@@ -16,8 +16,9 @@
     <a href="/" {{if eq .Nav "overview"}}class="on" aria-current="page"{{end}}>Projects</a>
     <a href="/cache" {{if eq .Nav "cache"}}class="on" aria-current="page"{{end}}>Cache</a>
     <a href="/advice" {{if eq .Nav "advice"}}class="on" aria-current="page"{{end}}>Advisor</a>
+    <a href="/profiles" {{if eq .Nav "profiles"}}class="on" aria-current="page"{{end}}>Profiles</a>
     <div class="grow"></div>
-    <div class="profile-label">Profiles</div>
+    <a class="profile-label" href="/profiles">Profiles</a>
     {{range .Profiles}}
     <div class="profile{{if .Current}} current{{end}}" title="{{if .LoggedIn}}{{.Account}}{{else}}not logged in{{end}}">
       <span><strong>{{.Name}}</strong>{{with .Account}}<br><span class="small">{{.}}</span>{{end}}</span>

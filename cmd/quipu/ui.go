@@ -88,4 +88,7 @@ func attachProfiles(srv *ui.Server, home string) {
 	if bin, err := realClaude(); err == nil {
 		srv.ClaudeBinary = bin
 	}
+	if self, err := os.Executable(); err == nil {
+		srv.SelfBinary = self
+	}
 }

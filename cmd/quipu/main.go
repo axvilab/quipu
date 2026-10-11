@@ -44,6 +44,10 @@ commands:
 `
 
 func main() {
+	// claude auth login runs quipu as $BROWSER when signing in from the UI.
+	if ui.CaptureLoginURL(os.Args) {
+		return
+	}
 	if filepath.Base(os.Args[0]) == "claude" {
 		fmt.Fprintln(os.Stderr, "quipu: shim mode is not implemented yet")
 		os.Exit(1)

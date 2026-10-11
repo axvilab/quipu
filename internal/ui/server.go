@@ -39,6 +39,7 @@ type Server struct {
 	configDir string
 	profile   string
 	st        *store.Store
+	dataDir   string
 	journal   *fsx.Journal
 	token     string
 	addr      string // host:port we listen on, for the Host check
@@ -48,7 +49,9 @@ type Server struct {
 	// profile with its login state in the sidebar.
 	ProfilesFile string
 	ClaudeBinary string
+	SelfBinary   string // quipu itself, used as BROWSER for `claude auth login`
 	profileCache profileCache
+	logins       logins
 }
 
 // New prepares a server; call Listen to start it. Backups of files changed through the UI go
@@ -66,7 +69,7 @@ func New(home, configDir, profile, dataDir string, st *store.Store) (*Server, er
 	if _, err := rand.Read(b); err != nil {
 		return nil, err
 	}
-	return &Server{home: home, configDir: configDir, profile: profile, st: st, journal: journal, token: hex.EncodeToString(b), pages: pages}, nil
+	return &Server{home: home, configDir: configDir, profile: profile, st: st, dataDir: dataDir, journal: journal, token: hex.EncodeToString(b), pages: pages}, nil
 }
 
 // Listen binds to 127.0.0.1:port and serves until ctx is done. If the port is taken it falls
@@ -110,6 +113,12 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /advice", s.advice)
 	mux.HandleFunc("POST /apply", s.apply)
 	mux.HandleFunc("POST /undo", s.undo)
+	mux.HandleFunc("GET /profiles", s.profilesPage)
+	mux.HandleFunc("POST /profiles/add", s.profileAdd)
+	mux.HandleFunc("POST /profiles/remove", s.profileRemove)
+	mux.HandleFunc("POST /profiles/rule", s.profileRule)
+	mux.HandleFunc("POST /profiles/unrule", s.profileUnrule)
+	mux.HandleFunc("POST /profiles/login", s.profileLogin)
 	return s.guard(mux)
 }
 
