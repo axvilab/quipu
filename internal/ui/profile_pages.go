@@ -164,7 +164,8 @@ func (s *Server) profilesPage(w http.ResponseWriter, r *http.Request) {
 		Folders   []string
 		Shareable []string
 		Waiting   bool
-	}{rows, rules, folders, profile.Shareable, waiting})
+		Browsers  []browser
+	}{rows, rules, folders, profile.Shareable, waiting, installedBrowsers()})
 }
 
 func (s *Server) profileAdd(w http.ResponseWriter, r *http.Request) {
@@ -268,5 +269,38 @@ func (s *Server) profileLogin(w http.ResponseWriter, r *http.Request) {
 		s.back(w, r, "Could not start sign-in: "+err.Error())
 		return
 	}
+	// The browser this page runs in is usually signed in to claude.ai already, with whatever
+	// account it was used with last. A private window starts clean, so try that first.
+	if u := s.waitLoginURL(p.Name, 5*time.Second); u != "" && openPrivate(u) {
+		s.back(w, r, "Opened the sign-in page in a private window of your browser: sign in there with the account for "+p.Name+".")
+		return
+	}
 	http.Redirect(w, r, "/profiles", http.StatusSeeOther)
+}
+
+// profilePrivate opens the pending sign-in page of a profile in a private window again.
+func (s *Server) profilePrivate(w http.ResponseWriter, r *http.Request) {
+	name := r.FormValue("name")
+	if u := s.waitLoginURL(name, 0); u != "" && openPrivateWith(r.FormValue("browser"), u) {
+		s.back(w, r, "Opened a private window: sign in there with the account for "+name+".")
+		return
+	}
+	s.back(w, r, "Could not open a private window here; copy the link and paste it into one.")
+}
+
+// waitLoginURL returns the sign-in URL of a running login, waiting up to d for claude to hand it
+// over.
+func (s *Server) waitLoginURL(name string, d time.Duration) string {
+	deadline := time.Now().Add(d)
+	for {
+		if l := s.logins.get(name); l != nil && !l.done {
+			if b, err := os.ReadFile(l.urlFile); err == nil && len(b) > 0 {
+				return string(b)
+			}
+		}
+		if time.Now().After(deadline) {
+			return ""
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }

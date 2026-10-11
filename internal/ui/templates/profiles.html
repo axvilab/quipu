@@ -19,10 +19,12 @@
         <td>
           {{if eq .Login "url"}}
             <div class="signin">
-              <a class="button primary" href="{{.URL}}" target="_blank" rel="noopener">Open the sign-in page</a>
+              {{if $.Data.Browsers}}<form method="post" action="/profiles/private" class="login-form"><input type="hidden" name="name" value="{{.Name}}"><button type="submit" class="primary">Open in a private window</button>
+                <select name="browser" aria-label="browser">{{range $.Data.Browsers}}<option value="{{.ID}}">{{.Name}}{{if .Default}} (default){{end}}</option>{{end}}</select></form>{{end}}
+              <a class="button" href="{{.URL}}" target="_blank" rel="noopener">Open here</a>
               <button type="button" class="copy" data-url="{{.URL}}">Copy link</button>
             </div>
-            <div class="muted small">Signed in to claude.ai with another account in this browser? Paste the link into a private window. Waiting for you to sign in…</div>
+            <div class="muted small">A private window does not reuse the account this browser is signed in to. Waiting for you to sign in…</div>
           {{else if eq .Login "waiting"}}<span class="muted">starting sign-in…</span>
           {{else if .LoggedIn}}<span class="dot on"></span> {{.Account}}
           {{else}}<span class="dot"></span> <span class="muted">not signed in</span>{{end}}

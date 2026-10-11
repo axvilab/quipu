@@ -119,6 +119,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /profiles/rule", s.profileRule)
 	mux.HandleFunc("POST /profiles/unrule", s.profileUnrule)
 	mux.HandleFunc("POST /profiles/login", s.profileLogin)
+	mux.HandleFunc("POST /profiles/private", s.profilePrivate)
 	return s.guard(mux)
 }
 
