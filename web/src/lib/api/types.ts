@@ -240,3 +240,21 @@ export interface RestorePlan {
   files: { path: string; state: "new" | "changed" }[];
   links: number;
 }
+
+export interface Check {
+  id: string;
+  state: "ok" | "info" | "warn" | "fail";
+  params: Record<string, string>;
+}
+
+export interface ShimState {
+  installed: boolean;
+  inRc: boolean;
+  rcFile: string;
+  line: string;
+}
+
+export interface Doctor {
+  checks: Check[];
+  shim: ShimState;
+}

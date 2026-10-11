@@ -5,6 +5,7 @@
   import { notifyChanged } from "../lib/changes.svelte";
   import { live, refreshLive } from "../lib/live.svelte";
   import { report } from "../lib/toast.svelte";
+  import type { Doctor } from "../lib/api/types";
   import Header from "../components/Header.svelte";
   import Icon from "../components/Icon.svelte";
 
@@ -13,6 +14,31 @@
   const languageName = { uk: "Українська", en: "English" } as const;
 
   let busy = $state(false);
+
+  let doctor = $state<Doctor | null>(null);
+  async function check() {
+    try {
+      doctor = await api.doctor();
+    } catch (e) {
+      report(e);
+    }
+  }
+  check();
+
+  async function setShim(on: boolean) {
+    busy = true;
+    try {
+      report(await api.setShim(on));
+    } catch (e) {
+      report(e);
+    } finally {
+      busy = false;
+      notifyChanged();
+      check();
+    }
+  }
+  const mark = { ok: "✓", info: "–", warn: "!", fail: "✕" } as const;
+  const tone = { ok: "text-chilca", info: "text-fleece", warn: "text-qolle", fail: "text-cochineal" } as const;
   async function setWatching(on: boolean) {
     busy = true;
     try {
@@ -87,5 +113,47 @@
       {t("settings.rc.toggle")}
     </label>
     <p class="mt-2 text-xs text-fleece">{live.data.watching ? t("settings.rc.on") : t("settings.rc.off")}</p>
+  {/if}
+</section>
+
+<section class="max-w-xl border-t border-warp py-6">
+  <h2 class="text-md font-semibold">{t("settings.shim.title")}</h2>
+  <p class="mt-1 text-sm leading-relaxed text-fleece">{t("settings.shim.note")}</p>
+  {#if doctor}
+    {@const sh = doctor.shim}
+    <p class="mt-3 text-sm {sh.installed && sh.inRc ? 'text-chilca' : sh.installed ? 'text-qolle' : 'text-fleece'}">
+      {sh.installed && sh.inRc ? t("settings.shim.on", { file: sh.rcFile }) : sh.installed ? t("settings.shim.half", { file: sh.rcFile }) : t("settings.shim.off")}
+    </p>
+    <div class="mt-3 flex gap-2">
+      {#if sh.installed}
+        <button class="btn" onclick={() => setShim(false)} disabled={busy}>{t("settings.shim.turnOff")}</button>
+      {/if}
+      {#if !(sh.installed && sh.inRc)}
+        <button class="btn btn-primary" onclick={() => setShim(true)} disabled={busy}>{t("settings.shim.turnOn", { file: sh.rcFile })}</button>
+      {/if}
+    </div>
+    <p class="mt-2 text-xs text-fleece">{t("settings.shim.manual")} <code class="font-mono">{sh.line.split("\n").pop()}</code></p>
+  {/if}
+</section>
+
+<section class="max-w-xl border-t border-warp py-6">
+  <div class="flex items-center justify-between">
+    <h2 class="text-md font-semibold">{t("doctor.title")}</h2>
+    <button class="btn btn-ghost" onclick={check}>{t("doctor.again")}</button>
+  </div>
+  {#if doctor}
+    <ul class="mt-3 space-y-2">
+      {#each doctor.checks as c, i (c.id + i)}
+        <li class="flex gap-3 text-sm">
+          <span class="w-4 shrink-0 text-center font-semibold {tone[c.state]}" aria-hidden="true">{mark[c.state]}</span>
+          <span class="min-w-0">
+            <span class="block">{t(`doctor.${c.id}.${c.state}`, c.params)}</span>
+            {#if c.state === "warn" || c.state === "fail"}
+              <span class="block text-xs text-fleece">{t(`doctor.${c.id}.fix`, c.params)}</span>
+            {/if}
+          </span>
+        </li>
+      {/each}
+    </ul>
   {/if}
 </section>

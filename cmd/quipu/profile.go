@@ -28,6 +28,8 @@ const profileUsage = `usage: quipu profile <command>
   remove <name>                 forget a profile; its directory and login are kept
   rule <folder> <name>          folders below <folder> use profile <name>
   unrule <folder>               delete the rule for <folder>
+  shim on|off|status [--rc]     make plain "claude" pick the profile by folder; --rc also adds or
+                                removes the PATH line in your shell's startup file
 `
 
 func loadProfiles() (string, *profile.Config, error) {
@@ -111,6 +113,8 @@ func runProfile(ctx context.Context, args []string) error {
 		}
 		fmt.Printf("Profile %s removed. Its directory with the login and sessions is kept: %s\n", rest[0], dir)
 		return nil
+	case "shim":
+		return runShim(home, rest)
 	case "rule":
 		if len(rest) != 2 {
 			return fmt.Errorf("usage: quipu profile rule <folder> <name>")
@@ -190,6 +194,12 @@ func runClaude(args []string) (int, error) {
 	if len(args) > 0 && args[0] == "--" {
 		args = args[1:]
 	}
+	return runClaudeWith(args, explicit)
+}
+
+// runClaudeWith runs the real claude with args under the explicit profile, or the one the folder
+// rules, a question or the default give.
+func runClaudeWith(args []string, explicit string) (int, error) {
 
 	home, c, err := loadProfiles()
 	if err != nil {

@@ -9,6 +9,7 @@ import type {
   EditorFile,
   Live,
   Overview,
+  Doctor,
   Profiles,
   Project,
   RestorePlan,
@@ -55,6 +56,8 @@ export const api = {
   readFile: (path: string) => get<EditorFile>(`/api/file?path=${encodeURIComponent(path)}`),
   saveFile: (path: string, content: string, version: string) => post("/api/file", { path, content, version }),
   live: () => get<Live>("/api/live"),
+  doctor: () => get<Doctor>("/api/doctor"),
+  setShim: (on: boolean) => post("/api/shim", { on }),
   backup: () => get<BackupInfo>("/api/backup"),
   createBackup: (opts: { gitDir: string; push: boolean; allowSecrets: boolean }) =>
     request<BackupResult>("POST", "/api/backup", opts),

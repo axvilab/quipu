@@ -35,6 +35,7 @@ commands:
   cache      cache hit rate per project or day, and why the cache missed
   daemon     collect transcripts in the background and serve the web interface
   demo       create a fake home with a Claude Code setup to try quipu on
+  doctor     check Claude Code, profiles, the claude shim and quipu itself
   install    start quipu at login and add it to the application menu
   map        what Claude Code loads for a project and how much it weighs
   profile    Claude accounts (personal, work…) and which folder uses which
@@ -50,9 +51,14 @@ func main() {
 	if ui.CaptureLoginURL(os.Args) {
 		return
 	}
+	// Run as claude (the shim, see quipu profile shim): pick the profile and run the real claude.
+	// Every argument is claude's, so quipu reads none of them as its own flags.
 	if filepath.Base(os.Args[0]) == "claude" {
-		fmt.Fprintln(os.Stderr, "quipu: shim mode is not implemented yet")
-		os.Exit(1)
+		code, err := runClaudeWith(os.Args[1:], "")
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "quipu:", err)
+		}
+		os.Exit(code)
 	}
 	if len(os.Args) < 2 {
 		fmt.Fprint(os.Stderr, usage)
@@ -74,6 +80,8 @@ func main() {
 		err = runCache(ctx, os.Args[2:])
 	case "daemon":
 		err = runDaemon(ctx, os.Args[2:])
+	case "doctor":
+		err = runDoctor(ctx)
 	case "demo":
 		err = runDemo(os.Args[2:])
 	case "install":

@@ -267,3 +267,45 @@ func TestBackupAPI(t *testing.T) {
 		t.Errorf("undo did not remove the restored file: %v", err)
 	}
 }
+
+func TestDoctorAndShimAPI(t *testing.T) {
+	s := testServer(t)
+	s.SelfBinary = filepath.Join(s.home, "bin", "quipu")
+	os.MkdirAll(filepath.Dir(s.SelfBinary), 0o755)
+	os.WriteFile(s.SelfBinary, []byte("#!/bin/sh\n"), 0o755)
+	t.Setenv("SHELL", "/bin/bash")
+	h := s.Handler()
+	cookie := &http.Cookie{Name: cookieName, Value: s.token}
+
+	var d struct {
+		Checks []Check   `json:"checks"`
+		Shim   ShimState `json:"shim"`
+	}
+	if code := getJSON(t, h, "/api/doctor", cookie, &d); code != 200 || len(d.Checks) == 0 || d.Shim.Installed {
+		t.Fatalf("doctor = %+v (%d)", d, code)
+	}
+	if rec := postJSON(h, "/api/shim", `{"on":true}`, cookie); !strings.Contains(rec.Body.String(), "shim-on") {
+		t.Fatalf("shim on: %s", rec.Body.String())
+	}
+	getJSON(t, h, "/api/doctor", cookie, &d)
+	var shim Check
+	for _, c := range d.Checks {
+		if c.ID == "shim" {
+			shim = c
+		}
+	}
+	if !d.Shim.Installed || !d.Shim.InRC || shim.State != "ok" {
+		t.Errorf("after shim on: %+v, check %+v", d.Shim, shim)
+	}
+	rc, _ := os.ReadFile(filepath.Join(s.home, ".bashrc"))
+	if !strings.Contains(string(rc), "/shim:$PATH") {
+		t.Errorf(".bashrc = %q", rc)
+	}
+	if rec := postJSON(h, "/api/shim", `{"on":false}`, cookie); !strings.Contains(rec.Body.String(), "shim-off") {
+		t.Fatalf("shim off: %s", rec.Body.String())
+	}
+	rc, _ = os.ReadFile(filepath.Join(s.home, ".bashrc"))
+	if strings.Contains(string(rc), "quipu") {
+		t.Errorf(".bashrc after off = %q", rc)
+	}
+}

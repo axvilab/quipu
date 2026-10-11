@@ -97,15 +97,16 @@ main repo via `git rev-parse --git-common-dir`.
 - Install method does not matter: native installer (`~/.local/bin/claude` → versions dir, self-
   updating), npm global (deprecated) or Homebrew. Data always lives in the config dir; the shim
   never replaces the binary. `quipu doctor` warns when several installs are on `PATH`.
-- `quipu doctor` reuses `claude doctor` (version, install method, auto-update, managed settings)
-  instead of re-implementing those checks; its output is plain text, so parsing lives in
-  `internal/claudecode` and tolerates format changes. The in-session `/doctor` audits one
-  project interactively; quipu complements it across projects and profiles with measured costs.
+- `quipu doctor` does not re-implement Claude Code's own `/doctor`, which audits one install
+  interactively; it checks what quipu sets up and depends on, across profiles.
 - Shared library: at `quipu profile add` the new profile links to `~/.claude/{CLAUDE.md,skills,
   agents,rules,commands}`; `projects/` (memory, transcripts) is never shared, which keeps the
   personal / work boundary. Login state comes from `claude auth status --json`.
-- MVP is `quipu run` with folder rules (`quipu profile rule <folder> <name>`); the `claude` shim
-  on PATH comes later, `alias claude='quipu run'` works meanwhile.
+- `quipu run` with folder rules (`quipu profile rule <folder> <name>`), and the `claude` shim:
+  a link `claude` → quipu in quipu's own folder, put first on PATH by one line in the shell's rc
+  file (`quipu profile shim on --rc`, or Settings). The real claude is never replaced.
+- `quipu doctor` (and the Check section in Settings): Claude Code found and its installs, profile
+  logins, broken shared links, stale folder rules, the shim, the service, the window.
 - No edits to `.claude.json` ([ADR 0003](adr/0003-supported-integration-only.md)); MCP servers
   are shared through plugins or `.mcp.json`.
 
@@ -135,6 +136,7 @@ quipu never installs plugin files itself; it runs `claude plugin install|enable|
 project|local|user` (with the profile's `CLAUDE_CONFIG_DIR`), so the Claude Code install method
 does not matter, only a version that has these commands.
 
+- Postponed: matching plugins to a project's stack by keywords would guess more than it knows.
 - Catalog: marketplaces the user already added (read from the config dir, read-only).
 - Recommendations by detected stack (`go.mod`, `composer.json`, `package.json`, …), each with
   its per-request token cost from `claude plugin details`.

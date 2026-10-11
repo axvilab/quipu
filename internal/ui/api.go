@@ -101,6 +101,16 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 			writeJSON(w, v, err)
 		}
 	})
+	mux.HandleFunc("GET /api/doctor", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, map[string]any{"checks": s.Doctor(r.Context()), "shim": s.Shim()}, nil)
+	})
+	mux.HandleFunc("POST /api/shim", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ On bool }
+		if readJSON(w, r, &in) {
+			v, err := s.SetShim(in.On)
+			writeJSON(w, v, err)
+		}
+	})
 	mux.HandleFunc("GET /api/profiles", func(w http.ResponseWriter, r *http.Request) {
 		v, err := s.ProfilesReport(r.Context())
 		writeJSON(w, v, err)
