@@ -20,7 +20,7 @@ func TestPlans(t *testing.T) {
 	if linux.Files["/home/alice/.local/share/icons/hicolor/scalable/apps/quipu.svg"] != "<svg/>" {
 		t.Error("icon not installed")
 	}
-	if !strings.Contains(linux.Files["/home/alice/.local/share/applications/quipu.desktop"], "Exec=/home/alice/.local/bin/quipu ui") {
+	if d := linux.Files["/home/alice/.local/share/applications/quipu.desktop"]; !strings.Contains(d, "Exec=/home/alice/.local/bin/quipu ui") || !strings.Contains(d, "Name=Quipu") {
 		t.Error("desktop entry does not open the UI")
 	}
 

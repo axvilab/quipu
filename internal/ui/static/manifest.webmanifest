@@ -1,6 +1,6 @@
 {
-  "name": "quipu",
-  "short_name": "quipu",
+  "name": "Quipu",
+  "short_name": "Quipu",
   "description": "What Claude Code knows about your projects and what it costs",
   "start_url": "/",
   "scope": "/",

@@ -48,7 +48,7 @@ WantedBy=default.target
 `, binary),
 				filepath.Join(dataHome, "applications", "quipu.desktop"): fmt.Sprintf(`[Desktop Entry]
 Type=Application
-Name=quipu
+Name=Quipu
 Comment=What Claude Code knows about your projects and what it costs
 Exec=%s ui
 Icon=quipu
