@@ -4,6 +4,8 @@
   "nav.advice": "Advice",
   "nav.cache": "Cache and tokens",
   "nav.profiles": "Profiles",
+  "nav.accounts": "Accounts",
+  "nav.shortcut": "Keys: G, then {key}",
   "palette.open": "Search and commands",
   "palette.label": "Command palette",
   "palette.placeholder": "A project, page or action…",
@@ -25,6 +27,11 @@
   "help.close": "Close the panel",
   "help.this": "This help",
   "lang.label": "Language",
+  "theme.label": "Theme",
+  "theme.system": "Match system",
+  "theme.light": "Light",
+  "theme.dark": "Dark",
+  "palette.theme": "Theme: {name}",
   "loading": "Loading",
   "period.label": "Period",
   "period.days": {
@@ -52,7 +59,10 @@
   "overview.empty.title": "No sessions in this period yet",
   "overview.empty.body": "Quipu collects Claude Code transcripts in the background. Work in Claude Code, or pick a longer period.",
   "khipu.label": "Khipu of your projects",
-  "khipu.legend": "Each cord is a project. Its length is cache writes; red knots are things worth fixing.",
+  "khipu.legend": "Each cord is a project. Colour and length show cache writes, and the knots record the number the way Inca khipus did: thousands, hundreds, tens and units of {unit} tokens from top to bottom. A red side cord marks things worth fixing; its knot counts them.",
+  "khipu.more": "Showing {shown} of {total} projects, those with the most cache writes; the rest are in the list below.",
+  "khipu.total": "total",
+  "khipu.totalTitle": "All projects: {writes} cache writes",
   "khipu.cord": {
     "one": "{writes} cache writes, {count} finding",
     "other": "{writes} cache writes, {count} findings"

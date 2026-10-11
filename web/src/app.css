@@ -29,7 +29,12 @@
 
 /* Dark is the default (Linear/Raycast direction). The light variant keeps the same meanings with
    darker dyes; it is used when <html data-theme="light"> is set. */
+:root {
+  color-scheme: dark; /* native scrollbars and form controls follow the theme */
+}
+
 :root[data-theme="light"] {
+  color-scheme: light;
   --color-night: #f4f2ec;
   --color-loom: #fbfaf6;
   --color-loom-2: #efece4;

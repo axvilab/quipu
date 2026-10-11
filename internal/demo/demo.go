@@ -25,6 +25,15 @@ func Create(home string, now time.Time) error {
 	cfg := filepath.Join(home, ".claude")
 	shop := filepath.Join(home, "work", "shop-api")
 	blog := filepath.Join(home, "pet", "blog")
+	// More projects with only a short CLAUDE.md and sessions, so the overview looks like a real
+	// machine with several projects of different weight.
+	others := []string{
+		filepath.Join(home, "work", "billing"),
+		filepath.Join(home, "work", "infra"),
+		filepath.Join(home, "work", "admin"),
+		filepath.Join(home, "pet", "mobile"),
+		filepath.Join(home, "pet", "notes"),
+	}
 
 	files := map[string]string{
 		filepath.Join(cfg, "CLAUDE.md"):     "# About me\n\n- Answer briefly.\n- Conventional commits.\n",
@@ -38,6 +47,9 @@ func Create(home string, now time.Time) error {
 		filepath.Join(blog, "CLAUDE.md"): "# blog\n\nStatic site. Build with `make site`.\n",
 
 		filepath.Join(cfg, "projects", claudecode.ProjectDirName(shop), "memory", "MEMORY.md"): strings.Repeat("- [Note](note.md): something learned about the shop\n", 190),
+	}
+	for _, o := range others {
+		files[filepath.Join(o, "CLAUDE.md")] = "# " + filepath.Base(o) + "\n\nRun `make test` before committing.\n"
 	}
 	for _, skill := range []string{"pptx", "docx", "xlsx", "pdf", "deep-research", "browser"} {
 		files[filepath.Join(cfg, "skills", "synced", "demo-account", skill, "SKILL.md")] = fmt.Sprintf(
@@ -58,7 +70,7 @@ func Create(home string, now time.Time) error {
 		path     string
 		sessions int
 		start    int64 // tokens of the first request
-	}{{shop, 6, 48000}, {blog, 3, 31000}}
+	}{{shop, 6, 48000}, {blog, 3, 31000}, {others[0], 4, 39000}, {others[1], 5, 52000}, {others[2], 3, 35000}, {others[3], 2, 27000}, {others[4], 1, 22000}}
 	for _, p := range projects {
 		dir := filepath.Join(cfg, "projects", claudecode.ProjectDirName(p.path))
 		for i := 0; i < p.sessions; i++ {

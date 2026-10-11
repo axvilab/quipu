@@ -8,14 +8,16 @@
 
   let width = $state(600);
   const height = 200;
-  const left = 44;
+  const top = 10; // room for the top axis label
   const bottom = 22;
 
   const max = $derived(Math.max(1, ...days.map((d) => d.totals.cacheWrite)));
   const ticks = $derived([0, max / 2, max]);
+  // The axis is as wide as its longest label ("28,6 млн" is longer than "28.6M").
+  const left = $derived(Math.max(32, ...ticks.map((v) => tokens(v).length * 6.6 + 12)));
   const bar = $derived(days.length ? (width - left) / days.length : 0);
   let hover = $state<number | null>(null);
-  const y = (v: number) => (height - bottom) * (1 - v / max);
+  const y = (v: number) => top + (height - bottom - top) * (1 - v / max);
 </script>
 
 <div class="relative" bind:clientWidth={width}>

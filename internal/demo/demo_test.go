@@ -36,8 +36,8 @@ func TestDemoTriggersEveryRule(t *testing.T) {
 	}
 
 	ts, err := claudecode.Transcripts(cfg)
-	if err != nil || len(ts) != 9 {
-		t.Errorf("transcripts = %d (%v), want 9", len(ts), err)
+	if err != nil || len(ts) != 24 {
+		t.Errorf("transcripts = %d (%v), want 24", len(ts), err)
 	}
 	if err := Create(home, time.Now()); err == nil {
 		t.Error("Create into a non-empty dir must fail")

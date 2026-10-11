@@ -3,6 +3,7 @@
   import { api } from "../lib/api/client";
   import type { ProjectRow } from "../lib/api/types";
   import { i18n, setLocale, t } from "../lib/i18n.svelte";
+  import { setTheme, themes } from "../lib/theme.svelte";
   import { palette } from "../lib/palette.svelte";
   import { prefs, setDays } from "../lib/prefs.svelte";
   import { navigate, projectPath } from "../lib/router.svelte";
@@ -44,6 +45,12 @@
       icon: "globe",
       run: () => setLocale(i18n.locale === "uk" ? "en" : "uk"),
     },
+    ...themes.map((th) => ({
+      id: "theme:" + th,
+      label: t("palette.theme", { name: t(`theme.${th}`) }),
+      icon: th === "system" ? "monitor" : th === "light" ? "sun" : "moon",
+      run: () => setTheme(th),
+    })),
     { id: "help", label: t("palette.shortcuts"), hint: "?", icon: "keyboard", run: () => (palette.help = true) },
   ]);
 

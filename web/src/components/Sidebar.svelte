@@ -2,6 +2,7 @@
   import type { Session } from "../lib/api/types";
   import { i18n, locales, setLocale, t } from "../lib/i18n.svelte";
   import { palette } from "../lib/palette.svelte";
+  import { setTheme, theme, themes } from "../lib/theme.svelte";
   import { link, router } from "../lib/router.svelte";
   import Icon from "./Icon.svelte";
 
@@ -13,6 +14,8 @@
     { href: "/cache", name: "cache", icon: "cache", key: "C" },
     { href: "/profiles", name: "profiles", icon: "profiles", key: "R" },
   ] as const;
+
+  const themeIcon = { system: "monitor", light: "sun", dark: "moon" } as const;
 
   const current = $derived(router.route.name === "project" ? "overview" : router.route.name);
 </script>
@@ -36,29 +39,39 @@
       use:link
       class="group flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors {current === it.name ? 'bg-loom-2 text-cotton' : 'text-fleece hover:bg-loom hover:text-cotton'}"
       aria-current={current === it.name ? "page" : undefined}
+      title={t("nav.shortcut", { key: it.key })}
     >
       <Icon name={it.icon} />
       <span class="flex-1">{t(`nav.${it.name}`)}</span>
-      <span class="hidden text-xs text-fleece/70 group-hover:inline">G {it.key}</span>
     </a>
   {/each}
 
   <div class="flex-1"></div>
 
   {#if session?.profiles.length}
-    <a href="/profiles" use:link class="px-2.5 pb-1 text-xs text-fleece hover:text-cotton">{t("nav.profiles")}</a>
+    <p class="px-2.5 pb-1 text-xs text-fleece">{t("nav.accounts")}</p>
     {#each session.profiles as p (p.name)}
-      <div class="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 {p.current ? 'bg-loom' : ''}" title={p.account || t("profile.signedOut")}>
+      <a href="/profiles" use:link class="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-loom {p.current ? 'bg-loom' : ''}" title={p.account || t("profile.signedOut")}>
         <span class="h-2 w-2 shrink-0 rounded-full {p.signedIn ? 'bg-chilca' : 'bg-warp'}" aria-hidden="true"></span>
         <span class="min-w-0 flex-1">
           <span class="block truncate text-sm">{p.name}</span>
           <span class="block truncate text-xs text-fleece">{p.signedIn ? p.account : t("profile.signedOut")}</span>
         </span>
-      </div>
+      </a>
     {/each}
   {/if}
 
-  <div class="mt-3 flex items-center justify-between px-2.5">
+  <div class="mt-3 flex px-2.5">
+    <div class="flex rounded-md border border-warp p-0.5" role="group" aria-label={t("theme.label")}>
+      {#each themes as th (th)}
+        <button class="rounded px-2 py-1 {theme.choice === th ? 'bg-loom-2 text-cotton' : 'text-fleece hover:text-cotton'}"
+          aria-pressed={theme.choice === th} title={t(`theme.${th}`)} onclick={() => setTheme(th)}>
+          <Icon name={themeIcon[th]} size={14} label={t(`theme.${th}`)} />
+        </button>
+      {/each}
+    </div>
+  </div>
+  <div class="mt-2 flex items-center justify-between px-2.5">
     <div class="flex rounded-md border border-warp p-0.5 text-xs" role="group" aria-label={t("lang.label")}>
       {#each locales as l (l)}
         <button class="rounded px-2 py-0.5 {i18n.locale === l ? 'bg-loom-2 text-cotton' : 'text-fleece'}" aria-pressed={i18n.locale === l} onclick={() => setLocale(l)}>{l === "uk" ? "Укр" : "Eng"}</button>
