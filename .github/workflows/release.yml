@@ -23,8 +23,8 @@ jobs:
           - { goos: darwin, goarch: amd64, runner: macos-14, cc: "clang -arch x86_64" }
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
       - name: Test
@@ -43,18 +43,18 @@ jobs:
       - name: Check the binary runs
         if: ${{ !matrix.cc }}
         run: ./quipu version
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: quipu_${{ matrix.goos }}_${{ matrix.goarch }}
           path: quipu_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz
 
   release:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           merge-multiple: true
       - name: Checksums
