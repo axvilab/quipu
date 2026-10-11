@@ -10,7 +10,7 @@ DOCKER_GO = docker run --rm -t \
 	-e HOME=/tmp \
 	-e GOMODCACHE=/src/.cache/mod \
 	-e GOCACHE=/src/.cache/build \
-	-e CGO_ENABLED=0 \
+	-e CGO_ENABLED=1 \
 	-e GOOS -e GOARCH \
 	$(GO_IMAGE)
 
@@ -26,7 +26,7 @@ vet:
 	$(DOCKER_GO) go vet ./...
 
 fmt:
-	$(DOCKER_GO) gofmt -w .
+	$(DOCKER_GO) go fmt ./...
 
 tidy:
 	$(DOCKER_GO) go mod tidy

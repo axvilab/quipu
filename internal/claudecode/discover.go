@@ -82,3 +82,13 @@ func Transcripts(configDir string) ([]Transcript, error) {
 	sort.Slice(out, func(i, j int) bool { return out[i].Path < out[j].Path })
 	return out, nil
 }
+
+// ProfileName returns the profile a config directory belongs to: "default" for ~/.claude and
+// "<name>" for ~/.claude-<name>.
+func ProfileName(configDir string) string {
+	base := filepath.Base(configDir)
+	if name, ok := strings.CutPrefix(base, ".claude-"); ok && name != "" {
+		return name
+	}
+	return "default"
+}

@@ -55,3 +55,16 @@ func TestTranscripts(t *testing.T) {
 		t.Errorf("Transcripts =\n%+v\nwant\n%+v", got, want)
 	}
 }
+
+func TestProfileName(t *testing.T) {
+	cases := map[string]string{
+		"/home/alice/.claude":      "default",
+		"/home/alice/.claude-work": "work",
+		"/home/alice/.claude-":     "default",
+	}
+	for in, want := range cases {
+		if got := ProfileName(in); got != want {
+			t.Errorf("ProfileName(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
