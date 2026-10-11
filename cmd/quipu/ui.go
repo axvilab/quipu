@@ -46,7 +46,7 @@ func runUI(ctx context.Context, args []string) error {
 		configDir += "-" + *profile
 	}
 
-	srv, err := ui.New(home, configDir, *profile, dir, st)
+	srv, err := ui.New(home, configDir, *profile, dir, version, st)
 	if err != nil {
 		return err
 	}
@@ -79,12 +79,8 @@ func runUI(ctx context.Context, args []string) error {
 // when quipu-app is not installed next to quipu or cannot run here (no GTK or WebKit on Linux),
 // so the caller falls back to the browser.
 func startWindow(url string) *exec.Cmd {
-	self, err := os.Executable()
-	if err != nil {
-		return nil
-	}
-	app := filepath.Join(filepath.Dir(self), "quipu-app")
-	if exec.Command(app, "-version").Run() != nil {
+	app := windowBinary()
+	if app == "" || exec.Command(app, "-version").Run() != nil {
 		return nil
 	}
 	cmd := exec.Command(app)
@@ -93,6 +89,27 @@ func startWindow(url string) *exec.Cmd {
 		return nil
 	}
 	return cmd
+}
+
+// windowBinary finds quipu-app: inside Quipu.app on macOS (run from the bundle, it gets the app's
+// name and Dock icon), otherwise next to quipu.
+func windowBinary() string {
+	var candidates []string
+	if runtime.GOOS == "darwin" {
+		if home, err := os.UserHomeDir(); err == nil {
+			candidates = append(candidates, filepath.Join(home, "Applications", "Quipu.app", "Contents", "MacOS", "quipu-app"))
+		}
+		candidates = append(candidates, "/Applications/Quipu.app/Contents/MacOS/quipu-app")
+	}
+	if self, err := os.Executable(); err == nil {
+		candidates = append(candidates, filepath.Join(filepath.Dir(self), "quipu-app"))
+	}
+	for _, c := range candidates {
+		if _, err := os.Stat(c); err == nil {
+			return c
+		}
+	}
+	return ""
 }
 
 // openBrowser opens url in its own app window (Chrome, Chromium, Edge or Brave with --app) so

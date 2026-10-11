@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { external } from "../lib/external";
   import { api } from "../lib/api/client";
   import type { ProfileInfo, Profiles } from "../lib/api/types";
   import { t } from "../lib/i18n.svelte";
@@ -159,7 +160,7 @@
               {#each data.browsers as b (b.id)}<option value={b.id}>{b.name}{b.default ? ` (${t("signin.default")})` : ""}</option>{/each}
             </select>
           {/if}
-          <a class="btn" href={signing.signIn.url} target="_blank" rel="noopener"><Icon name="external" size={14} />{t("signin.here")}</a>
+          <a class="btn" href={signing.signIn.url} target="_blank" rel="noopener" use:external><Icon name="external" size={14} />{t("signin.here")}</a>
           <button class="btn" onclick={() => navigator.clipboard.writeText(signing.signIn.url ?? "").then(() => report({ ok: true, code: "copied" }))}><Icon name="copy" size={14} />{t("signin.copy")}</button>
         </li>
         <li class="text-fleece">{t("signin.step.wait")}</li>

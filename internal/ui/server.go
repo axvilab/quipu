@@ -69,9 +69,9 @@ type Server struct {
 	addr  string // host:port we listen on, for the Host check
 }
 
-// New prepares a server; call Listen to start it.
-func New(home, configDir, profile, dataDir string, st *store.Store) (*Server, error) {
-	svc, err := NewService(home, configDir, profile, dataDir, "", st)
+// New prepares a server; call Listen to start it. version is shown in the UI.
+func New(home, configDir, profile, dataDir, version string, st *store.Store) (*Server, error) {
+	svc, err := NewService(home, configDir, profile, dataDir, version, st)
 	if err != nil {
 		return nil, err
 	}

@@ -34,3 +34,12 @@ jobs:
         run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go vet ./...
       - run: go test ./...
+      - name: GTK and WebKit headers for the window
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-3-dev libwebkit2gtk-4.1-dev
+      - name: Build the window (quipu-app)
+        run: |
+          tags=desktop,production
+          if [ "$RUNNER_OS" = Linux ]; then tags=$tags,webkit2_41; fi
+          go build -tags "$tags" -o /tmp/quipu-app ./cmd/quipu-app
+          /tmp/quipu-app -version

@@ -116,7 +116,7 @@ func runDaemon(ctx context.Context, args []string) error {
 	defer st.Close()
 
 	if !*once && !*noUI {
-		srv, err := ui.New(home, filepath.Join(home, ".claude"), "default", dir, st)
+		srv, err := ui.New(home, filepath.Join(home, ".claude"), "default", dir, version, st)
 		if err != nil {
 			return err
 		}

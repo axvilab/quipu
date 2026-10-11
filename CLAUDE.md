@@ -13,7 +13,8 @@ directly.
 - `make vet`, `make fmt`, `make tidy`
 - `make web`: build the Svelte frontend (`web/` → `internal/ui/dist/app`)
 - `make web-dev`: Vite dev server with hot reload on :5173 (run `quipu ui --port 47801` beside it)
-- `make build`: frontend + `bin/quipu`
+- `make build`: frontend + `bin/quipu` + `bin/quipu-app` (the native window, ADR 0007; `make app`
+  builds only the window, in its own image with GTK and WebKit)
 - Try changes on a fake home, never on the real `~/.claude`: `bin/quipu demo /tmp/qdemo`, then
   `HOME=/tmp/qdemo bin/quipu ui`
 

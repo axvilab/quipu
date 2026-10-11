@@ -1,6 +1,6 @@
 # UI redesign: Svelte, keyboard-first, Ukrainian and English
 
-Status: done (step 6 open) · 2026-10-11 · decision in [ADR 0006](../adr/0006-svelte-spa.md)
+Status: done · 2026-10-11 · decision in [ADR 0006](../adr/0006-svelte-spa.md)
 
 ## Brief
 
@@ -47,9 +47,14 @@ row is selected (Linear's master–detail). Left-aligned everywhere.
 
 ## The one bold element: the khipu
 
-The overview opens with a khipu drawn from real data: a primary cord across the top, one pendant
-cord per project. Cord length = cache writes over the period, colour depth = share of the total
-(per-project profiles are not known yet), knots = findings. Hovering a cord shows the project; clicking opens it. Everything else stays quiet.
+The overview opens with a khipu drawn from real data, read the way the Incas wrote numbers
+(Locke, 1912). A primary cord across the top, one pendant cord per project; each pendant records
+the project's cache writes in decimal knots: clusters of single knots for thousands, hundreds and
+tens, a long knot (2–9 turns) or a figure-eight (1) for units, nothing for 0, in one unit for the
+whole khipu so the sum fits four places. Places sit at fixed heights, so knots line up in rows.
+Cords are dyed from undyed cotton to deep qolle and grow with cost; findings hang as a red
+subsidiary cord whose knot counts them; a darker first cord holds the sum. Hovering a cord shows
+the exact number and dims the rest; clicking opens the project. Everything else stays quiet.
 
 ## Screens
 
@@ -91,7 +96,8 @@ cord per project. Cord length = cache writes over the period, colour depth = sha
 3. [x] Shell: sidebar, top bar, router, i18n (`web/src/locales/{uk,en}.json`), command palette, keys.
 4. [x] Screens: overview with khipu, project, advisor, cache, profiles.
 5. [x] Remove the html/template pages; screenshots on the demo home; release.
-6. [ ] Native window with Wails right after (user's request): the frontend talks to Go only
-   through `web/src/lib/api/client.ts`, and Go exposes the API as plain methods with thin HTTP
-   handlers, so Wails can bind the same methods without a port or token. Linux needs
-   libwebkit2gtk at runtime; cover it in install.sh and the docs.
+6. [x] Native window with Wails ([ADR 0007](../adr/0007-native-window-wails.md)): a separate
+   `quipu-app` that forwards requests to the running server instead of binding methods, so it
+   stays small and one process collects. Linux needs WebKitGTK 4.1 (install.sh hints); macOS gets
+   Quipu.app. Also: the khipu records cache writes in Inca decimal knots; theme and language moved
+   to a settings page.

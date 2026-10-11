@@ -33,7 +33,7 @@ func testServer(t *testing.T) *Server {
 		t.Fatal(err)
 	}
 
-	s, err := New(home, filepath.Join(home, ".claude"), "default", filepath.Join(home, "data"), st)
+	s, err := New(home, filepath.Join(home, ".claude"), "default", filepath.Join(home, "data"), "test", st)
 	if err != nil {
 		t.Fatal(err)
 	}

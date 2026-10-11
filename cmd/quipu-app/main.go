@@ -3,7 +3,9 @@
 // It is a thin shell: `quipu ui` starts it with the address of a running quipu server in
 // QUIPU_UI_URL (token included; the environment, unlike the command line, is private to the
 // user), and the window forwards every request to that server. The app holds no data and no
-// database, so it stays small, and only one process collects transcripts.
+// database, so it stays small, and only one process collects transcripts. Started without the
+// address (Quipu.app opened from Launchpad), it hands over to `quipu ui`, which finds the server
+// and starts the window again.
 package main
 
 import (
@@ -15,6 +17,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"syscall"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -38,7 +43,11 @@ func main() {
 		fmt.Println("quipu-app", version)
 		return
 	}
-	if err := run(os.Getenv(URLEnv)); err != nil {
+	raw := os.Getenv(URLEnv)
+	if raw == "" {
+		handOver()
+	}
+	if err := run(raw); err != nil {
 		fmt.Fprintln(os.Stderr, "quipu-app:", err)
 		os.Exit(1)
 	}
@@ -73,6 +82,42 @@ func run(raw string) error {
 			WebviewGpuPolicy: linux.WebviewGpuPolicyOnDemand,
 		},
 	})
+}
+
+// handOver replaces this process with `quipu ui`. Replacing (not starting a child) frees the
+// single-instance lock for the window that `quipu ui` starts.
+func handOver() {
+	quipu, err := findQuipu()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "quipu-app: start it with `quipu ui`:", err)
+		os.Exit(1)
+	}
+	err = syscall.Exec(quipu, []string{quipu, "ui"}, os.Environ())
+	fmt.Fprintln(os.Stderr, "quipu-app:", err)
+	os.Exit(1)
+}
+
+// findQuipu looks next to this binary, where install.sh puts quipu, and on PATH. Apps opened from
+// the macOS Launchpad get a minimal PATH, so ~/.local/bin is checked explicitly.
+func findQuipu() (string, error) {
+	var dirs []string
+	if self, err := os.Executable(); err == nil {
+		dirs = append(dirs, filepath.Dir(self))
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		dirs = append(dirs, filepath.Join(home, ".local", "bin"))
+	}
+	for _, d := range dirs {
+		if p := filepath.Join(d, "quipu"); isExecutable(p) {
+			return p, nil
+		}
+	}
+	return exec.LookPath("quipu")
+}
+
+func isExecutable(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && !fi.IsDir() && fi.Mode()&0o111 != 0
 }
 
 // forward returns a handler that sends the webview's requests to the quipu server at raw

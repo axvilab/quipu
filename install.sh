@@ -5,7 +5,8 @@
 #
 # Environment:
 #   QUIPU_VERSION      a tag such as v0.1.0 (default: latest release)
-#   QUIPU_INSTALL_DIR  where to put the binary (default: ~/.local/bin)
+#   QUIPU_INSTALL_DIR  where to put quipu and quipu-app (default: ~/.local/bin); on macOS the
+#                      Quipu app goes to ~/Applications
 #   QUIPU_BASE_URL     download location, for mirrors and tests
 set -eu
 
@@ -64,11 +65,29 @@ got="$(sha256 "$tmp/$asset")"
 [ -n "$want" ] || fail "no checksum for $asset in checksums.txt"
 [ "$want" = "$got" ] || fail "checksum mismatch for $asset: the download is corrupt or was tampered with"
 
-tar xzf "$tmp/$asset" -C "$tmp" quipu
+mkdir "$tmp/x"
+tar xzf "$tmp/$asset" -C "$tmp/x"
 mkdir -p "$install_dir"
-mv "$tmp/quipu" "$install_dir/quipu"
+mv "$tmp/x/quipu" "$install_dir/quipu"
 chmod 755 "$install_dir/quipu"
 say "installed $("$install_dir/quipu" version) to $install_dir/quipu"
+
+# The quipu window (ADR 0007). Without it, quipu opens in the browser.
+if [ -f "$tmp/x/quipu-app" ]; then
+  mv "$tmp/x/quipu-app" "$install_dir/quipu-app"
+  chmod 755 "$install_dir/quipu-app"
+  if ! "$install_dir/quipu-app" -version >/dev/null 2>&1; then
+    say "the quipu window needs WebKitGTK 4.1; until it is installed, quipu opens in the browser"
+    say "  Debian/Ubuntu: sudo apt install libwebkit2gtk-4.1-0    Fedora: sudo dnf install webkit2gtk4.1"
+  fi
+fi
+if [ -d "$tmp/x/Quipu.app" ]; then
+  apps="$HOME/Applications"
+  mkdir -p "$apps"
+  rm -rf "$apps/Quipu.app"
+  mv "$tmp/x/Quipu.app" "$apps/Quipu.app"
+  say "installed the Quipu app to $apps/Quipu.app"
+fi
 
 case ":$PATH:" in
   *":$install_dir:"*) ;;

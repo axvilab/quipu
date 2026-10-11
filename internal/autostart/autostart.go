@@ -52,6 +52,7 @@ Name=Quipu
 Comment=What Claude Code knows about your projects and what it costs
 Exec=%s ui
 Icon=quipu
+StartupWMClass=quipu
 Terminal=false
 Categories=Development;
 `, binary),

@@ -1,9 +1,10 @@
 # Go lives only inside Docker; nothing is installed on the host.
 # Module and build caches live in the Docker volume $(CACHE_VOLUME), not in the project dir.
-# `make clean` removes build output; `make clean-cache` also removes the volumes.
+# `make clean` removes build output; `make clean-cache` also removes the volumes and the app image.
 
 GO_IMAGE     ?= golang:1.27.2
 NODE_IMAGE   ?= node:24.21-bookworm-slim
+APP_IMAGE    ?= quipu-app-build
 CACHE_VOLUME ?= quipu-go-cache
 NODE_VOLUMES  = quipu-node-cache quipu-node-modules
 VERSION      ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
@@ -30,10 +31,19 @@ DOCKER_NODE = docker run --rm \
 	-v quipu-node-cache:/npm \
 	-e HOME=/tmp -e npm_config_cache=/npm
 
-.PHONY: build web web-dev test vet fmt tidy shell clean clean-cache cache-volume node-volumes
+.PHONY: build app app-image web web-dev test vet fmt tidy shell clean clean-cache cache-volume node-volumes
 
-build: cache-volume web
+build: cache-volume web app
 	$(DOCKER_GO) go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o bin/quipu ./cmd/quipu
+
+# The native window (ADR 0007): links GTK 3 and WebKitGTK, so it builds in its own image.
+app: cache-volume app-image
+	$(DOCKER_RUN) -t $(APP_IMAGE) go build -trimpath -tags desktop,production,webkit2_41 \
+		-ldflags "-s -w -X main.version=$(VERSION)" -o bin/quipu-app ./cmd/quipu-app
+
+app-image:
+	@docker image inspect $(APP_IMAGE) >/dev/null 2>&1 || \
+		docker build -t $(APP_IMAGE) --build-arg GO_IMAGE=$(GO_IMAGE) -f build/app.Dockerfile build
 
 test: cache-volume
 	$(DOCKER_GO) go test ./...
@@ -73,3 +83,4 @@ clean:
 
 clean-cache: clean
 	-docker volume rm $(CACHE_VOLUME) $(NODE_VOLUMES)
+	-docker image rm $(APP_IMAGE)

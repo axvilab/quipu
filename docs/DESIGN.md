@@ -158,12 +158,17 @@ plugins so the same set can be enabled in existing projects through the switchbo
 Embedded web UI ([ADR 0004](adr/0004-embedded-web-ui.md)), served by the daemon on a fixed loopback
 port ([ADR 0005](adr/0005-distribution-and-autostart.md)) at `http://quipu.localhost:47800`:
 browsers and systemd-resolved map `*.localhost` to loopback, so no `/etc/hosts` edit. Listens on
-127.0.0.1 and ::1; other Host headers are refused. `quipu ui` opens the running instance in an
-app window (Chrome/Chromium/Edge/Brave `--app`), or a tab otherwise; an app manifest lets the
-browser install it with its icon. Shows when a session is open: "changes apply after /clear".
+127.0.0.1 and ::1; other Host headers are refused. `quipu ui` opens it in the Quipu window
+([ADR 0007](adr/0007-native-window-wails.md)): `quipu-app`, a small Wails binary with its own
+icon that forwards the webview's requests to the server (no data, no port of its own; the token
+comes in an environment variable). Only one window runs at a time. Without the window (no WebKit
+on Linux, or `--browser`) it opens a browser app window (Chrome/Chromium/Edge/Brave `--app`) or a
+tab. Shows when a session is open: "changes apply after /clear". Theme (system, light, dark) and
+language are per window, on the settings page.
 
 Install: `quipu install` adds a systemd user unit (Linux) or launchd agent (macOS) for the daemon
-and a menu entry with the icon (Linux); `quipu uninstall` removes exactly what it created.
+and a menu entry with the icon (Linux; on macOS install.sh puts Quipu.app into ~/Applications);
+`quipu uninstall` removes exactly what it created.
 
 ### 4.10 Code layout
 
