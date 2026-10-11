@@ -20,7 +20,8 @@ export interface Start {
 }
 
 export interface DiffLine {
-  kind: "add" | "del" | "ctx";
+  kind: "add" | "del" | "ctx" | "file";
+  line?: number;
   text: string;
 }
 
@@ -99,8 +100,10 @@ export interface CacheReport {
 export interface Change {
   id: string;
   path: string;
+  files: string[];
   rule: string;
   title: string;
+  params: Record<string, string>;
   time: string;
   undone: boolean;
 }

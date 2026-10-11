@@ -32,8 +32,8 @@ func largeImport(in Input) []Finding {
 			Saves:  tokens,
 			Params: map[string]string{"ref": it.Ref, "tokens": fmt.Sprint(tokens)},
 		}
-		if line, fixed, ok := replaceImport(it.From, it.Ref); ok {
-			f.Diff = "- " + line + "\n+ " + fixed
+		if line, fixed, n, ok := replaceImport(it.From, it.Ref); ok {
+			f.Diff = hunk(it.From, n) + "- " + line + "\n+ " + fixed
 			f.Edits = []Edit{{Path: it.From, Old: line, New: fixed}}
 		}
 		out = append(out, f)
@@ -42,16 +42,16 @@ func largeImport(in Input) []Finding {
 }
 
 // replaceImport finds the line with "@ref" and proposes the same line with
-// "`ref` (read it when relevant)" instead.
-func replaceImport(file, ref string) (line, fixed string, ok bool) {
+// "`ref` (read it when relevant)" instead; n is the line's number.
+func replaceImport(file, ref string) (line, fixed string, n int, ok bool) {
 	b, err := os.ReadFile(file)
 	if err != nil {
-		return "", "", false
+		return "", "", 0, false
 	}
-	for _, line := range strings.Split(string(b), "\n") {
+	for i, line := range strings.Split(string(b), "\n") {
 		if strings.Contains(line, "@"+ref) {
-			return line, strings.Replace(line, "@"+ref, "`"+ref+"` (read it when relevant)", 1), true
+			return line, strings.Replace(line, "@"+ref, "`"+ref+"` (read it when relevant)", 1), i + 1, true
 		}
 	}
-	return "", "", false
+	return "", "", 0, false
 }

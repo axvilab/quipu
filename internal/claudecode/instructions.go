@@ -42,7 +42,7 @@ const (
 func Instructions(home, configDir, projectPath string) []Item {
 	c := collector{home: home, seen: map[string]bool{}}
 
-	c.claudeMD(filepath.Join(configDir, "CLAUDE.md"), "user")
+	c.claudeMD(UserClaudeMD(configDir), "user")
 	c.rules(filepath.Join(configDir, "rules"), "user")
 
 	// CLAUDE.md files of the project and all its parents, outermost first.
@@ -69,6 +69,11 @@ func Instructions(home, configDir, projectPath string) []Item {
 		c.extensions(dir, "plugin "+name)
 	}
 	return c.items
+}
+
+// UserClaudeMD is the profile's own CLAUDE.md, loaded in every project; it may not exist yet.
+func UserClaudeMD(configDir string) string {
+	return filepath.Join(configDir, "CLAUDE.md")
 }
 
 type collector struct {

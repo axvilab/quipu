@@ -125,6 +125,36 @@
   "rule.memory-limit.title": "MEMORY.md is nearly full",
   "rule.memory-limit.detail.over": "Claude does not see entries past the limit. Merge similar ones and remove stale ones.",
   "rule.memory-limit.detail.near": "New entries will soon be cut off. Merge similar ones and remove stale ones.",
+  "rule.repeated-in-session.title": {
+    "one": "{name} repeats {count} line your CLAUDE.md already sends",
+    "other": "{name} repeats {count} lines your CLAUDE.md already sends"
+  },
+  "rule.repeated-in-session.detail": "Every session of this project gets these lines twice: from your settings and from the project file. Remove the project copy; your settings keep sending them.",
+  "rule.shared-block.title": {
+    "one": "A block of {lines} lines is copied into {count} project: “{first}”",
+    "other": "A block of {lines} lines is copied into {count} projects: “{first}”"
+  },
+  "rule.shared-block.detail.some": "Each copy has to be updated by hand. Keep one in your CLAUDE.md and remove it from the projects. It is then also sent in the other projects of this profile ({others}), ≈ {tokens} tokens each.",
+  "rule.shared-block.detail.all": "Each copy has to be updated by hand. Every project of this profile already has the block, so keep it once in your CLAUDE.md: no extra tokens, and one place to change it.",
+  "rule.copied-extension.title": {
+    "one": "“{name}” is copied into {count} project",
+    "other": "“{name}” is copied into {count} projects"
+  },
+  "rule.copied-extension.title.skill": {
+    "one": "Skill “{name}” is copied into {count} project",
+    "other": "Skill “{name}” is copied into {count} projects"
+  },
+  "rule.copied-extension.title.rule": {
+    "one": "Rule “{name}” is copied into {count} project",
+    "other": "Rule “{name}” is copied into {count} projects"
+  },
+  "rule.copied-extension.title.agent": {
+    "one": "Agent “{name}” is copied into {count} project",
+    "other": "Agent “{name}” is copied into {count} projects"
+  },
+  "rule.copied-extension.detail.skill": "The copies are identical. Move one to ~/.claude/skills/{name}/ (skills there work in every project) and delete the others, so it is changed in one place. The copies are listed below.",
+  "rule.copied-extension.detail.rule": "The copies are identical. Move one to ~/.claude/rules/ (rules there apply in every project) and delete the others, so it is changed in one place. The copies are listed below.",
+  "rule.copied-extension.detail.agent": "The copies are identical. Move one to ~/.claude/agents/ (agents there work in every project) and delete the others, so it is changed in one place. The copies are listed below.",
   "project.startTitle": "What is sent at the start of a session",
   "project.tab.context": "Context",
   "project.tab.advice": {
@@ -168,6 +198,10 @@
   "advice.projects": "In projects",
   "advice.projectsNote": "Changes in specific projects.",
   "advice.history": "Changes made by quipu",
+  "advice.files": {
+    "one": "{count} file",
+    "other": "{count} files, changed and undone together"
+  },
   "advice.undone": "undone",
   "cache.title": "Cache and tokens",
   "cache.subtitle": "Where your limits go and why the cache misses",

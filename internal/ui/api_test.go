@@ -58,7 +58,7 @@ func TestAPI(t *testing.T) {
 		t.Fatalf("overview = %+v", ov)
 	}
 	f := ov.Attention[0]
-	if f.Rule != "large-import" || !f.CanApply || f.Params["ref"] != "docs/DESIGN.md" || len(f.Diff) != 2 || f.Diff[0].Kind != "del" {
+	if f.Rule != "large-import" || !f.CanApply || f.Params["ref"] != "docs/DESIGN.md" || len(f.Diff) != 3 || f.Diff[0].Kind != "file" || f.Diff[0].Line != 2 || f.Diff[1].Kind != "del" {
 		t.Errorf("finding = %+v", f)
 	}
 

@@ -24,7 +24,7 @@ func TestLargeImport(t *testing.T) {
 		t.Fatalf("got %d findings, want 1: %+v", len(got), got)
 	}
 	f := got[0]
-	wantDiff := "- Design: @docs/DESIGN.md\n+ Design: `docs/DESIGN.md` (read it when relevant)"
+	wantDiff := "@@ " + claudeMD + ":2\n- Design: @docs/DESIGN.md\n+ Design: `docs/DESIGN.md` (read it when relevant)"
 	if f.Diff != wantDiff || f.Path != claudeMD || f.Saves < largeImportTokens {
 		t.Errorf("finding = %+v", f)
 	}

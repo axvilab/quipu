@@ -46,16 +46,31 @@ func WriteFile(path string, data []byte) error {
 	return os.Rename(tmp.Name(), path)
 }
 
+// Meta says why quipu changes a file.
+type Meta struct {
+	Rule   string
+	Title  string            // English, for the CLI and old entries
+	Params map[string]string // lets the UI show the title in the user's language
+	Batch  string            // changes made by one action share it and are undone together
+}
+
+// NewBatch returns an id that groups the changes of one action.
+func NewBatch() (string, error) {
+	return newID()
+}
+
 // Change is one file edit made by quipu.
 type Change struct {
-	ID       string    `json:"id"`
-	Path     string    `json:"path"`
-	Rule     string    `json:"rule"`
-	Title    string    `json:"title"`
-	Time     time.Time `json:"time"`
-	Existed  bool      `json:"existed"`   // false: quipu created the file
-	AfterSHA string    `json:"after_sha"` // content hash right after the edit
-	Undone   bool      `json:"undone"`
+	ID       string            `json:"id"`
+	Path     string            `json:"path"`
+	Rule     string            `json:"rule"`
+	Title    string            `json:"title"`
+	Params   map[string]string `json:"params,omitempty"`
+	Batch    string            `json:"batch,omitempty"`
+	Time     time.Time         `json:"time"`
+	Existed  bool              `json:"existed"`   // false: quipu created the file
+	AfterSHA string            `json:"after_sha"` // content hash right after the edit
+	Undone   bool              `json:"undone"`
 }
 
 // Journal keeps a backup of every file before quipu changes it.
@@ -73,12 +88,13 @@ func OpenJournal(dir string) (*Journal, error) {
 }
 
 // Write backs up path, replaces it with data and records the change.
-func (j *Journal) Write(path string, data []byte, rule, title string) (Change, error) {
+func (j *Journal) Write(path string, data []byte, m Meta) (Change, error) {
 	id, err := newID()
 	if err != nil {
 		return Change{}, err
 	}
-	c := Change{ID: id, Path: path, Rule: rule, Title: title, Time: time.Now(), AfterSHA: hash(data)}
+	c := Change{ID: id, Path: path, Rule: m.Rule, Title: m.Title, Params: m.Params, Batch: m.Batch,
+		Time: time.Now(), AfterSHA: hash(data)}
 	dir := filepath.Join(j.dir, id)
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return Change{}, err
@@ -103,25 +119,52 @@ func (j *Journal) Write(path string, data []byte, rule, title string) (Change, e
 	return c, nil
 }
 
-// Undo restores the file as it was before change id. It refuses with ErrChanged when the file
-// no longer has the content quipu wrote.
+// Undo restores the file as it was before change id, together with every other file of the
+// same batch. It refuses with ErrChanged, before restoring anything, when any of those files no
+// longer has the content quipu wrote.
 func (j *Journal) Undo(id string) error {
 	c, err := j.load(id)
 	if err != nil {
 		return err
 	}
-	if c.Undone {
-		return nil
+	group := []Change{c}
+	if c.Batch != "" {
+		all, err := j.List()
+		if err != nil {
+			return err
+		}
+		group = group[:0]
+		for _, o := range all {
+			if o.Batch == c.Batch {
+				group = append(group, o)
+			}
+		}
 	}
-	current, err := os.ReadFile(c.Path)
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return err
+	var todo []Change
+	for _, g := range group {
+		if g.Undone {
+			continue
+		}
+		current, err := os.ReadFile(g.Path)
+		if err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		if err != nil || hash(current) != g.AfterSHA {
+			return ErrChanged
+		}
+		todo = append(todo, g)
 	}
-	if err != nil || hash(current) != c.AfterSHA {
-		return ErrChanged
+	for _, g := range todo {
+		if err := j.restore(g); err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+func (j *Journal) restore(c Change) error {
 	if c.Existed {
-		original, err := os.ReadFile(filepath.Join(j.dir, id, "original"))
+		original, err := os.ReadFile(filepath.Join(j.dir, c.ID, "original"))
 		if err != nil {
 			return err
 		}

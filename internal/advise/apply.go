@@ -14,14 +14,16 @@ import (
 // again before the fix can be applied.
 var ErrStale = errors.New("the file changed since the finding was made")
 
-// Edit is a mechanical change to one file. Exactly one of the two forms is used:
+// Edit is a mechanical change to one file. Exactly one of the three forms is used:
 //   - Old/New: replace the single occurrence of Old with New;
+//   - Append: add text at the end of the file (created if missing), after a blank line;
 //   - JSONKey/JSONSet: in a JSON object file, set entries of the top-level object JSONKey
 //     (created if missing), keeping all other keys and their order.
 type Edit struct {
 	Path    string
 	Old     string
 	New     string
+	Append  string
 	JSONKey string
 	JSONSet map[string]string
 }
@@ -37,6 +39,13 @@ func (f Finding) ID() string {
 func (e Edit) Apply(current []byte) ([]byte, error) {
 	if e.JSONKey != "" {
 		return setJSONObject(current, e.JSONKey, e.JSONSet)
+	}
+	if e.Append != "" {
+		s := strings.TrimRight(string(current), "\n")
+		if s != "" {
+			s += "\n\n"
+		}
+		return []byte(s + e.Append), nil
 	}
 	if strings.Count(string(current), e.Old) != 1 {
 		return nil, ErrStale

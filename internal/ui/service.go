@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -53,8 +54,9 @@ func start(w analytics.StartWeight) Start {
 }
 
 type DiffLine struct {
-	Kind string `json:"kind"` // "add", "del" or "ctx"
+	Kind string `json:"kind"` // "add", "del", "ctx", or "file" (a hunk header: Text is the path)
 	Text string `json:"text"`
+	Line int    `json:"line,omitempty"` // for "file": number of the hunk's first line, 0 if unknown
 }
 
 type Finding struct {
@@ -129,13 +131,16 @@ type CacheReport struct {
 	Misses   []Miss `json:"misses"`
 }
 
+// Change is one action quipu took: the files it changed together, undone together.
 type Change struct {
-	ID     string `json:"id"`
-	Path   string `json:"path"`
-	Rule   string `json:"rule"`
-	Title  string `json:"title"`
-	Time   string `json:"time"`
-	Undone bool   `json:"undone"`
+	ID     string            `json:"id"` // any change of the action; undoing it undoes all
+	Path   string            `json:"path"`
+	Files  []string          `json:"files"`
+	Rule   string            `json:"rule"`
+	Title  string            `json:"title"`
+	Params map[string]string `json:"params"`
+	Time   string            `json:"time"`
+	Undone bool              `json:"undone"`
 }
 
 type Advice struct {
@@ -262,7 +267,7 @@ func (s *Service) Overview(ctx context.Context, days int) (Overview, error) {
 		return out, err
 	}
 	perProject := map[string]int{}
-	out.Attention = s.findingsAcross(rows, perProject)
+	out.Attention = s.findingsAcross(ctx, rows, perProject)
 	for _, p := range rows {
 		pf := f
 		pf.ProjectDir = p.ProjectDir
@@ -305,7 +310,7 @@ func (s *Service) ProjectDetail(ctx context.Context, dir string, days int) (Proj
 	}
 	sort.SliceStable(out.Items, func(i, j int) bool { return out.Items[i].Tokens > out.Items[j].Tokens })
 
-	for _, fd := range advise.Run(advise.Input{Home: s.home, ConfigDir: s.configDir, Project: path, Items: items}, nil) {
+	for _, fd := range advise.Run(s.adviceInput(path, s.projectItems(ctx)), nil) {
 		out.Findings = append(out.Findings, s.finding(fd, dir, []string{s.shortPath(path)}))
 	}
 	days30, _ := analytics.ByDay(ctx, s.st, f)
@@ -346,25 +351,38 @@ func (s *Service) AdviceReport(ctx context.Context) (Advice, error) {
 	if err != nil {
 		return Advice{}, err
 	}
-	out := Advice{Findings: s.findingsAcross(rows, map[string]int{}), Changes: []Change{}}
+	out := Advice{Findings: s.findingsAcross(ctx, rows, map[string]int{}), Changes: []Change{}}
 	changes, _ := s.journal.List()
-	for i, c := range changes {
-		if i == 20 {
+	index := map[string]int{} // batch → position in out.Changes
+	for _, c := range changes {
+		if i, ok := index[c.Batch]; ok && c.Batch != "" {
+			out.Changes[i].Files = append(out.Changes[i].Files, s.shortPath(c.Path))
+			continue
+		}
+		if len(out.Changes) == 20 {
 			break
 		}
-		out.Changes = append(out.Changes, Change{ID: c.ID, Path: s.shortPath(c.Path), Rule: c.Rule, Title: c.Title, Time: c.Time.Format(time.RFC3339), Undone: c.Undone})
+		if c.Batch != "" {
+			index[c.Batch] = len(out.Changes)
+		}
+		params := c.Params
+		if params == nil {
+			params = map[string]string{}
+		}
+		out.Changes = append(out.Changes, Change{ID: c.ID, Path: s.shortPath(c.Path), Files: []string{s.shortPath(c.Path)},
+			Rule: c.Rule, Title: c.Title, Params: params, Time: c.Time.Format(time.RFC3339), Undone: c.Undone})
 	}
 	return out, nil
 }
 
 // findingsAcross runs the advisor on each project and merges identical findings, so a problem in
 // the user's own settings shows once with every project it affects. perProject receives counts.
-func (s *Service) findingsAcross(rows []analytics.ProjectRow, perProject map[string]int) []Finding {
+func (s *Service) findingsAcross(ctx context.Context, rows []analytics.ProjectRow, perProject map[string]int) []Finding {
 	out := []Finding{}
 	index := map[string]int{}
+	projects := s.projectItems(ctx)
 	for _, p := range rows {
-		in := advise.Input{Home: s.home, ConfigDir: s.configDir, Project: p.Path, Items: claudecode.Instructions(s.home, s.configDir, p.Path)}
-		for _, fd := range advise.Run(in, nil) {
+		for _, fd := range advise.Run(s.adviceInput(p.Path, projects), nil) {
 			perProject[p.ProjectDir]++
 			key := fd.Rule + "\x00" + fd.Title + "\x00" + fd.Path
 			if i, seen := index[key]; seen {
@@ -396,6 +414,17 @@ func (s *Service) finding(f advise.Finding, dir string, projects []string) Findi
 		}
 		kind := "ctx"
 		switch {
+		case strings.HasPrefix(line, "@@ "):
+			// "@@ <path>:<line>": the file and the number of the hunk's first line.
+			ref := strings.TrimPrefix(line, "@@ ")
+			n := 0
+			if i := strings.LastIndex(ref, ":"); i > 0 {
+				if v, err := strconv.Atoi(ref[i+1:]); err == nil {
+					ref, n = ref[:i], v
+				}
+			}
+			out.Diff = append(out.Diff, DiffLine{Kind: "file", Text: s.shortPath(ref), Line: n})
+			continue
 		case strings.HasPrefix(line, "+"):
 			kind = "add"
 		case strings.HasPrefix(line, "-"):
@@ -415,7 +444,7 @@ func (s *Service) ApplyFinding(ctx context.Context, dir, id string) (Result, err
 	if !found {
 		return Result{}, problem("project-unknown")
 	}
-	in := advise.Input{Home: s.home, ConfigDir: s.configDir, Project: path, Items: claudecode.Instructions(s.home, s.configDir, path)}
+	in := s.adviceInput(path, s.projectItems(ctx))
 	var target *advise.Finding
 	for _, f := range advise.Run(in, nil) {
 		if f.ID() == id {
@@ -426,17 +455,34 @@ func (s *Service) ApplyFinding(ctx context.Context, dir, id string) (Result, err
 	if target == nil || len(target.Edits) == 0 {
 		return Result{}, problem("finding-gone")
 	}
+	// Check every edit before writing anything, so a fix that touches several files is applied
+	// to all of them or to none.
+	next := map[string][]byte{}
+	var order []string
 	for _, e := range target.Edits {
-		current, err := os.ReadFile(e.Path)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			return Result{}, problem("read-failed", "path", s.shortPath(e.Path), "error", err.Error())
+		current, seen := next[e.Path]
+		if !seen {
+			b, err := os.ReadFile(e.Path)
+			if err != nil && !errors.Is(err, fs.ErrNotExist) {
+				return Result{}, problem("read-failed", "path", s.shortPath(e.Path), "error", err.Error())
+			}
+			current = b
+			order = append(order, e.Path)
 		}
-		next, err := e.Apply(current)
+		changed, err := e.Apply(current)
 		if err != nil {
 			return Result{}, problem("file-changed", "path", s.shortPath(e.Path))
 		}
-		if _, err := s.journal.Write(e.Path, next, target.Rule, target.Title); err != nil {
-			return Result{}, problem("write-failed", "path", s.shortPath(e.Path), "error", err.Error())
+		next[e.Path] = changed
+	}
+	batch, err := fsx.NewBatch()
+	if err != nil {
+		return Result{}, err
+	}
+	meta := fsx.Meta{Rule: target.Rule, Title: target.Title, Params: target.Params, Batch: batch}
+	for _, path := range order {
+		if _, err := s.journal.Write(path, next[path], meta); err != nil {
+			return Result{}, problem("write-failed", "path", s.shortPath(path), "error", err.Error())
 		}
 	}
 	return ok("applied", "rule", target.Rule), nil
@@ -451,6 +497,31 @@ func (s *Service) UndoChange(id string) (Result, error) {
 		return Result{}, problem("undo-failed", "error", err.Error())
 	}
 	return ok("undone"), nil
+}
+
+// adviceInput is what the advisor looks at for one project; projects (from projectItems) lets
+// rules compare it with the others.
+func (s *Service) adviceInput(path string, projects map[string][]claudecode.Item) advise.Input {
+	items, ok := projects[path]
+	if !ok {
+		items = claudecode.Instructions(s.home, s.configDir, path)
+	}
+	return advise.Input{Home: s.home, ConfigDir: s.configDir, Project: path, Items: items, Projects: projects}
+}
+
+// projectItems scans every project seen in the last year that still exists, once per request.
+func (s *Service) projectItems(ctx context.Context) map[string][]claudecode.Item {
+	out := map[string][]claudecode.Item{}
+	rows, err := analytics.ByProject(ctx, s.st, analytics.Filter{Since: time.Now().AddDate(0, 0, -365)})
+	if err != nil {
+		return out
+	}
+	for _, r := range rows {
+		if fi, err := os.Stat(r.Path); err == nil && fi.IsDir() {
+			out[r.Path] = claudecode.Instructions(s.home, s.configDir, r.Path)
+		}
+	}
+	return out
 }
 
 func (s *Service) projectPathFor(ctx context.Context, dir string) (string, bool) {

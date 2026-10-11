@@ -1,4 +1,4 @@
-import type { Finding } from "./api/types";
+import type { Change, Finding } from "./api/types";
 import { has, t } from "./i18n.svelte";
 
 /** title of a finding in the current language. */
@@ -6,6 +6,14 @@ export function findingTitle(f: Finding): string {
   const params = { ...f.params, count: f.params.count ?? f.projects.length };
   const key = f.params.state ? `rule.${f.rule}.title.${f.params.state}` : `rule.${f.rule}.title`;
   return t(has(key) ? key : `rule.${f.rule}.title`, params);
+}
+
+/** title of a change quipu made, in the current language when the change recorded its params. */
+export function changeTitle(c: Change): string {
+  if (!Object.keys(c.params).length) return c.title; // made before params were recorded
+  const key = c.params.state ? `rule.${c.rule}.title.${c.params.state}` : `rule.${c.rule}.title`;
+  const found = has(key) ? key : `rule.${c.rule}.title`;
+  return has(found) ? t(found, { ...c.params, count: c.params.count ?? 1 }) : c.title;
 }
 
 export function findingDetail(f: Finding): string {

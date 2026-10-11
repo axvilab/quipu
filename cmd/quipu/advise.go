@@ -7,10 +7,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/axvilab/quipu/internal/advise"
 	"github.com/axvilab/quipu/internal/analytics"
 	"github.com/axvilab/quipu/internal/claudecode"
+	"github.com/axvilab/quipu/internal/collect"
 )
 
 func runAdvise(ctx context.Context, args []string) error {
@@ -55,7 +57,8 @@ func runAdvise(ctx context.Context, args []string) error {
 		}
 	}
 
-	in := advise.Input{Home: home, ConfigDir: configDir, Project: project, Items: claudecode.Instructions(home, configDir, project)}
+	in := advise.Input{Home: home, ConfigDir: configDir, Project: project, Items: claudecode.Instructions(home, configDir, project),
+		Projects: knownProjects(ctx, home, configDir)}
 	findings := advise.Run(in, disabled)
 	fmt.Printf("%s  (profile %s)\n\n", shortPath(home, project, project), *profile)
 	if len(findings) == 0 {
@@ -81,4 +84,28 @@ func runAdvise(ctx context.Context, args []string) error {
 		fmt.Printf("Fixing these saves ≈ %s tokens per session.\n", analytics.Human(saves))
 	}
 	return nil
+}
+
+// knownProjects scans every project quipu has seen in the last year (collecting new transcripts
+// first, as quipu cache does), so rules can compare the project with the others.
+func knownProjects(ctx context.Context, home, configDir string) map[string][]claudecode.Item {
+	out := map[string][]claudecode.Item{}
+	_, _, st, err := openData()
+	if err != nil {
+		return out
+	}
+	defer st.Close()
+	if _, err := collect.Run(ctx, home, st); err != nil {
+		return out
+	}
+	rows, err := analytics.ByProject(ctx, st, analytics.Filter{Since: time.Now().AddDate(0, 0, -365)})
+	if err != nil {
+		return out
+	}
+	for _, r := range rows {
+		if fi, err := os.Stat(r.Path); err == nil && fi.IsDir() {
+			out[r.Path] = claudecode.Instructions(home, configDir, r.Path)
+		}
+	}
+	return out
 }

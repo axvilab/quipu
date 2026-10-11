@@ -36,21 +36,23 @@ func Create(home string, now time.Time) error {
 	}
 
 	files := map[string]string{
-		filepath.Join(cfg, "CLAUDE.md"):     "# About me\n\n- Answer briefly.\n- Conventional commits.\n",
+		filepath.Join(cfg, "CLAUDE.md"):     "# About me\n\n- Answer briefly and to the point.\n- Write commit messages as Conventional Commits.\n",
 		filepath.Join(cfg, "settings.json"): "{\n  \"theme\": \"dark\",\n  \"effortLevel\": \"high\"\n}\n",
 
 		filepath.Join(shop, "CLAUDE.md"):                                shopClaudeMD(),
 		filepath.Join(shop, "docs", "DESIGN.md"):                        "# shop-api design\n\n" + strings.Repeat("The order service talks to payments through a queue; retries are idempotent by order ID.\n", 60),
 		filepath.Join(shop, ".claude", "rules", "db.md"):                "---\npaths:\n  - \"migrations/**\"\n---\nMigrations must be reversible.\n",
-		filepath.Join(shop, ".claude", "skills", "release", "SKILL.md"): "---\nname: release\ndescription: Cut a release of shop-api\n---\n1. Bump the version.\n2. Tag and push.\n",
+		filepath.Join(shop, ".claude", "skills", "release", "SKILL.md"): releaseSkill,
 
 		filepath.Join(blog, "CLAUDE.md"): "# blog\n\nStatic site. Build with `make site`.\n",
 
 		filepath.Join(cfg, "projects", claudecode.ProjectDirName(shop), "memory", "MEMORY.md"): strings.Repeat("- [Note](note.md): something learned about the shop\n", 190),
 	}
+	// The same testing block in several projects, and the same release skill in two of them.
 	for _, o := range others {
-		files[filepath.Join(o, "CLAUDE.md")] = "# " + filepath.Base(o) + "\n\nRun `make test` before committing.\n"
+		files[filepath.Join(o, "CLAUDE.md")] = "# " + filepath.Base(o) + "\n\n" + testingBlock
 	}
+	files[filepath.Join(others[0], ".claude", "skills", "release", "SKILL.md")] = releaseSkill
 	for _, skill := range []string{"pptx", "docx", "xlsx", "pdf", "deep-research", "browser"} {
 		files[filepath.Join(cfg, "skills", "synced", "demo-account", skill, "SKILL.md")] = fmt.Sprintf(
 			"---\nname: %s\ndescription: Use this skill whenever the user wants to create, read or edit %s content, including converting, extracting, reorganizing and polishing it into a finished deliverable for sharing, printing or presenting.\n---\nInstructions for %s.\n",
@@ -84,9 +86,16 @@ func Create(home string, now time.Time) error {
 	return nil
 }
 
+const (
+	testingBlock = "## Testing\n\n- Run `make test` before committing.\n- Keep each test next to the code it covers.\n"
+	releaseSkill = "---\nname: release\ndescription: Cut a release\n---\n1. Bump the version.\n2. Tag and push.\n"
+)
+
 func shopClaudeMD() string {
 	var b strings.Builder
-	b.WriteString("# shop-api\n\nDesign: @docs/DESIGN.md\n\n## Commands\n\n- `make test`\n- `make run`\n\n## Rules\n\n")
+	// The commit rule repeats the user's CLAUDE.md, so it is sent twice in every session.
+	b.WriteString("# shop-api\n\nDesign: @docs/DESIGN.md\n\n- Write commit messages as Conventional Commits.\n\n" +
+		testingBlock + "\n## Commands\n\n- `make test`\n- `make run`\n\n## Rules\n\n")
 	for i := 1; i <= 240; i++ {
 		fmt.Fprintf(&b, "- Rule %d: keep handlers thin and put logic into services.\n", i)
 	}

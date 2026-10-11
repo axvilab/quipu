@@ -19,7 +19,12 @@ func TestDemoTriggersEveryRule(t *testing.T) {
 	cfg := filepath.Join(home, ".claude")
 	shop := filepath.Join(home, "work", "shop-api")
 
-	in := advise.Input{Home: home, ConfigDir: cfg, Project: shop, Items: claudecode.Instructions(home, cfg, shop)}
+	projects := map[string][]claudecode.Item{}
+	for _, p := range []string{"work/shop-api", "work/billing", "work/infra", "work/admin", "pet/blog", "pet/mobile", "pet/notes"} {
+		path := filepath.Join(home, p)
+		projects[path] = claudecode.Instructions(home, cfg, path)
+	}
+	in := advise.Input{Home: home, ConfigDir: cfg, Project: shop, Items: projects[shop], Projects: projects}
 	fired := map[string]bool{}
 	for _, f := range advise.Run(in, nil) {
 		fired[f.Rule] = true
