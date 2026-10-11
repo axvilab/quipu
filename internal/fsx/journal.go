@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -73,8 +74,10 @@ type Change struct {
 	Params   map[string]string `json:"params,omitempty"`
 	Batch    string            `json:"batch,omitempty"`
 	Time     time.Time         `json:"time"`
-	Existed  bool              `json:"existed"`   // false: quipu created the file
-	AfterSHA string            `json:"after_sha"` // content hash right after the edit
+	Existed  bool              `json:"existed"`            // false: quipu created the file
+	Deleted  bool              `json:"deleted"`            // quipu removed the file
+	MadeDir  string            `json:"made_dir,omitempty"` // topmost folder quipu created for a new file
+	AfterSHA string            `json:"after_sha"`          // content hash right after the edit
 	Undone   bool              `json:"undone"`
 }
 
@@ -114,6 +117,8 @@ func (j *Journal) Write(path string, data []byte, m Meta) (Change, error) {
 		}
 	case !errors.Is(err, fs.ErrNotExist):
 		return Change{}, err
+	default:
+		c.MadeDir = topMissingDir(path)
 	}
 	if err := j.save(c); err != nil {
 		return Change{}, err
@@ -122,6 +127,56 @@ func (j *Journal) Write(path string, data []byte, m Meta) (Change, error) {
 		return Change{}, fmt.Errorf("write %s: %w", path, err)
 	}
 	return c, nil
+}
+
+// Remove backs up path and deletes it, then removes the directories left empty by that, up to but
+// not including stop. Undo puts the file back.
+func (j *Journal) Remove(path, stop string, m Meta) (Change, error) {
+	id, err := newID()
+	if err != nil {
+		return Change{}, err
+	}
+	original, err := os.ReadFile(path)
+	if err != nil {
+		return Change{}, err
+	}
+	c := Change{ID: id, Path: path, Rule: m.Rule, Title: m.Title, Params: m.Params, Batch: m.Batch,
+		Time: time.Now(), Existed: true, Deleted: true}
+	dir := filepath.Join(j.dir, id)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return Change{}, err
+	}
+	if err := os.WriteFile(filepath.Join(dir, "original"), original, 0o600); err != nil {
+		return Change{}, err
+	}
+	if err := j.save(c); err != nil {
+		return Change{}, err
+	}
+	if err := os.Remove(path); err != nil {
+		return Change{}, err
+	}
+	for d := filepath.Dir(path); d != stop && strings.HasPrefix(d, stop+string(filepath.Separator)); d = filepath.Dir(d) {
+		if os.Remove(d) != nil { // not empty
+			break
+		}
+	}
+	return c, nil
+}
+
+// Prune deletes the backups of changes older than age; those changes can no longer be undone.
+func (j *Journal) Prune(age time.Duration) error {
+	all, err := j.List()
+	if err != nil {
+		return err
+	}
+	for _, c := range all {
+		if time.Since(c.Time) > age {
+			if err := os.RemoveAll(filepath.Join(j.dir, c.ID)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Undo restores the file as it was before change id, together with every other file of the
@@ -154,7 +209,10 @@ func (j *Journal) Undo(id string) error {
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}
-		if err != nil || hash(current) != g.AfterSHA {
+		switch {
+		case g.Deleted && err == nil: // someone created the file again
+			return ErrChanged
+		case !g.Deleted && (err != nil || hash(current) != g.AfterSHA):
 			return ErrChanged
 		}
 		todo = append(todo, g)
@@ -176,8 +234,16 @@ func (j *Journal) restore(c Change) error {
 		if err := WriteFile(c.Path, original); err != nil {
 			return err
 		}
-	} else if err := os.Remove(c.Path); err != nil {
-		return err
+	} else {
+		if err := os.Remove(c.Path); err != nil {
+			return err
+		}
+		// Remove the folders quipu made for the file, if nothing else was put there since.
+		for d := filepath.Dir(c.Path); c.MadeDir != "" && strings.HasPrefix(d+string(filepath.Separator), c.MadeDir+string(filepath.Separator)); d = filepath.Dir(d) {
+			if os.Remove(d) != nil {
+				break
+			}
+		}
 	}
 	c.Undone = true
 	return j.save(c)
@@ -220,6 +286,17 @@ func (j *Journal) load(id string) (Change, error) {
 		return c, err
 	}
 	return c, json.Unmarshal(b, &c)
+}
+
+// topMissingDir is the outermost folder that writing path would create, or "" if its folder exists.
+func topMissingDir(path string) string {
+	top := ""
+	for d := filepath.Dir(path); ; d = filepath.Dir(d) {
+		if _, err := os.Stat(d); err == nil || d == filepath.Dir(d) {
+			return top
+		}
+		top = d
+	}
 }
 
 // newID is sortable by time and unique: a timestamp plus random bytes.

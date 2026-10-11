@@ -37,8 +37,10 @@ headings, code fences and lines shorter than 20 characters do not count on their
    of one fix are one history entry, undone together (journal batches).
 4. [x] Demo home triggers all three; checked in the UI (apply, undo); docs.
 
-## Later
+## Later (done)
 
-- An editor in the finding panel for fixes marked "manual", with the token cost as you type.
-- `copied-extension` in one click: needs the journal to delete files.
-- Remove backups older than 90 days.
+- An editor for fixes marked "manual", with the token cost as you type (plan: editor).
+- `copied-extension` in one click: a skill moves as its whole folder; the journal deletes files
+  with a backup, prunes the folders they leave empty, and removes folders it made on undo. Not
+  offered when the user's settings already have one of that name.
+- Backups older than 90 days are removed when quipu starts.

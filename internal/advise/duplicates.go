@@ -316,15 +316,18 @@ func moveToUser(in Input, files map[string]map[string]string, holders []string, 
 	}, true
 }
 
-// copiedExtension flags a skill, rule or agent whose file is identical in several projects.
-// Moving a folder is not an edit quipu makes, so the fix is described, not applied.
+// copiedExtension flags a skill, rule or agent that is identical in several projects. A skill is
+// its whole folder (SKILL.md and any scripts or references), a rule or agent is one file. When
+// the user's settings have nothing of that name yet, the fix moves one copy there and deletes the
+// others; otherwise it is left to the user.
 func copiedExtension(in Input) []Finding {
 	if len(in.Projects) < 2 {
 		return nil
 	}
 	type copyOf struct {
 		kind, name string
-		paths      []string
+		roots      []string // the skill folders or the rule/agent files
+		files      map[string]string
 	}
 	groups := map[string]*copyOf{}
 	seen := map[string]bool{} // a file can be listed more than once
@@ -334,39 +337,111 @@ func copiedExtension(in Input) []Finding {
 				continue
 			}
 			seen[it.Path] = true
-			b, err := os.ReadFile(it.Path)
-			if err != nil {
+			root := it.Path
+			if it.Kind == "skill" {
+				root = filepath.Dir(it.Path)
+			}
+			files, sum, ok := extensionFiles(root)
+			if !ok {
 				continue
 			}
-			sum := sha256.Sum256(b)
-			key := it.Kind + "\x00" + string(sum[:])
+			key := it.Kind + "\x00" + filepath.Base(root) + "\x00" + sum
 			if groups[key] == nil {
-				groups[key] = &copyOf{kind: it.Kind, name: it.Name}
+				groups[key] = &copyOf{kind: it.Kind, name: it.Name, files: files}
 			}
-			groups[key].paths = append(groups[key].paths, it.Path)
+			groups[key].roots = append(groups[key].roots, root)
 		}
 	}
 	var out []Finding
 	for _, g := range groups {
-		if len(g.paths) < 2 || !hasPathIn(g.paths, in.Project) {
+		if len(g.roots) < 2 || !hasPathIn(g.roots, in.Project) {
 			continue
 		}
-		sort.Strings(g.paths)
-		var b strings.Builder
-		for _, p := range g.paths {
-			b.WriteString("  " + p + "\n")
+		sort.Strings(g.roots)
+		f := Finding{
+			Title: fmt.Sprintf("%s %q is copied into %d projects", g.kind, g.name, len(g.roots)),
+			Params: map[string]string{"kind": g.kind, "name": g.name, "copies": fmt.Sprint(len(g.roots)),
+				"count": fmt.Sprint(len(g.roots)), "state": g.kind},
 		}
-		out = append(out, Finding{
-			Title: fmt.Sprintf("%s %q is copied into %d projects", g.kind, g.name, len(g.paths)),
-			Detail: "The copies are identical. Keep one in your own settings (" + g.kind + "s are " +
-				"read from there in every project) and delete the others, so a change is made once:\n" +
-				strings.TrimRight(b.String(), "\n"),
-			Params: map[string]string{"kind": g.kind, "name": g.name, "copies": fmt.Sprint(len(g.paths)),
-				"count": fmt.Sprint(len(g.paths)), "state": g.kind},
-		})
+		target := filepath.Join(claudecode.UserExtensionDir(in.ConfigDir, g.kind), filepath.Base(g.roots[0]))
+		if _, err := os.Stat(target); err == nil {
+			f.Params["state"] = "exists" // the user's settings already have one of that name
+			f.Detail = "Your own settings already have a " + g.kind + " of this name, so quipu does not move it; " +
+				"compare them and keep one."
+		} else {
+			f.Detail = "The copies are identical. Keep one in your own settings, where it works in every project, " +
+				"and delete the others, so a change is made once."
+			f.Path = target
+			f.Edits, f.Diff = moveExtension(g.roots, g.files, target)
+		}
+		out = append(out, f)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Title < out[j].Title })
 	return out
+}
+
+// extensionFiles reads a skill folder or a single file: relative path → content, and a hash of
+// all of it. Folders bigger than a skill would be are skipped.
+func extensionFiles(root string) (map[string]string, string, bool) {
+	files := map[string]string{}
+	size := 0
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		size += len(b)
+		rel, _ := filepath.Rel(root, path)
+		files[rel] = string(b)
+		return nil
+	})
+	if err != nil || size > 1<<20 || len(files) == 0 {
+		return nil, "", false
+	}
+	h := sha256.New()
+	for _, rel := range sortedKeys(files) {
+		fmt.Fprintf(h, "%s\x00%d\x00%s", rel, len(files[rel]), files[rel])
+	}
+	return files, fmt.Sprintf("%x", h.Sum(nil)), true
+}
+
+// moveExtension creates the files under target and deletes every copy, pruning the folders it
+// empties up to the project's skills/rules/agents folder.
+func moveExtension(roots []string, files map[string]string, target string) ([]Edit, string) {
+	var edits []Edit
+	var diff strings.Builder
+	single := len(files) == 1 && files["."] != "" // a rule or agent: root is the file itself
+	place := func(root, rel string) string {
+		if single {
+			return root
+		}
+		return filepath.Join(root, rel)
+	}
+	for _, rel := range sortedKeys(files) {
+		path := place(target, rel)
+		edits = append(edits, Edit{Path: path, Create: files[rel]})
+		diff.WriteString(hunk(path, 1) + diffPreview("+", files[rel]))
+	}
+	for _, root := range roots {
+		for _, rel := range sortedKeys(files) {
+			path := place(root, rel)
+			edits = append(edits, Edit{Path: path, Delete: true, Old: files[rel], Stop: filepath.Dir(root)})
+			diff.WriteString(hunk(path, 1) + diffPreview("-", files[rel]))
+		}
+	}
+	return edits, strings.TrimRight(diff.String(), "\n")
+}
+
+// diffPreview shows the first lines of a whole file being created or deleted.
+func diffPreview(sign, text string) string {
+	lines := strings.Split(strings.TrimRight(text, "\n"), "\n")
+	if len(lines) > 8 {
+		lines = append(lines[:7], "…")
+	}
+	return diffLines(sign, strings.Join(lines, "\n"))
 }
 
 func hasPathIn(paths []string, project string) bool {

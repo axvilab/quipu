@@ -152,9 +152,9 @@
     "one": "Agent “{name}” is copied into {count} project",
     "other": "Agent “{name}” is copied into {count} projects"
   },
-  "rule.copied-extension.detail.skill": "The copies are identical. Move one to ~/.claude/skills/{name}/ (skills there work in every project) and delete the others, so it is changed in one place. The copies are listed below.",
-  "rule.copied-extension.detail.rule": "The copies are identical. Move one to ~/.claude/rules/ (rules there apply in every project) and delete the others, so it is changed in one place. The copies are listed below.",
-  "rule.copied-extension.detail.agent": "The copies are identical. Move one to ~/.claude/agents/ (agents there work in every project) and delete the others, so it is changed in one place. The copies are listed below.",
+  "rule.copied-extension.detail.skill": "The copies are identical. In one click quipu moves one to ~/.claude/skills/{name}/ (skills there work in every project) and deletes the others, so it is changed in one place.",
+  "rule.copied-extension.detail.rule": "The copies are identical. In one click quipu moves one to ~/.claude/rules/ (rules there apply in every project) and deletes the others, so it is changed in one place.",
+  "rule.copied-extension.detail.agent": "The copies are identical. In one click quipu moves one to ~/.claude/agents/ (agents there work in every project) and deletes the others, so it is changed in one place.",
   "project.startTitle": "What is sent at the start of a session",
   "project.tab.context": "Context",
   "project.tab.advice": {
@@ -320,5 +320,6 @@
   "result.unchanged": "Nothing changed.",
   "result.file-not-editable": "quipu does not edit this file: {path}",
   "result.file-too-big": "The file is too big for the editor: {path}",
-  "rule.edit.title": "Edited in quipu"
+  "rule.edit.title": "Edited in quipu",
+  "rule.copied-extension.detail.exists": "Your settings already have a different “{name}”, so quipu does not move anything itself. Compare them and keep one."
 }

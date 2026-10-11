@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestJournal(t *testing.T) {
@@ -132,5 +133,77 @@ func TestWriteFileKeepsSymlink(t *testing.T) {
 	}
 	if got, _ := os.ReadFile(target); string(got) != "new\n" {
 		t.Errorf("target = %q, want the new content", got)
+	}
+}
+
+func TestRemoveAndUndo(t *testing.T) {
+	dir := t.TempDir()
+	j, err := OpenJournal(filepath.Join(dir, "backups"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	skills := filepath.Join(dir, "proj", ".claude", "skills")
+	file := filepath.Join(skills, "release", "scripts", "tag.sh")
+	os.MkdirAll(filepath.Dir(file), 0o755)
+	os.WriteFile(file, []byte("git tag\n"), 0o755)
+
+	c, err := j.Remove(file, skills, Meta{Rule: "r"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(skills, "release")); !os.IsNotExist(err) {
+		t.Errorf("empty skill folder left behind: %v", err)
+	}
+	if _, err := os.Stat(skills); err != nil {
+		t.Errorf("the stop folder was removed: %v", err)
+	}
+	if err := j.Undo(c.ID); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(file); string(got) != "git tag\n" {
+		t.Errorf("after undo = %q", got)
+	}
+}
+
+func TestPrune(t *testing.T) {
+	dir := t.TempDir()
+	j, _ := OpenJournal(filepath.Join(dir, "backups"))
+	file := filepath.Join(dir, "a.md")
+	os.WriteFile(file, []byte("a\n"), 0o644)
+	if _, err := j.Write(file, []byte("b\n"), Meta{Rule: "r"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := j.Prune(time.Hour); err != nil {
+		t.Fatal(err)
+	}
+	if all, _ := j.List(); len(all) != 1 {
+		t.Errorf("a fresh change was pruned: %d left", len(all))
+	}
+	if err := j.Prune(0); err != nil {
+		t.Fatal(err)
+	}
+	if all, _ := j.List(); len(all) != 0 {
+		t.Errorf("old changes kept: %d", len(all))
+	}
+}
+
+func TestUndoRemovesFoldersItMade(t *testing.T) {
+	dir := t.TempDir()
+	j, _ := OpenJournal(filepath.Join(dir, "backups"))
+	skills := filepath.Join(dir, "skills")
+	os.MkdirAll(skills, 0o755)
+	file := filepath.Join(skills, "release", "scripts", "tag.sh")
+	c, err := j.Write(file, []byte("git tag\n"), Meta{Rule: "r"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := j.Undo(c.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(skills, "release")); !os.IsNotExist(err) {
+		t.Errorf("folder made for the file was left: %v", err)
+	}
+	if _, err := os.Stat(skills); err != nil {
+		t.Errorf("a folder that existed before was removed: %v", err)
 	}
 }

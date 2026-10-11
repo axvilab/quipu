@@ -29,6 +29,7 @@ import (
 var assets embed.FS
 
 const (
+	keepBackups = 90 * 24 * time.Hour // changes older than this can no longer be undone
 	cookieName  = "quipu_token"
 	healthReply = "quipu"
 )
@@ -59,6 +60,7 @@ func NewService(home, configDir, profile, dataDir, version string, st *store.Sto
 	if err != nil {
 		return nil, err
 	}
+	journal.Prune(keepBackups) // best effort: old copies only take space
 	return &Service{home: home, configDir: configDir, profile: profile, st: st, dataDir: dataDir, journal: journal, version: version}, nil
 }
 

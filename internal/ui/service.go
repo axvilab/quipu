@@ -488,6 +488,7 @@ func (s *Service) ApplyFinding(ctx context.Context, dir, id string) (Result, err
 	// Check every edit before writing anything, so a fix that touches several files is applied
 	// to all of them or to none.
 	next := map[string][]byte{}
+	remove := map[string]string{} // files to delete → folder where pruning empty folders stops
 	var order []string
 	for _, e := range target.Edits {
 		current, seen := next[e.Path]
@@ -504,6 +505,9 @@ func (s *Service) ApplyFinding(ctx context.Context, dir, id string) (Result, err
 			return Result{}, problem("file-changed", "path", s.shortPath(e.Path))
 		}
 		next[e.Path] = changed
+		if e.Delete {
+			remove[e.Path] = e.Stop
+		}
 	}
 	batch, err := fsx.NewBatch()
 	if err != nil {
@@ -512,7 +516,11 @@ func (s *Service) ApplyFinding(ctx context.Context, dir, id string) (Result, err
 	meta := fsx.Meta{Rule: target.Rule, Title: target.Title, Params: target.Params, Batch: batch}
 	var change string // any change of the batch undoes all of it
 	for _, path := range order {
-		c, err := s.journal.Write(path, next[path], meta)
+		write := func() (fsx.Change, error) { return s.journal.Write(path, next[path], meta) }
+		if stop, ok := remove[path]; ok {
+			write = func() (fsx.Change, error) { return s.journal.Remove(path, stop, meta) }
+		}
+		c, err := write()
 		if err != nil {
 			return Result{}, problem("write-failed", "path", s.shortPath(path), "error", err.Error())
 		}

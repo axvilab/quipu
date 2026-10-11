@@ -71,6 +71,12 @@ func Instructions(home, configDir, projectPath string) []Item {
 	return c.items
 }
 
+// UserExtensionDir is where the profile keeps its own skills, rules or agents (kind "skill",
+// "rule" or "agent"); those apply in every project.
+func UserExtensionDir(configDir, kind string) string {
+	return filepath.Join(configDir, kind+"s")
+}
+
 // UserClaudeMD is the profile's own CLAUDE.md, loaded in every project; it may not exist yet.
 func UserClaudeMD(configDir string) string {
 	return filepath.Join(configDir, "CLAUDE.md")

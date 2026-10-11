@@ -1,6 +1,7 @@
 package advise
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -107,13 +108,57 @@ func TestSharedBlock(t *testing.T) {
 
 func TestCopiedExtension(t *testing.T) {
 	in, projects := dupHome(t)
+	// A script next to SKILL.md makes the skill a folder, moved as a whole.
+	for _, p := range []string{projects["api"], projects["web"]} {
+		os.MkdirAll(filepath.Join(p, ".claude", "skills", "release", "scripts"), 0o755)
+		os.WriteFile(filepath.Join(p, ".claude", "skills", "release", "scripts", "tag.sh"), []byte("git tag\n"), 0o755)
+	}
 	got := copiedExtension(in)
 	if len(got) != 1 || got[0].Params["name"] != "release" || got[0].Params["copies"] != "2" {
 		t.Fatalf("findings = %+v", got)
 	}
+	f := got[0]
+	target := filepath.Join(in.ConfigDir, "skills", "release")
+	// Two files created under the user's skills, four deleted (two per copy).
+	var creates, deletes int
+	for _, e := range f.Edits {
+		switch {
+		case e.Create != "" && strings.HasPrefix(e.Path, target+string(filepath.Separator)):
+			creates++
+		case e.Delete && e.Stop == filepath.Dir(filepath.Dir(e.Path)) || e.Delete && strings.HasSuffix(e.Stop, "skills"):
+			deletes++
+		}
+	}
+	if f.Path != target || creates != 2 || deletes != 4 {
+		t.Errorf("path %s, %d creates, %d deletes; edits = %+v", f.Path, creates, deletes, f.Edits)
+	}
+
 	in.Project = projects["cli"] // cli has no copy
 	if got := copiedExtension(in); len(got) != 0 {
 		t.Errorf("cli flagged: %+v", got)
+	}
+
+	// With a skill of that name in the user's settings, nothing is moved automatically.
+	os.MkdirAll(target, 0o755)
+	os.WriteFile(filepath.Join(target, "SKILL.md"), []byte("---\nname: release\n---\nOther.\n"), 0o644)
+	in.Project = projects["api"]
+	if got := copiedExtension(in); len(got) != 1 || len(got[0].Edits) != 0 || got[0].Params["state"] != "exists" {
+		t.Errorf("with a user skill of that name: %+v", got)
+	}
+}
+
+func TestEditCreateDelete(t *testing.T) {
+	if got, err := (Edit{Create: "x\n"}).Apply(nil); err != nil || string(got) != "x\n" {
+		t.Errorf("create = %q, %v", got, err)
+	}
+	if _, err := (Edit{Create: "x\n"}).Apply([]byte("already here\n")); !errors.Is(err, ErrStale) {
+		t.Errorf("create over a file: %v, want ErrStale", err)
+	}
+	if _, err := (Edit{Delete: true, Old: "a\n"}).Apply([]byte("a\n")); err != nil {
+		t.Errorf("delete: %v", err)
+	}
+	if _, err := (Edit{Delete: true, Old: "a\n"}).Apply([]byte("edited\n")); !errors.Is(err, ErrStale) {
+		t.Errorf("delete of an edited file: %v, want ErrStale", err)
 	}
 }
 
