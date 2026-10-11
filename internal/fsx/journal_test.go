@@ -116,3 +116,21 @@ func TestUndoBatch(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteFileKeepsSymlink(t *testing.T) {
+	dir := t.TempDir()
+	target, link := filepath.Join(dir, "shared.md"), filepath.Join(dir, "link.md")
+	os.WriteFile(target, []byte("old\n"), 0o644)
+	if err := os.Symlink(target, link); err != nil {
+		t.Skip("symlinks not supported:", err)
+	}
+	if err := WriteFile(link, []byte("new\n")); err != nil {
+		t.Fatal(err)
+	}
+	if fi, err := os.Lstat(link); err != nil || fi.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("link replaced by a regular file: %v, %v", fi, err)
+	}
+	if got, _ := os.ReadFile(target); string(got) != "new\n" {
+		t.Errorf("target = %q, want the new content", got)
+	}
+}

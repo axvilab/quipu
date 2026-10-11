@@ -3,6 +3,7 @@
   import type { Finding, Overview } from "../lib/api/types";
   import { percent, tokens } from "../lib/format";
   import { t } from "../lib/i18n.svelte";
+  import { onChanged } from "../lib/changes.svelte";
   import { prefs } from "../lib/prefs.svelte";
   import { link, projectPath } from "../lib/router.svelte";
   import FindingDetail from "../components/FindingDetail.svelte";
@@ -30,6 +31,7 @@
     void prefs.days;
     load();
   });
+  onChanged(load);
 
   const maxWrites = $derived(Math.max(1, ...(data?.projects.map((p) => p.totals.cacheWrite) ?? [1])));
 </script>

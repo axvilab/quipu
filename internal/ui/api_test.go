@@ -114,3 +114,62 @@ func TestAPI(t *testing.T) {
 		t.Errorf("stale apply %d = %+v", rec.Code, res)
 	}
 }
+
+func TestEditorAPI(t *testing.T) {
+	s := testServer(t)
+	h := s.Handler()
+	cookie := &http.Cookie{Name: cookieName, Value: s.token}
+	proj := filepath.Join(s.home, "src", "demo")
+	file := filepath.Join(proj, "CLAUDE.md")
+	os.WriteFile(file, []byte("# demo\n\nRules.\n"), 0o644)
+
+	var f File
+	if code := getJSON(t, h, "/api/file?path=~/src/demo/CLAUDE.md", cookie, &f); code != 200 {
+		t.Fatalf("read: %d", code)
+	}
+	if f.Content != "# demo\n\nRules.\n" || !f.Always || f.Tokens == 0 || f.Version == "" {
+		t.Fatalf("file = %+v", f)
+	}
+
+	// Files Claude Code does not load for a known project are off limits.
+	secret := filepath.Join(s.home, ".ssh", "config")
+	os.MkdirAll(filepath.Dir(secret), 0o700)
+	os.WriteFile(secret, []byte("Host x\n"), 0o600)
+	if code := getJSON(t, h, "/api/file?path=~/.ssh/config", cookie, nil); code != http.StatusForbidden {
+		t.Errorf("read outside instructions: %d, want 403", code)
+	}
+	if rec := postJSON(h, "/api/file", `{"path":"~/.ssh/config","content":"x","version":""}`, cookie); rec.Code != http.StatusForbidden {
+		t.Errorf("write outside instructions: %d, want 403", rec.Code)
+	}
+
+	save := func(content, version string) *httptest.ResponseRecorder {
+		b, _ := json.Marshal(map[string]string{"path": f.Path, "content": content, "version": version})
+		return postJSON(h, "/api/file", string(b), cookie)
+	}
+	if rec := save("# demo\n\nShorter.\n", f.Version); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"saved"`) {
+		t.Fatalf("save: %d %s", rec.Code, rec.Body.String())
+	}
+	if got, _ := os.ReadFile(file); string(got) != "# demo\n\nShorter.\n" {
+		t.Errorf("file = %q", got)
+	}
+	// Saving again from the old version would overwrite the change just made.
+	if rec := save("# demo\n\nStale.\n", f.Version); rec.Code == 200 || !strings.Contains(rec.Body.String(), "file-changed") {
+		t.Errorf("stale save: %d %s", rec.Code, rec.Body.String())
+	}
+
+	// The edit is in the journal and can be undone.
+	changes, _ := s.journal.List()
+	if len(changes) != 1 || changes[0].Rule != "edit" {
+		t.Fatalf("journal = %+v", changes)
+	}
+	if err := s.journal.Undo(changes[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(file); string(got) != "# demo\n\nRules.\n" {
+		t.Errorf("after undo = %q", got)
+	}
+
+	if rec := postJSON(h, "/api/tokens", `{"text":"four words in here"}`, cookie); rec.Code != 200 || !strings.Contains(rec.Body.String(), `"tokens":5`) {
+		t.Errorf("tokens: %d %s", rec.Code, rec.Body.String())
+	}
+}

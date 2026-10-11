@@ -4,6 +4,9 @@
   import { percent, tokens } from "../lib/format";
   import { t } from "../lib/i18n.svelte";
   import { prefs } from "../lib/prefs.svelte";
+  import { onChanged } from "../lib/changes.svelte";
+  import { openEditor } from "../lib/editor.svelte";
+  import ChangeList from "../components/ChangeList.svelte";
   import ContextBar from "../components/ContextBar.svelte";
   import DailyChart from "../components/DailyChart.svelte";
   import FindingDetail from "../components/FindingDetail.svelte";
@@ -17,7 +20,7 @@
   let { dir }: { dir: string } = $props();
   let data = $state<Project | null>(null);
   let error = $state<unknown>(null);
-  let tab = $state<"context" | "advice" | "activity">("context");
+  let tab = $state<"context" | "advice" | "changes" | "activity">("context");
   let open = $state<Finding | null>(null);
   let showAll = $state(false);
 
@@ -35,6 +38,8 @@
     load();
   });
 
+  onChanged(load);
+
   $effect(() => {
     if (data) document.title = `${data.name} · Quipu`;
   });
@@ -45,6 +50,7 @@
   const tabs = $derived([
     { id: "context" as const, label: t("project.tab.context") },
     { id: "advice" as const, label: t("project.tab.advice", { count: data?.findings.length ?? 0 }) },
+    { id: "changes" as const, label: t("project.tab.changes", { count: data?.changes.length ?? 0 }) },
     { id: "activity" as const, label: t("project.tab.activity") },
   ]);
 </script>
@@ -53,10 +59,17 @@
   <ul class="divide-y divide-warp">
     {#each items.slice(0, limit) as it (it.path + it.kind + it.always)}
       <li class="grid grid-cols-[minmax(0,1fr)_auto_100px_56px] items-center gap-4 py-2 text-sm">
-        <span class="min-w-0">
-          <span class="block truncate">{it.label}</span>
-          <span class="block truncate font-mono text-xs text-fleece" title={it.path}>{it.path}</span>
-        </span>
+        {#if it.editable}
+          <button class="group min-w-0 text-left" onclick={() => openEditor(it.path)} title={t("editor.open")}>
+            <span class="block truncate group-hover:text-indigo">{it.label}</span>
+            <span class="block truncate font-mono text-xs text-fleece">{it.path}</span>
+          </button>
+        {:else}
+          <span class="min-w-0">
+            <span class="block truncate">{it.label}</span>
+            <span class="block truncate font-mono text-xs text-fleece" title={it.path}>{it.path}</span>
+          </span>
+        {/if}
         <span class="text-xs text-fleece">{t(`scope.${it.scope.split(" ")[0]}`)} · {t(`kind.${it.kind}`)}</span>
         <span class="h-1.5 rounded-full bg-loom-2"><span class="block h-full rounded-full {it.always ? 'bg-qolle' : 'bg-fleece/50'}" style="width: {(it.tokens / maxTokens) * 100}%"></span></span>
         <span class="text-right">{tokens(it.tokens)}</span>
@@ -108,6 +121,12 @@
         <FindingList findings={data.findings} onopen={(f) => (open = f)} />
       {:else}
         <p class="text-sm text-fleece">{t("project.noFindings")}</p>
+      {/if}
+    {:else if tab === "changes"}
+      {#if data.changes.length}
+        <ChangeList changes={data.changes} />
+      {:else}
+        <p class="text-sm text-fleece">{t("project.noChanges")}</p>
       {/if}
     {:else}
       <DailyChart days={data.daily} />

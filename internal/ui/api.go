@@ -45,6 +45,23 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 			writeJSON(w, v, err)
 		}
 	})
+	mux.HandleFunc("GET /api/file", func(w http.ResponseWriter, r *http.Request) {
+		v, err := s.ReadFile(r.Context(), r.URL.Query().Get("path"))
+		writeJSON(w, v, err)
+	})
+	mux.HandleFunc("POST /api/file", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ Path, Content, Version string }
+		if readJSON(w, r, &in) {
+			v, err := s.SaveFile(r.Context(), in.Path, in.Content, in.Version)
+			writeJSON(w, v, err)
+		}
+	})
+	mux.HandleFunc("POST /api/tokens", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ Text string }
+		if readJSON(w, r, &in) {
+			writeJSON(w, map[string]int64{"tokens": s.Tokens(in.Text)}, nil)
+		}
+	})
 	mux.HandleFunc("GET /api/profiles", func(w http.ResponseWriter, r *http.Request) {
 		v, err := s.ProfilesReport(r.Context())
 		writeJSON(w, v, err)
@@ -133,6 +150,8 @@ func writeJSON(w http.ResponseWriter, v any, err error) {
 		switch p.Code {
 		case "project-unknown", "profile-unknown":
 			status = http.StatusNotFound
+		case "file-not-editable":
+			status = http.StatusForbidden
 		case "json-required":
 			status = http.StatusUnsupportedMediaType
 		case "unauthorized":

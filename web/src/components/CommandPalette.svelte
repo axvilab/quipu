@@ -7,6 +7,7 @@
   import { palette } from "../lib/palette.svelte";
   import { prefs, setDays } from "../lib/prefs.svelte";
   import { navigate, projectPath } from "../lib/router.svelte";
+  import { openEditor } from "../lib/editor.svelte";
   import Icon from "./Icon.svelte";
 
   interface Command {
@@ -16,6 +17,8 @@
     icon: string;
     run: () => void;
   }
+
+  let { userFile }: { userFile: string } = $props();
 
   let query = $state("");
   let active = $state(0);
@@ -52,6 +55,7 @@
       icon: th === "system" ? "monitor" : th === "light" ? "sun" : "moon",
       run: () => setTheme(th),
     })),
+    ...(userFile ? [{ id: "edit-user", label: t("palette.editUser"), hint: userFile, icon: "edit", run: () => openEditor(userFile) }] : []),
     { id: "help", label: t("palette.shortcuts"), hint: "?", icon: "keyboard", run: () => (palette.help = true) },
   ]);
 

@@ -2,6 +2,7 @@
   import type { Finding } from "../lib/api/types";
   import { api } from "../lib/api/client";
   import { report } from "../lib/toast.svelte";
+  import { openEditor } from "../lib/editor.svelte";
   import { findingDetail, findingTitle, findingWhere } from "../lib/findings";
   import { tokens } from "../lib/format";
   import { t } from "../lib/i18n.svelte";
@@ -80,6 +81,12 @@
       <span class="text-xs text-fleece">{t("finding.applyNote")}</span>
     {:else}
       <span class="text-sm text-fleece">{t("finding.manual")}</span>
+    {/if}
+    {#if finding.path}
+      {@const path = finding.path}
+      <button class="btn {finding.canApply ? 'btn-ghost' : ''} ml-auto" onclick={() => openEditor(path)} data-autofocus={finding.canApply ? undefined : true}>
+        <Icon name="edit" size={14} />{t("editor.edit")}
+      </button>
     {/if}
   </div>
 </div>

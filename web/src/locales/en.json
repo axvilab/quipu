@@ -293,5 +293,32 @@
   "result.internal": "Internal error: {error}",
   "palette.search": "Search",
   "settings.title": "Settings",
-  "settings.subtitle": "How this window looks; remembered on this computer"
+  "settings.subtitle": "How this window looks; remembered on this computer",
+  "editor.title": "Editor",
+  "editor.open": "Open in the editor",
+  "editor.edit": "Edit file",
+  "editor.tokens": "≈ {tokens} tokens",
+  "editor.always": "in every session",
+  "editor.onDemand": "when Claude opens it",
+  "editor.newFile": "The file does not exist yet: saving creates it.",
+  "editor.conflict": "The file changed outside the editor. Reload it so those changes are not overwritten.",
+  "editor.reload": "Reload",
+  "editor.unsaved": "There are unsaved changes.",
+  "editor.saveClose": "Save and close",
+  "editor.discard": "Discard",
+  "editor.keepEditing": "Keep editing",
+  "editor.save": "Save",
+  "editor.revert": "Revert",
+  "editor.hint": "Ctrl+S saves; undo in the notification or under Changes",
+  "palette.editUser": "Edit your CLAUDE.md",
+  "project.tab.changes": {
+    "one": "Changes ({count})",
+    "other": "Changes ({count})"
+  },
+  "project.noChanges": "quipu has not changed this project's files yet.",
+  "result.saved": "Saved. Open Claude Code sessions see the change after /clear.",
+  "result.unchanged": "Nothing changed.",
+  "result.file-not-editable": "quipu does not edit this file: {path}",
+  "result.file-too-big": "The file is too big for the editor: {path}",
+  "rule.edit.title": "Edited in quipu"
 }

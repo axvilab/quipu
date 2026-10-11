@@ -202,6 +202,11 @@ func (c *collector) extension(path, scope, kind, fallbackName string) {
 	c.add(Item{Load: OnDemand, Scope: scope, Kind: kind, Name: name, Path: path, Text: body})
 }
 
+// MemoryDir is the project's auto-memory directory, where Claude Code keeps MEMORY.md.
+func MemoryDir(configDir, projectPath string) string {
+	return memoryDir(configDir, projectPath)
+}
+
 // memoryDir is the project's auto-memory directory: autoMemoryDirectory from user or local
 // settings (project settings may not set it), else <config>/projects/<encoded path>/memory.
 func memoryDir(configDir, projectPath string) string {

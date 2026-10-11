@@ -62,6 +62,7 @@ export interface Item {
   always: boolean;
   tokens: number;
   path: string;
+  editable: boolean;
 }
 
 export interface Day {
@@ -81,6 +82,7 @@ export interface Project {
   onDemandTotal: number;
   findings: Finding[];
   daily: Day[];
+  changes: Change[];
 }
 
 export interface Miss {
@@ -152,6 +154,7 @@ export interface Session {
   version: string;
   profile: string;
   profiles: ProfileInfo[];
+  userFile: string;
 }
 
 /** The answer to an action, or an error: a code translated as `result.<code>`. */
@@ -159,4 +162,15 @@ export interface Result {
   ok: boolean;
   code: string;
   params?: Record<string, string>;
+}
+
+/** An instruction file opened in the editor. */
+export interface EditorFile {
+  path: string;
+  name: string;
+  content: string;
+  version: string;
+  tokens: number;
+  always: boolean;
+  exists: boolean;
 }

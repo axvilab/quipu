@@ -96,6 +96,8 @@ type Item struct {
 	Always bool   `json:"always"`
 	Tokens int64  `json:"tokens"`
 	Path   string `json:"path"`
+	// Editable is false for files managed elsewhere: synced from claude.ai or installed by plugins.
+	Editable bool `json:"editable"`
 }
 
 type Day struct {
@@ -115,6 +117,7 @@ type Project struct {
 	OnDemandTotal int64     `json:"onDemandTotal"`
 	Findings      []Finding `json:"findings"`
 	Daily         []Day     `json:"daily"`
+	Changes       []Change  `json:"changes"` // quipu's changes that touched this project's files
 }
 
 type Miss struct {
@@ -187,6 +190,7 @@ type Session struct {
 	Version  string        `json:"version"`
 	Profile  string        `json:"profile"`
 	Profiles []ProfileInfo `json:"profiles"`
+	UserFile string        `json:"userFile"` // the profile's own CLAUDE.md, for "edit my CLAUDE.md"
 }
 
 // Result answers an action: a code the frontend translates, with parameters.
@@ -248,7 +252,8 @@ func (s *Service) previous(ctx context.Context, f analytics.Filter) Totals {
 
 // SessionInfo tells the frontend who it serves.
 func (s *Service) SessionInfo(ctx context.Context) Session {
-	return Session{Version: s.version, Profile: s.profile, Profiles: s.profileInfos(ctx)}
+	return Session{Version: s.version, Profile: s.profile, Profiles: s.profileInfos(ctx),
+		UserFile: s.shortPath(claudecode.UserClaudeMD(s.configDir))}
 }
 
 // Overview is the home screen: totals against the previous period, projects and what to fix.
@@ -301,7 +306,9 @@ func (s *Service) ProjectDetail(ctx context.Context, dir string, days int) (Proj
 	for _, it := range items {
 		n := analytics.EstimateTokens(it.Text)
 		always := it.Load == claudecode.Always
-		out.Items = append(out.Items, Item{Label: s.itemLabel(it, path), Scope: it.Scope, Kind: it.Kind, Always: always, Tokens: n, Path: s.shortPath(it.Path)})
+		editable := it.Path != "" && it.Scope != "claude.ai" && !strings.HasPrefix(it.Scope, "plugin ")
+		out.Items = append(out.Items, Item{Label: s.itemLabel(it, path), Scope: it.Scope, Kind: it.Kind, Always: always, Tokens: n,
+			Path: s.shortPath(it.Path), Editable: editable})
 		if always {
 			out.AlwaysTotal += n
 		} else {
@@ -313,6 +320,10 @@ func (s *Service) ProjectDetail(ctx context.Context, dir string, days int) (Proj
 	for _, fd := range advise.Run(s.adviceInput(path, s.projectItems(ctx)), nil) {
 		out.Findings = append(out.Findings, s.finding(fd, dir, []string{s.shortPath(path)}))
 	}
+	memory := claudecode.MemoryDir(s.configDir, path)
+	out.Changes = s.changes(func(p string) bool {
+		return strings.HasPrefix(p, path+string(filepath.Separator)) || strings.HasPrefix(p, memory+string(filepath.Separator))
+	})
 	days30, _ := analytics.ByDay(ctx, s.st, f)
 	for _, d := range days30 {
 		out.Daily = append(out.Daily, Day{Day: d.Day.Format(time.DateOnly), Totals: totals(d.Totals)})
@@ -351,28 +362,47 @@ func (s *Service) AdviceReport(ctx context.Context) (Advice, error) {
 	if err != nil {
 		return Advice{}, err
 	}
-	out := Advice{Findings: s.findingsAcross(ctx, rows, map[string]int{}), Changes: []Change{}}
-	changes, _ := s.journal.List()
-	index := map[string]int{} // batch → position in out.Changes
-	for _, c := range changes {
-		if i, ok := index[c.Batch]; ok && c.Batch != "" {
-			out.Changes[i].Files = append(out.Changes[i].Files, s.shortPath(c.Path))
-			continue
+	return Advice{Findings: s.findingsAcross(ctx, rows, map[string]int{}), Changes: s.changes(nil)}, nil
+}
+
+// changes lists quipu's recent changes, newest first, one entry per action (the files of a batch
+// together). With touches set, only actions that changed at least one matching file are listed.
+func (s *Service) changes(touches func(path string) bool) []Change {
+	out := []Change{}
+	list, _ := s.journal.List()
+	var group []fsx.Change
+	flush := func() {
+		if len(group) == 0 {
+			return
 		}
-		if len(out.Changes) == 20 {
-			break
+		match := touches == nil
+		for _, c := range group {
+			match = match || touches(c.Path)
 		}
-		if c.Batch != "" {
-			index[c.Batch] = len(out.Changes)
+		if match && len(out) < 20 {
+			first := group[0]
+			params := first.Params
+			if params == nil {
+				params = map[string]string{}
+			}
+			ch := Change{ID: first.ID, Path: s.shortPath(first.Path), Rule: first.Rule, Title: first.Title, Params: params,
+				Time: first.Time.Format(time.RFC3339), Undone: first.Undone}
+			for _, c := range group {
+				ch.Files = append(ch.Files, s.shortPath(c.Path))
+			}
+			out = append(out, ch)
 		}
-		params := c.Params
-		if params == nil {
-			params = map[string]string{}
-		}
-		out.Changes = append(out.Changes, Change{ID: c.ID, Path: s.shortPath(c.Path), Files: []string{s.shortPath(c.Path)},
-			Rule: c.Rule, Title: c.Title, Params: params, Time: c.Time.Format(time.RFC3339), Undone: c.Undone})
+		group = nil
 	}
-	return out, nil
+	// List is newest first and a batch is written at one moment, so its entries are adjacent.
+	for _, c := range list {
+		if len(group) > 0 && (c.Batch == "" || c.Batch != group[0].Batch) {
+			flush()
+		}
+		group = append(group, c)
+	}
+	flush()
+	return out
 }
 
 // findingsAcross runs the advisor on each project and merges identical findings, so a problem in

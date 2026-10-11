@@ -6,6 +6,9 @@
   import { link, navigate, router } from "./lib/router.svelte";
   import Icon from "./components/Icon.svelte";
   import CommandPalette from "./components/CommandPalette.svelte";
+  import Editor from "./components/Editor.svelte";
+  import Panel from "./components/Panel.svelte";
+  import { closeEditor, editor } from "./lib/editor.svelte";
   import Help from "./components/Help.svelte";
   import Sidebar from "./components/Sidebar.svelte";
   import Toasts from "./components/Toasts.svelte";
@@ -37,8 +40,8 @@
       palette.open = !palette.open;
       return;
     }
-    const el = e.target as HTMLElement;
-    if (e.metaKey || e.ctrlKey || e.altKey || el.closest("input, textarea, select, [contenteditable]")) return;
+    const el = e.target instanceof Element ? e.target : null;
+    if (e.metaKey || e.ctrlKey || e.altKey || el?.closest("input, textarea, select, [contenteditable]")) return;
     if (e.key === "?") {
       palette.help = true;
       return;
@@ -95,7 +98,12 @@
       </div>
     </main>
   </div>
-  <CommandPalette />
+  {#if editor.path}
+    <Panel wide title={t("editor.title")} onclose={() => closeEditor()}>
+      {#key editor.path}<Editor path={editor.path} />{/key}
+    </Panel>
+  {/if}
+  <CommandPalette userFile={session?.userFile ?? ""} />
   <Help />
   <Toasts />
 {/if}

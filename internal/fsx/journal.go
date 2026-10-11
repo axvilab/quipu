@@ -20,7 +20,12 @@ import (
 var ErrChanged = errors.New("the file was changed after this edit")
 
 // WriteFile replaces path with data atomically, keeping the file's mode (0644 for a new file).
+// A symlink is followed and its target replaced: profiles share files through symlinks, and
+// renaming over the link would silently stop the sharing.
 func WriteFile(path string, data []byte) error {
+	if real, err := filepath.EvalSymlinks(path); err == nil {
+		path = real
+	}
 	mode := fs.FileMode(0o644)
 	if fi, err := os.Stat(path); err == nil {
 		mode = fi.Mode().Perm()
