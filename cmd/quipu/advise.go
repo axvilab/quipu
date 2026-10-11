@@ -55,7 +55,7 @@ func runAdvise(ctx context.Context, args []string) error {
 		}
 	}
 
-	in := advise.Input{Home: home, Project: project, Items: claudecode.Instructions(home, configDir, project)}
+	in := advise.Input{Home: home, ConfigDir: configDir, Project: project, Items: claudecode.Instructions(home, configDir, project)}
 	findings := advise.Run(in, disabled)
 	fmt.Printf("%s  (profile %s)\n\n", shortPath(home, project, project), *profile)
 	if len(findings) == 0 {

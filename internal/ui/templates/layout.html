@@ -19,6 +19,7 @@
     <div class="profile">{{.Profile}}</div>
   </nav>
   <main>
+    {{with .Msg}}<div class="flash" role="status">{{.}}</div>{{end}}
     {{template "content" .}}
   </main>
 </div>

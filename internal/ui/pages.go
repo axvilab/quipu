@@ -15,6 +15,7 @@ import (
 	"github.com/axvilab/quipu/internal/analytics"
 	"github.com/axvilab/quipu/internal/claudecode"
 	"github.com/axvilab/quipu/internal/collect"
+	"github.com/axvilab/quipu/internal/fsx"
 )
 
 func parsePages() (map[string]*template.Template, error) {
@@ -59,12 +60,14 @@ type page struct {
 	Nav     string
 	Title   string
 	Profile string
+	Msg     string // result of the last action, shown once
 	Data    any
 }
 
-func (s *Server) render(w http.ResponseWriter, name, nav, title string, data any) {
+func (s *Server) render(w http.ResponseWriter, r *http.Request, name, nav, title string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	if err := s.pages[name].Execute(w, page{Nav: nav, Title: title, Profile: s.profile, Data: data}); err != nil {
+	p := page{Nav: nav, Title: title, Profile: s.profile, Msg: r.URL.Query().Get("msg"), Data: data}
+	if err := s.pages[name].Execute(w, p); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
@@ -113,7 +116,7 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) {
 		pf := f
 		pf.ProjectDir = p.ProjectDir
 		start, _ := analytics.SessionStart(r.Context(), s.st, pf)
-		findings := advise.Run(advise.Input{Home: s.home, Project: p.Path,
+		findings := advise.Run(advise.Input{Home: s.home, ConfigDir: s.configDir, Project: p.Path,
 			Items: claudecode.Instructions(s.home, s.configDir, p.Path)}, nil)
 		rows = append(rows, projectRow{Dir: p.ProjectDir, Path: s.shortPath(p.Path), Totals: p.Totals, Start: start, Findings: len(findings)})
 		total.Sessions += p.Sessions
@@ -124,7 +127,7 @@ func (s *Server) overview(w http.ResponseWriter, r *http.Request) {
 		total.Output += p.Output
 		total.Misses += p.Misses
 	}
-	s.render(w, "overview", "overview", "Projects", struct {
+	s.render(w, r, "overview", "overview", "Projects", struct {
 		Days  int
 		Rows  []projectRow
 		Total analytics.Totals
@@ -177,9 +180,12 @@ func (s *Server) project(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	start, _ := analytics.SessionStart(r.Context(), s.st, f)
-	findings := advise.Run(advise.Input{Home: s.home, Project: path, Items: items}, nil)
+	var findings []findingView
+	for _, f := range advise.Run(advise.Input{Home: s.home, ConfigDir: s.configDir, Project: path, Items: items}, nil) {
+		findings = append(findings, findingView{Finding: f, Dir: dir, ShowPath: s.shortPath(f.Path)})
+	}
 
-	s.render(w, "project", "overview", s.shortPath(path), struct {
+	s.render(w, r, "project", "overview", s.shortPath(path), struct {
 		Path          string
 		Totals        analytics.Totals
 		Start         analytics.StartWeight
@@ -187,7 +193,7 @@ func (s *Server) project(w http.ResponseWriter, r *http.Request) {
 		OnDemand      []itemRow
 		AlwaysTotal   int64
 		OnDemandTotal int64
-		Findings      []advise.Finding
+		Findings      []findingView
 	}{s.shortPath(path), projects[0].Totals, start, always, onDemand, alwaysTotal, onDemandTotal, findings})
 }
 
@@ -259,7 +265,7 @@ func (s *Server) cache(w http.ResponseWriter, r *http.Request) {
 	for _, m := range misses {
 		mrows = append(mrows, missRow{Reason: m.Reason, Count: m.Count, Hint: analytics.MissHints[m.Reason]})
 	}
-	s.render(w, "cache", "cache", "Cache and tokens", struct {
+	s.render(w, r, "cache", "cache", "Cache and tokens", struct {
 		Days   int
 		Daily  []dayRow
 		Total  analytics.Totals
@@ -270,7 +276,7 @@ func (s *Server) cache(w http.ResponseWriter, r *http.Request) {
 // ---- advice ----
 
 type adviceGroup struct {
-	advise.Finding
+	findingView
 	Projects []string
 }
 
@@ -286,12 +292,12 @@ func (s *Server) advice(w http.ResponseWriter, r *http.Request) {
 	var groups []*adviceGroup
 	byKey := map[string]*adviceGroup{}
 	for _, p := range projects {
-		in := advise.Input{Home: s.home, Project: p.Path, Items: claudecode.Instructions(s.home, s.configDir, p.Path)}
+		in := advise.Input{Home: s.home, ConfigDir: s.configDir, Project: p.Path, Items: claudecode.Instructions(s.home, s.configDir, p.Path)}
 		for _, f := range advise.Run(in, nil) {
 			key := f.Rule + "\x00" + f.Title + "\x00" + f.Path
 			g, ok := byKey[key]
 			if !ok {
-				g = &adviceGroup{Finding: f}
+				g = &adviceGroup{findingView: findingView{Finding: f, Dir: p.ProjectDir, ShowPath: s.shortPath(f.Path)}}
 				byKey[key] = g
 				groups = append(groups, g)
 			}
@@ -299,7 +305,15 @@ func (s *Server) advice(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sort.SliceStable(groups, func(i, j int) bool { return groups[i].Saves > groups[j].Saves })
-	s.render(w, "advice", "advice", "What to improve", struct {
-		Groups []*adviceGroup
-	}{groups})
+	changes, _ := s.journal.List()
+	if len(changes) > 10 {
+		changes = changes[:10]
+	}
+	for i := range changes {
+		changes[i].Path = s.shortPath(changes[i].Path)
+	}
+	s.render(w, r, "advice", "advice", "What to improve", struct {
+		Groups  []*adviceGroup
+		Changes []fsx.Change
+	}{groups, changes})
 }

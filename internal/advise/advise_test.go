@@ -1,6 +1,7 @@
 package advise
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,5 +63,55 @@ func TestSizeLimits(t *testing.T) {
 	}
 	if got := Run(in, map[string]bool{"long-claude-md": true, "memory-limit": true}); len(got) != 0 {
 		t.Errorf("disabled rules still ran: %+v", got)
+	}
+}
+
+func TestEditReplace(t *testing.T) {
+	e := Edit{Old: "Design: @docs/DESIGN.md", New: "Design: `docs/DESIGN.md` (read it when relevant)"}
+	got, err := e.Apply([]byte("# Demo\nDesign: @docs/DESIGN.md\n"))
+	if err != nil || string(got) != "# Demo\nDesign: `docs/DESIGN.md` (read it when relevant)\n" {
+		t.Errorf("got %q, %v", got, err)
+	}
+	if _, err := e.Apply([]byte("# Demo\nsomeone already edited this\n")); !errors.Is(err, ErrStale) {
+		t.Errorf("stale content: err = %v, want ErrStale", err)
+	}
+}
+
+func TestEditJSON(t *testing.T) {
+	e := Edit{JSONKey: "skillOverrides", JSONSet: map[string]string{"pptx": "user-invocable-only"}}
+
+	in := `{"env": {"A": "1"}, "theme": "dark", "skillOverrides": {"docs": "off"}, "zzz": [1, 2]}`
+	got, err := e.Apply([]byte(in))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{
+  "env": {
+    "A": "1"
+  },
+  "theme": "dark",
+  "skillOverrides": {
+    "docs": "off",
+    "pptx": "user-invocable-only"
+  },
+  "zzz": [
+    1,
+    2
+  ]
+}
+`
+	if string(got) != want {
+		t.Errorf("merge into existing key:\n%s\nwant\n%s", got, want)
+	}
+
+	got, err = e.Apply([]byte(`{"theme": "dark"}`))
+	if err != nil || !strings.Contains(string(got), "\"theme\": \"dark\",\n  \"skillOverrides\": {\n    \"pptx\"") {
+		t.Errorf("new key appended last:\n%s (%v)", got, err)
+	}
+	if got, err := e.Apply(nil); err != nil || !strings.Contains(string(got), "pptx") {
+		t.Errorf("missing file: %q, %v", got, err)
+	}
+	if _, err := e.Apply([]byte("not json")); !errors.Is(err, ErrStale) {
+		t.Errorf("broken JSON: err = %v, want ErrStale", err)
 	}
 }

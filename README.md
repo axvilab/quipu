@@ -9,7 +9,17 @@ See what Claude Code knows about each of your projects and what it costs.
 
 Everything runs locally; nothing leaves your machine.
 
-> Early development. Nothing works yet. See [docs/DESIGN.md](docs/DESIGN.md).
+> Early development. See [docs/DESIGN.md](docs/DESIGN.md).
+
+## Try it
+
+```sh
+quipu ui                 # web interface for your own Claude Code data
+quipu demo /tmp/qdemo    # or a fake home, so nothing of yours is touched:
+HOME=/tmp/qdemo quipu ui
+```
+
+CLI: `quipu cache`, `quipu map [path]`, `quipu advise [path]`, `quipu daemon`.
 
 Linux and macOS.
 

@@ -31,26 +31,26 @@ func largeImport(in Input) []Finding {
 			Path:  it.From,
 			Saves: tokens,
 		}
-		if diff, ok := replaceImportDiff(it.From, it.Ref); ok {
-			f.Diff = diff
+		if line, fixed, ok := replaceImport(it.From, it.Ref); ok {
+			f.Diff = "- " + line + "\n+ " + fixed
+			f.Edits = []Edit{{Path: it.From, Old: line, New: fixed}}
 		}
 		out = append(out, f)
 	}
 	return out
 }
 
-// replaceImportDiff proposes turning "@ref" into "`ref` (read it when relevant)" on the line
-// where it appears.
-func replaceImportDiff(file, ref string) (string, bool) {
+// replaceImport finds the line with "@ref" and proposes the same line with
+// "`ref` (read it when relevant)" instead.
+func replaceImport(file, ref string) (line, fixed string, ok bool) {
 	b, err := os.ReadFile(file)
 	if err != nil {
-		return "", false
+		return "", "", false
 	}
 	for _, line := range strings.Split(string(b), "\n") {
 		if strings.Contains(line, "@"+ref) {
-			fixed := strings.Replace(line, "@"+ref, "`"+ref+"` (read it when relevant)", 1)
-			return "- " + line + "\n+ " + fixed, true
+			return line, strings.Replace(line, "@"+ref, "`"+ref+"` (read it when relevant)", 1), true
 		}
 	}
-	return "", false
+	return "", "", false
 }

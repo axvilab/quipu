@@ -2,6 +2,7 @@ package advise
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -27,9 +28,12 @@ func claudeAISkills(in Input) []Finding {
 		return nil
 	}
 	sort.Strings(names)
+	settings := filepath.Join(in.ConfigDir, "settings.json")
 
+	set := map[string]string{}
 	diff := []string{`+ "skillOverrides": {`}
 	for i, n := range names {
+		set[n] = "user-invocable-only"
 		comma := ","
 		if i == len(names)-1 {
 			comma = ""
@@ -45,5 +49,7 @@ func claudeAISkills(in Input) []Finding {
 			"\"syncClaudeAiSkills\": false.",
 		Diff:  strings.Join(diff, "\n"),
 		Saves: tokens,
+		Path:  settings,
+		Edits: []Edit{{Path: settings, JSONKey: "skillOverrides", JSONSet: set}},
 	}}
 }

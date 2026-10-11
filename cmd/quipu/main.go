@@ -28,6 +28,7 @@ commands:
   advise     check a project's Claude Code setup and propose fixes
   cache      cache hit rate per project or day, and why the cache missed
   daemon     collect Claude Code transcripts before they are deleted
+  demo       create a fake home with a Claude Code setup to try quipu on
   map        what Claude Code loads for a project and how much it weighs
   ui         open the web interface
   version    print the version
@@ -54,6 +55,8 @@ func main() {
 		err = runCache(ctx, os.Args[2:])
 	case "daemon":
 		err = runDaemon(ctx, os.Args[2:])
+	case "demo":
+		err = runDemo(os.Args[2:])
 	case "map":
 		err = runMap(ctx, os.Args[2:])
 	case "ui":
@@ -109,16 +112,21 @@ func runDaemon(ctx context.Context, args []string) error {
 
 // openStore opens the store in the user's data dir.
 func openStore() (home string, st *store.Store, err error) {
+	home, _, st, err = openData()
+	return home, st, err
+}
+
+// openData returns the home dir, quipu's data dir and the store in it.
+func openData() (home, dir string, st *store.Store, err error) {
 	home, err = os.UserHomeDir()
 	if err != nil {
-		return "", nil, err
+		return "", "", nil, err
 	}
-	dir, err := dataDir(home)
-	if err != nil {
-		return "", nil, err
+	if dir, err = dataDir(home); err != nil {
+		return "", "", nil, err
 	}
 	st, err = store.Open(dir)
-	return home, st, err
+	return home, dir, st, err
 }
 
 // dataDir is where quipu keeps collected data: $XDG_DATA_HOME/quipu or ~/.local/share/quipu on

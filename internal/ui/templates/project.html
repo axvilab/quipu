@@ -57,9 +57,13 @@
 <article class="finding">
   <div class="fhead"><strong>{{.Title}}</strong>{{if .Saves}}<span class="badge">saves ≈ {{human .Saves}} / session</span>{{end}}</div>
   <p>{{.Detail}}</p>
-  {{if .Path}}<div class="mono muted small">{{.Path}}</div>{{end}}
-  {{if .Diff}}<pre class="diff">{{range lines .Diff}}<span class="{{diffClass .}}">{{.}}</span>
-{{end}}</pre>{{end}}
-  <div class="rule muted small">rule: {{.Rule}}</div>
+  {{if .ShowPath}}<div class="mono muted small">{{.ShowPath}}</div>{{end}}
+  {{if .Diff}}<pre class="diff">{{range lines .Diff}}<span class="{{diffClass .}}">{{.}}</span>{{end}}</pre>{{end}}
+  <div class="factions">
+    {{if .Edits}}<form method="post" action="/apply"><input type="hidden" name="dir" value="{{.Dir}}"><input type="hidden" name="id" value="{{.ID}}"><button type="submit" class="primary">Apply</button></form>
+    <span class="muted small">a backup is saved; you can undo it on the Advisor page</span>
+    {{else}}<span class="muted small">needs a manual edit</span>{{end}}
+    <span class="rule muted small">rule: {{.Rule}}</span>
+  </div>
 </article>
 {{end}}

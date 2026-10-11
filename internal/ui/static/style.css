@@ -131,3 +131,13 @@ summary { cursor: pointer; color: var(--muted); }
   main { padding: 20px 16px; }
 }
 .items.more { margin-top: 8px; }
+
+.flash { background: var(--add-bg); color: var(--add-text); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; font-size: 14px; }
+.factions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 10px; }
+.factions .rule { margin: 0 0 0 auto; }
+button { font: inherit; font-size: 14px; padding: 8px 16px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--text); cursor: pointer; min-height: 40px; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 500; }
+button:hover { filter: brightness(0.96); }
+form { margin: 0; }
+.change { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.change:first-of-type { border-top: 0; }

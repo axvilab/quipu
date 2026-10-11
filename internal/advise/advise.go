@@ -13,9 +13,10 @@ import (
 
 // Input is everything a rule may look at.
 type Input struct {
-	Home    string
-	Project string
-	Items   []claudecode.Item
+	Home      string
+	ConfigDir string // the profile's Claude Code config dir, e.g. ~/.claude
+	Project   string
+	Items     []claudecode.Item
 }
 
 // Finding is one problem and what to do about it.
@@ -26,6 +27,7 @@ type Finding struct {
 	Path   string // file to change, if any
 	Diff   string // proposed change in unified-diff style, if the fix is mechanical
 	Saves  int64  // approximate tokens saved per session, 0 if unknown
+	Edits  []Edit // set when the fix can be applied automatically
 }
 
 // Rule is one check.

@@ -19,7 +19,7 @@ func runUI(ctx context.Context, args []string) error {
 	noBrowser := fs.Bool("no-browser", false, "print the link instead of opening the browser")
 	fs.Parse(args)
 
-	home, st, err := openStore()
+	home, dir, st, err := openData()
 	if err != nil {
 		return err
 	}
@@ -29,7 +29,7 @@ func runUI(ctx context.Context, args []string) error {
 		configDir += "-" + *profile
 	}
 
-	srv, err := ui.New(home, configDir, *profile, st)
+	srv, err := ui.New(home, configDir, *profile, dir, st)
 	if err != nil {
 		return err
 	}

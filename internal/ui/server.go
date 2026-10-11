@@ -17,8 +17,10 @@ import (
 	"io/fs"
 	"net"
 	"net/http"
+	"path/filepath"
 	"time"
 
+	"github.com/axvilab/quipu/internal/fsx"
 	"github.com/axvilab/quipu/internal/store"
 )
 
@@ -33,14 +35,20 @@ type Server struct {
 	configDir string
 	profile   string
 	st        *store.Store
+	journal   *fsx.Journal
 	token     string
 	addr      string // host:port we listen on, for the Host check
 	pages     map[string]*template.Template
 }
 
-// New prepares a server; call Listen to start it.
-func New(home, configDir, profile string, st *store.Store) (*Server, error) {
+// New prepares a server; call Listen to start it. Backups of files changed through the UI go
+// to <dataDir>/backups.
+func New(home, configDir, profile, dataDir string, st *store.Store) (*Server, error) {
 	pages, err := parsePages()
+	if err != nil {
+		return nil, err
+	}
+	journal, err := fsx.OpenJournal(filepath.Join(dataDir, "backups"))
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +56,7 @@ func New(home, configDir, profile string, st *store.Store) (*Server, error) {
 	if _, err := rand.Read(b); err != nil {
 		return nil, err
 	}
-	return &Server{home: home, configDir: configDir, profile: profile, st: st, token: hex.EncodeToString(b), pages: pages}, nil
+	return &Server{home: home, configDir: configDir, profile: profile, st: st, journal: journal, token: hex.EncodeToString(b), pages: pages}, nil
 }
 
 // Listen binds to 127.0.0.1:port (0 picks a free port) and serves until ctx is done.
@@ -82,6 +90,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /project", s.project)
 	mux.HandleFunc("GET /cache", s.cache)
 	mux.HandleFunc("GET /advice", s.advice)
+	mux.HandleFunc("POST /apply", s.apply)
+	mux.HandleFunc("POST /undo", s.undo)
 	return s.guard(mux)
 }
 
@@ -103,8 +113,19 @@ func (s *Server) guard(next http.Handler) http.Handler {
 			http.Error(w, "open quipu through the link printed by `quipu ui`", http.StatusUnauthorized)
 			return
 		}
+		// Changes must come from our own pages: the SameSite cookie already blocks other sites,
+		// and the Origin check also covers browsers that do not enforce it.
+		if r.Method != http.MethodGet && !s.sameOrigin(r) {
+			http.Error(w, "cross-origin request refused", http.StatusForbidden)
+			return
+		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// sameOrigin requires an Origin header naming this server; the Host itself is checked earlier.
+func (s *Server) sameOrigin(r *http.Request) bool {
+	return r.Header.Get("Origin") == "http://"+r.Host
 }
 
 func (s *Server) validToken(t string) bool {
