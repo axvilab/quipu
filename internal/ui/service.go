@@ -228,6 +228,19 @@ func window(days int) analytics.Filter {
 	return analytics.Filter{Since: time.Now().AddDate(0, 0, -days)}
 }
 
+// previous totals the window before f, or returns zero totals when the stored history does not
+// cover that window: Claude Code deletes transcripts after 30 days by default, so a half-empty
+// previous window would show growth of thousands of percent. Zero hides the comparison.
+func (s *Service) previous(ctx context.Context, f analytics.Filter) Totals {
+	p := f.Previous()
+	first, err := analytics.Earliest(ctx, s.st, f)
+	if err != nil || first.IsZero() || first.After(p.Since.Add(24*time.Hour)) {
+		return Totals{}
+	}
+	t, _ := analytics.Total(ctx, s.st, p)
+	return totals(t)
+}
+
 // SessionInfo tells the frontend who it serves.
 func (s *Service) SessionInfo(ctx context.Context) Session {
 	return Session{Version: s.version, Profile: s.profile, Profiles: s.profileInfos(ctx)}
@@ -242,8 +255,7 @@ func (s *Service) Overview(ctx context.Context, days int) (Overview, error) {
 	if err != nil {
 		return out, err
 	}
-	prev, _ := analytics.Total(ctx, s.st, f.Previous())
-	out.Totals, out.Previous = totals(t), totals(prev)
+	out.Totals, out.Previous = totals(t), s.previous(ctx, f)
 
 	rows, err := analytics.ByProject(ctx, s.st, f)
 	if err != nil {
@@ -276,8 +288,7 @@ func (s *Service) ProjectDetail(ctx context.Context, dir string, days int) (Proj
 	path := rows[0].Path
 	out := Project{Dir: dir, Path: s.shortPath(path), Name: filepath.Base(path), Items: []Item{}, Findings: []Finding{}, Daily: []Day{}}
 	t, _ := analytics.Total(ctx, s.st, f)
-	prev, _ := analytics.Total(ctx, s.st, f.Previous())
-	out.Totals, out.Previous = totals(t), totals(prev)
+	out.Totals, out.Previous = totals(t), s.previous(ctx, f)
 	w, _ := analytics.SessionStart(ctx, s.st, f)
 	out.Start = start(w)
 
@@ -313,8 +324,7 @@ func (s *Service) Cache(ctx context.Context, days int) (CacheReport, error) {
 	if err != nil {
 		return out, err
 	}
-	prev, _ := analytics.Total(ctx, s.st, f.Previous())
-	out.Totals, out.Previous = totals(t), totals(prev)
+	out.Totals, out.Previous = totals(t), s.previous(ctx, f)
 	daily, err := analytics.ByDay(ctx, s.st, f)
 	if err != nil {
 		return out, err

@@ -177,3 +177,25 @@ func Misses(ctx context.Context, st *store.Store, f Filter) ([]MissRow, error) {
 	}
 	return out, rows.Err()
 }
+
+// Earliest is the time of the first stored response, limited to f.ProjectDir when set, ignoring
+// the time window. It is zero when nothing is stored.
+func Earliest(ctx context.Context, st *store.Store, f Filter) (time.Time, error) {
+	where, args := "true", []any{}
+	if f.ProjectDir != "" {
+		where, args = "project_dir = ?", []any{f.ProjectDir}
+	}
+	rows, err := st.Query(ctx, `SELECT min(ts) FROM responses WHERE `+where, args...)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("query earliest: %w", err)
+	}
+	defer rows.Close()
+	var ts *time.Time
+	if rows.Next() {
+		err = rows.Scan(&ts)
+	}
+	if ts == nil {
+		return time.Time{}, err
+	}
+	return *ts, err
+}

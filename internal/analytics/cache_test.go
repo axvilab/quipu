@@ -142,3 +142,25 @@ func TestTotalAndPrevious(t *testing.T) {
 		t.Errorf("old window = %+v, want the one old response", old)
 	}
 }
+
+func TestEarliest(t *testing.T) {
+	st := testStore(t)
+	ctx := context.Background()
+	tests := []struct {
+		project string
+		want    time.Time
+	}{
+		{"", day1.AddDate(0, -2, 0)},
+		{"-srv-a", day1},
+		{"-srv-none", time.Time{}},
+	}
+	for _, tt := range tests {
+		got, err := Earliest(ctx, st, Filter{ProjectDir: tt.project})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !got.Equal(tt.want) {
+			t.Errorf("Earliest(%q) = %v, want %v", tt.project, got, tt.want)
+		}
+	}
+}
