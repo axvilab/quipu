@@ -32,7 +32,7 @@ type Edit struct {
 	Delete  bool
 	Stop    string
 	JSONKey string
-	JSONSet map[string]string
+	JSONSet map[string]any // values are written as JSON: strings, booleans
 }
 
 // ID identifies a finding across runs, as long as its rule, title and file stay the same.
@@ -74,7 +74,7 @@ func (e Edit) Apply(current []byte) ([]byte, error) {
 
 // setJSONObject merges set into the object under key at the top level of a JSON object.
 // Top-level key order is preserved; the file is re-indented with two spaces.
-func setJSONObject(current []byte, key string, set map[string]string) ([]byte, error) {
+func setJSONObject(current []byte, key string, set map[string]any) ([]byte, error) {
 	raw, ok, err := claudecode.SettingsValue(current, key)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrStale, err)

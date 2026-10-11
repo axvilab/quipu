@@ -78,7 +78,7 @@ func TestEditReplace(t *testing.T) {
 }
 
 func TestEditJSON(t *testing.T) {
-	e := Edit{JSONKey: "skillOverrides", JSONSet: map[string]string{"pptx": "user-invocable-only"}}
+	e := Edit{JSONKey: "skillOverrides", JSONSet: map[string]any{"pptx": "user-invocable-only"}}
 
 	in := `{"env": {"A": "1"}, "theme": "dark", "skillOverrides": {"docs": "off"}, "zzz": [1, 2]}`
 	got, err := e.Apply([]byte(in))

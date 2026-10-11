@@ -4,6 +4,7 @@ package analytics
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/axvilab/quipu/internal/store"
@@ -198,4 +199,55 @@ func Earliest(ctx context.Context, st *store.Store, f Filter) (time.Time, error)
 		return time.Time{}, err
 	}
 	return *ts, err
+}
+
+// PluginUse is where a plugin was used: the project, its folder, and how often and when last.
+type PluginUse struct {
+	Plugin     string
+	ProjectDir string
+	Path       string
+	Responses  int64
+	Last       time.Time
+}
+
+// PluginUses reports, per project, the plugins its responses used in the filter's window.
+func PluginUses(ctx context.Context, st *store.Store, f Filter) ([]PluginUse, error) {
+	where, args := f.where()
+	rows, err := st.Query(ctx, `
+		SELECT project_dir, arg_min(cwd, ts), plugins, count(*), max(ts)
+		FROM responses WHERE `+where+` AND plugins IS NOT NULL AND plugins <> ''
+		GROUP BY project_dir, plugins`, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query plugin use: %w", err)
+	}
+	defer rows.Close()
+	type key struct{ project, plugin string }
+	merged := map[key]*PluginUse{}
+	var order []key
+	for rows.Next() {
+		var dir, path, plugins string
+		var n int64
+		var last time.Time
+		if err := rows.Scan(&dir, &path, &plugins, &n, &last); err != nil {
+			return nil, err
+		}
+		for _, p := range strings.Split(plugins, ",") {
+			k := key{dir, p}
+			u, ok := merged[k]
+			if !ok {
+				u = &PluginUse{Plugin: p, ProjectDir: dir, Path: path}
+				merged[k] = u
+				order = append(order, k)
+			}
+			u.Responses += n
+			if last.After(u.Last) {
+				u.Last = last
+			}
+		}
+	}
+	out := make([]PluginUse, 0, len(order))
+	for _, k := range order {
+		out = append(out, *merged[k])
+	}
+	return out, rows.Err()
 }

@@ -428,5 +428,19 @@
   "result.backup-unreadable": "Не вдалося прочитати копію: {error}",
   "result.restore-failed": "Не вдалося відновити: {error}",
   "result.restored": "Відновлено. Відкриті сесії Claude Code побачать зміни після /clear.",
-  "rule.restore.title": "Відновлено з резервної копії"
+  "rule.restore.title": "Відновлено з резервної копії",
+  "project.plugins": "Плагіни",
+  "project.pluginsNote": "Увімкнені для цього проєкту: їхні skills, агенти й команди перелічуються в кожній сесії. MCP-інструменти плагінів теж коштують токенів, але їхній розмір знає лише Claude Code.",
+  "project.pluginScope.user": "увімкнений для всіх проєктів",
+  "project.pluginScope.project": "увімкнений у налаштуваннях проєкту",
+  "project.pluginScope.local": "увімкнений лише в тебе (settings.local.json)",
+  "project.pluginUsed": "використано {time}",
+  "project.pluginUnused": "не використовувався 30 днів",
+  "project.pluginTokens": "≈ {tokens}",
+  "rule.unused-plugin.title": "Плагін {name} не використовувався 30 днів",
+  "rule.unused-plugin.detail.user": "Він увімкнений для всіх проєктів, тож його skills, агенти, команди й MCP-інструменти потрапляють у кожну сесію кожного проєкту. Вимкни його; коли знадобиться, увімкнеш знову.",
+  "rule.unused-plugin.detail.project": "Він увімкнений у налаштуваннях проєкту, тож потрапляє в кожну сесію цього проєкту. Вимкни його; коли знадобиться, увімкнеш знову.",
+  "rule.unused-plugin.detail.local": "Він увімкнений у твоїх локальних налаштуваннях проєкту, тож потрапляє в кожну його сесію. Вимкни його; коли знадобиться, увімкнеш знову.",
+  "rule.plugin-one-project.title": "Плагін {name} увімкнений для всіх проєктів, а використовується лише в {project}",
+  "rule.plugin-one-project.detail": "Зараз він потрапляє в кожну сесію кожного проєкту. Одним кліком quipu вимкне його в загальних налаштуваннях і ввімкне лише для {project} (у settings.local.json, тільки для тебе); інші проєкти ({others}) перестануть за нього платити."
 }

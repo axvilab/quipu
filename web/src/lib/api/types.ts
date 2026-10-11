@@ -83,6 +83,16 @@ export interface Project {
   findings: Finding[];
   daily: Day[];
   changes: Change[];
+  plugins: ProjectPlugin[];
+}
+
+/** A plugin enabled for a project. */
+export interface ProjectPlugin {
+  name: string;
+  scope: "user" | "project" | "local";
+  tokens: number;
+  uses: number;
+  last?: string;
 }
 
 export interface Miss {

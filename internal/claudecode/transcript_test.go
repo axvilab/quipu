@@ -1,6 +1,8 @@
 package claudecode
 
 import (
+	"strings"
+
 	"os"
 	"testing"
 )
@@ -51,5 +53,31 @@ func TestReadResponses(t *testing.T) {
 	miss := got[2].CacheMiss
 	if miss == nil || miss.Type != "model_changed" || miss.MissedTokens != 20500 {
 		t.Errorf("msg_3 cache miss = %+v", miss)
+	}
+}
+
+func TestReadResponsesPlugins(t *testing.T) {
+	// One message written as three lines (one content block each), then a slash command.
+	lines := []string{
+		`{"type":"assistant","sessionId":"s","message":{"id":"m1","model":"claude-opus-5-5","content":[{"type":"text","text":"Let me look."}],"usage":{"input_tokens":1}}}`,
+		`{"type":"assistant","sessionId":"s","message":{"id":"m1","model":"claude-opus-5-5","content":[{"type":"tool_use","name":"mcp__plugin_playwright_playwright__browser_click","input":{}}],"usage":{"input_tokens":1}}}`,
+		`{"type":"assistant","sessionId":"s","message":{"id":"m1","model":"claude-opus-5-5","content":[{"type":"tool_use","name":"Skill","input":{"skill":"frontend-design:frontend-design"}}],"usage":{"input_tokens":1}}}`,
+		`{"type":"user","sessionId":"s","message":{"role":"user","content":"<command-name>/ship:release</command-name>"}}`,
+		`{"type":"assistant","sessionId":"s","message":{"id":"m2","model":"claude-opus-5-5","content":[{"type":"tool_use","name":"Agent","input":{"subagent_type":"Explore"}}],"usage":{"input_tokens":1}}}`,
+		`{"type":"user","sessionId":"s","message":{"role":"user","content":[{"type":"tool_result","content":"ok"}]}}`,
+		`{"type":"assistant","sessionId":"s","message":{"id":"m3","model":"claude-opus-5-5","content":[{"type":"tool_use","name":"Agent","input":{"subagent_type":"pr-tools:reviewer"}}],"usage":{"input_tokens":1}}}`,
+	}
+	rs, stats, err := ReadResponses(strings.NewReader(strings.Join(lines, "\n")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rs) != 3 || stats.Repeated != 2 {
+		t.Fatalf("%d responses, %d repeated", len(rs), stats.Repeated)
+	}
+	want := [][]string{{"frontend-design", "playwright"}, {"ship"}, {"pr-tools"}}
+	for i, w := range want {
+		if strings.Join(rs[i].Plugins, ",") != strings.Join(w, ",") {
+			t.Errorf("response %d plugins = %v, want %v", i, rs[i].Plugins, w)
+		}
 	}
 }

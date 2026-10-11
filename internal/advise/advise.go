@@ -20,6 +20,10 @@ type Input struct {
 	// Projects holds the items of every known project of the profile (Project included), keyed by
 	// project path, for rules that compare projects. Callers scan them once and share the map.
 	Projects map[string][]claudecode.Item
+	// PluginUse holds, per plugin name, the folders of the projects that used it in the last 30
+	// days; Sessions counts the sessions of that window. Without data (nil) plugin rules stay quiet.
+	PluginUse map[string][]string
+	Sessions  int64
 }
 
 // Finding is one problem and what to do about it.
@@ -55,6 +59,8 @@ var Rules = []Rule{
 	{"repeated-in-session", "a project file repeats lines your own CLAUDE.md already sends", repeatedInSession},
 	{"shared-block", "the same CLAUDE.md block is copied into several projects", sharedBlock},
 	{"copied-extension", "the same skill, rule or agent is copied into several projects", copiedExtension},
+	{"unused-plugin", "a plugin was not used in any project in 30 days", unusedPlugin},
+	{"plugin-one-project", "a plugin enabled for every project is used in only one", pluginOneProject},
 }
 
 // Run applies every rule not in disabled and returns findings, biggest savings first.

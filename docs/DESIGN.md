@@ -125,7 +125,11 @@ Per-project exclusions in settings (e.g. work projects whose memory must not lea
 A secret scan runs before every commit or export. `quipu restore` applies a backup with a
 preview of every file it will write.
 
-### 4.7 Plugins (v0.3)
+### 4.7 Plugins
+
+Done: per project, which plugins are enabled where, what they list in every session and when they
+were last used (from transcripts); rules for plugins unused in 30 days and plugins enabled for
+every project but used in one (plan: `plans/2026-10-11-plugins.md`). Planned:
 
 quipu never installs plugin files itself; it runs `claude plugin install|enable|disable … --scope
 project|local|user` (with the profile's `CLAUDE_CONFIG_DIR`), so the Claude Code install method

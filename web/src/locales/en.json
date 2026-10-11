@@ -386,5 +386,19 @@
   "result.backup-unreadable": "Could not read the backup: {error}",
   "result.restore-failed": "Could not restore: {error}",
   "result.restored": "Restored. Open Claude Code sessions see the changes after /clear.",
-  "rule.restore.title": "Restored from a backup"
+  "rule.restore.title": "Restored from a backup",
+  "project.plugins": "Plugins",
+  "project.pluginsNote": "Enabled for this project: their skills, agents and commands are listed in every session. Their MCP tools cost tokens too, but only Claude Code knows how many.",
+  "project.pluginScope.user": "enabled for every project",
+  "project.pluginScope.project": "enabled in the project's settings",
+  "project.pluginScope.local": "enabled just for you (settings.local.json)",
+  "project.pluginUsed": "used {time}",
+  "project.pluginUnused": "not used in 30 days",
+  "project.pluginTokens": "≈ {tokens}",
+  "rule.unused-plugin.title": "Plugin {name} was not used in 30 days",
+  "rule.unused-plugin.detail.user": "It is enabled for every project, so its skills, agents, commands and MCP tools are in every session of every project. Turn it off; enable it again when you need it.",
+  "rule.unused-plugin.detail.project": "It is enabled in the project's settings, so it is in every session of this project. Turn it off; enable it again when you need it.",
+  "rule.unused-plugin.detail.local": "It is enabled in your local project settings, so it is in every session of this project. Turn it off; enable it again when you need it.",
+  "rule.plugin-one-project.title": "Plugin {name} is enabled for every project but used only in {project}",
+  "rule.plugin-one-project.detail": "Now it is in every session of every project. In one click quipu turns it off in your general settings and on for {project} only (in settings.local.json, just for you); the other projects ({others}) stop paying for it."
 }

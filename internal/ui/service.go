@@ -106,18 +106,29 @@ type Day struct {
 }
 
 type Project struct {
-	Dir           string    `json:"dir"`
-	Path          string    `json:"path"`
-	Name          string    `json:"name"`
-	Totals        Totals    `json:"totals"`
-	Previous      Totals    `json:"previous"`
-	Start         Start     `json:"start"`
-	Items         []Item    `json:"items"`
-	AlwaysTotal   int64     `json:"alwaysTotal"`
-	OnDemandTotal int64     `json:"onDemandTotal"`
-	Findings      []Finding `json:"findings"`
-	Daily         []Day     `json:"daily"`
-	Changes       []Change  `json:"changes"` // quipu's changes that touched this project's files
+	Dir           string          `json:"dir"`
+	Path          string          `json:"path"`
+	Name          string          `json:"name"`
+	Totals        Totals          `json:"totals"`
+	Previous      Totals          `json:"previous"`
+	Start         Start           `json:"start"`
+	Items         []Item          `json:"items"`
+	AlwaysTotal   int64           `json:"alwaysTotal"`
+	OnDemandTotal int64           `json:"onDemandTotal"`
+	Findings      []Finding       `json:"findings"`
+	Daily         []Day           `json:"daily"`
+	Changes       []Change        `json:"changes"` // quipu's changes that touched this project's files
+	Plugins       []ProjectPlugin `json:"plugins"`
+}
+
+// ProjectPlugin is a plugin enabled for a project: where, what it lists in every session, and
+// whether this project used it in the last 30 days.
+type ProjectPlugin struct {
+	Name   string `json:"name"`
+	Scope  string `json:"scope"` // "user" (every project), "project" or "local"
+	Tokens int64  `json:"tokens"`
+	Uses   int64  `json:"uses"` // responses that used it here in 30 days
+	Last   string `json:"last,omitempty"`
 }
 
 type Miss struct {
@@ -317,9 +328,10 @@ func (s *Service) ProjectDetail(ctx context.Context, dir string, days int) (Proj
 	}
 	sort.SliceStable(out.Items, func(i, j int) bool { return out.Items[i].Tokens > out.Items[j].Tokens })
 
-	for _, fd := range advise.Run(s.adviceInput(path, s.projectItems(ctx)), nil) {
+	for _, fd := range advise.Run(s.adviceInput(path, s.adviceData(ctx)), nil) {
 		out.Findings = append(out.Findings, s.finding(fd, dir, []string{s.shortPath(path)}))
 	}
+	out.Plugins = s.projectPlugins(ctx, dir, path, items)
 	memory := claudecode.MemoryDir(s.configDir, path)
 	out.Changes = s.changes(func(p string) bool {
 		return strings.HasPrefix(p, path+string(filepath.Separator)) || strings.HasPrefix(p, memory+string(filepath.Separator))
@@ -410,9 +422,9 @@ func (s *Service) changes(touches func(path string) bool) []Change {
 func (s *Service) findingsAcross(ctx context.Context, rows []analytics.ProjectRow, perProject map[string]int) []Finding {
 	out := []Finding{}
 	index := map[string]int{}
-	projects := s.projectItems(ctx)
+	data := s.adviceData(ctx)
 	for _, p := range rows {
-		for _, fd := range advise.Run(s.adviceInput(p.Path, projects), nil) {
+		for _, fd := range advise.Run(s.adviceInput(p.Path, data), nil) {
 			perProject[p.ProjectDir]++
 			key := fd.Rule + "\x00" + fd.Title + "\x00" + fd.Path
 			if i, seen := index[key]; seen {
@@ -474,7 +486,7 @@ func (s *Service) ApplyFinding(ctx context.Context, dir, id string) (Result, err
 	if !found {
 		return Result{}, problem("project-unknown")
 	}
-	in := s.adviceInput(path, s.projectItems(ctx))
+	in := s.adviceInput(path, s.adviceData(ctx))
 	var target *advise.Finding
 	for _, f := range advise.Run(in, nil) {
 		if f.ID() == id {
@@ -540,14 +552,46 @@ func (s *Service) UndoChange(id string) (Result, error) {
 	return ok("undone"), nil
 }
 
-// adviceInput is what the advisor looks at for one project; projects (from projectItems) lets
-// rules compare it with the others.
-func (s *Service) adviceInput(path string, projects map[string][]claudecode.Item) advise.Input {
-	items, ok := projects[path]
+// adviceData is what the advisor needs about all projects, gathered once per request: every
+// project's items, and which projects used each plugin in the last 30 days.
+type adviceData struct {
+	projects  map[string][]claudecode.Item
+	pluginUse map[string][]string
+	sessions  int64
+}
+
+func (s *Service) adviceData(ctx context.Context) adviceData {
+	d := adviceData{projects: s.projectItems(ctx), pluginUse: map[string][]string{}}
+	rows, _ := analytics.ByProject(ctx, s.st, analytics.Filter{Since: time.Now().AddDate(0, 0, -365)})
+	path := map[string]string{}
+	for _, r := range rows {
+		path[r.ProjectDir] = r.Path
+	}
+	month := window(30)
+	if t, err := analytics.Total(ctx, s.st, month); err == nil {
+		d.sessions = t.Sessions
+	}
+	uses, err := analytics.PluginUses(ctx, s.st, month)
+	if err != nil {
+		d.pluginUse = nil // no usage data: plugin rules stay quiet
+		return d
+	}
+	for _, u := range uses {
+		if p, ok := path[u.ProjectDir]; ok {
+			d.pluginUse[u.Plugin] = append(d.pluginUse[u.Plugin], p)
+		}
+	}
+	return d
+}
+
+// adviceInput is what the advisor looks at for one project.
+func (s *Service) adviceInput(path string, d adviceData) advise.Input {
+	items, ok := d.projects[path]
 	if !ok {
 		items = claudecode.Instructions(s.home, s.configDir, path)
 	}
-	return advise.Input{Home: s.home, ConfigDir: s.configDir, Project: path, Items: items, Projects: projects}
+	return advise.Input{Home: s.home, ConfigDir: s.configDir, Project: path, Items: items, Projects: d.projects,
+		PluginUse: d.pluginUse, Sessions: d.sessions}
 }
 
 // projectItems scans every project seen in the last year that still exists, once per request.
@@ -757,4 +801,27 @@ func (s *Service) itemLabel(it claudecode.Item, project string) string {
 		return rel
 	}
 	return s.shortPath(it.Path)
+}
+
+// projectPlugins lists the plugins enabled for a project with their cost and use in 30 days.
+func (s *Service) projectPlugins(ctx context.Context, dir, path string, items []claudecode.Item) []ProjectPlugin {
+	f := window(30)
+	f.ProjectDir = dir
+	uses, _ := analytics.PluginUses(ctx, s.st, f)
+	out := []ProjectPlugin{}
+	for _, p := range claudecode.Plugins(s.configDir, path) {
+		row := ProjectPlugin{Name: p.Name, Scope: p.Scope}
+		for _, it := range items {
+			if it.Scope == "plugin "+p.Name && it.Load == claudecode.Always {
+				row.Tokens += analytics.EstimateTokens(it.Text)
+			}
+		}
+		for _, u := range uses {
+			if u.Plugin == p.Name {
+				row.Uses, row.Last = u.Responses, u.Last.Format(time.RFC3339)
+			}
+		}
+		out = append(out, row)
+	}
+	return out
 }

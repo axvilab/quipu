@@ -65,8 +65,8 @@ func Instructions(home, configDir, projectPath string) []Item {
 
 	c.extensions(configDir, "user")
 	c.extensions(filepath.Join(projectPath, ".claude"), "project")
-	for name, dir := range enabledPlugins(configDir, projectPath) {
-		c.extensions(dir, "plugin "+name)
+	for _, p := range Plugins(configDir, projectPath) {
+		c.extensions(p.Dir, "plugin "+p.Name)
 	}
 	return c.items
 }
@@ -234,25 +234,39 @@ func memoryDir(configDir, projectPath string) string {
 	return filepath.Join(configDir, "projects", ProjectDirName(projectPath), "memory")
 }
 
-// enabledPlugins maps each plugin enabled for the project to its install directory.
-// Later settings files override earlier ones: user, project, local.
-func enabledPlugins(configDir, projectPath string) map[string]string {
-	enabled := map[string]bool{}
-	for _, f := range []string{
-		filepath.Join(configDir, "settings.json"),
-		filepath.Join(projectPath, ".claude", "settings.json"),
-		filepath.Join(projectPath, ".claude", "settings.local.json"),
+// Plugin is a plugin enabled for a project.
+type Plugin struct {
+	ID       string // "<name>@<marketplace>", the key in enabledPlugins
+	Name     string
+	Dir      string // where it is installed
+	Scope    string // where it is enabled: "user" (every project), "project" or "local"
+	Settings string // the settings file that enables it
+}
+
+// Plugins lists the installed plugins enabled for the project. Later settings files override
+// earlier ones (user, project, local), as in Claude Code.
+func Plugins(configDir, projectPath string) []Plugin {
+	type setting struct {
+		on           bool
+		scope, where string
+	}
+	enabled := map[string]setting{}
+	for _, f := range []struct{ scope, path string }{
+		{"user", UserSettings(configDir)},
+		{"project", filepath.Join(projectPath, ".claude", "settings.json")},
+		{"local", filepath.Join(projectPath, ".claude", "settings.local.json")},
 	} {
 		var s struct {
 			EnabledPlugins map[string]json.RawMessage `json:"enabledPlugins"`
 		}
-		if !readJSON(f, &s) {
+		if !readJSON(f.path, &s) {
 			continue
 		}
 		for id, raw := range s.EnabledPlugins {
 			var on bool
 			// Besides true/false, a value can be a list of version constraints, meaning enabled.
-			enabled[id] = json.Unmarshal(raw, &on) != nil || on
+			on = json.Unmarshal(raw, &on) != nil || on
+			enabled[id] = setting{on: on, scope: f.scope, where: f.path}
 		}
 	}
 
@@ -263,13 +277,19 @@ func enabledPlugins(configDir, projectPath string) map[string]string {
 	}
 	readJSON(filepath.Join(configDir, "plugins", "installed_plugins.json"), &installed)
 
-	out := map[string]string{}
-	for id, on := range enabled {
-		if inst := installed.Plugins[id]; on && len(inst) > 0 && inst[0].InstallPath != "" {
-			out[strings.SplitN(id, "@", 2)[0]] = inst[0].InstallPath
+	var out []Plugin
+	for id, st := range enabled {
+		if inst := installed.Plugins[id]; st.on && len(inst) > 0 && inst[0].InstallPath != "" {
+			out = append(out, Plugin{ID: id, Name: strings.SplitN(id, "@", 2)[0], Dir: inst[0].InstallPath, Scope: st.scope, Settings: st.where})
 		}
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
+}
+
+// LocalSettings is a project's personal settings file, not shared through git.
+func LocalSettings(projectPath string) string {
+	return filepath.Join(projectPath, ".claude", "settings.local.json")
 }
 
 func truncateMemory(text string) string {

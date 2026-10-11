@@ -37,7 +37,7 @@ func Create(home string, now time.Time) error {
 
 	files := map[string]string{
 		filepath.Join(cfg, "CLAUDE.md"):     "# About me\n\n- Answer briefly and to the point.\n- Write commit messages as Conventional Commits.\n",
-		filepath.Join(cfg, "settings.json"): "{\n  \"theme\": \"dark\",\n  \"effortLevel\": \"high\"\n}\n",
+		filepath.Join(cfg, "settings.json"): "{\n  \"theme\": \"dark\",\n  \"effortLevel\": \"high\",\n  \"enabledPlugins\": {\n    \"browser@demo-market\": true,\n    \"slides@demo-market\": true\n  }\n}\n",
 
 		filepath.Join(shop, "CLAUDE.md"):                                shopClaudeMD(),
 		filepath.Join(shop, "docs", "DESIGN.md"):                        "# shop-api design\n\n" + strings.Repeat("The order service talks to payments through a queue; retries are idempotent by order ID.\n", 60),
@@ -53,6 +53,17 @@ func Create(home string, now time.Time) error {
 		files[filepath.Join(o, "CLAUDE.md")] = "# " + filepath.Base(o) + "\n\n" + testingBlock
 	}
 	files[filepath.Join(others[0], ".claude", "skills", "release", "SKILL.md")] = releaseSkill
+	// Two plugins enabled for every project: browser is used in shop-api only, slides nowhere.
+	installed := map[string]any{}
+	for _, name := range []string{"browser", "slides"} {
+		dir := filepath.Join(cfg, "plugins", "cache", "demo-market", name, "1.0.0")
+		files[filepath.Join(dir, "skills", name, "SKILL.md")] = fmt.Sprintf(
+			"---\nname: %s\ndescription: Use this skill whenever the user asks to work with %s, from the first step to a finished result, including checks and fixes along the way.\n---\nInstructions.\n",
+			name, name)
+		installed[name+"@demo-market"] = []map[string]string{{"installPath": dir}}
+	}
+	b, _ := json.Marshal(map[string]any{"version": 2, "plugins": installed})
+	files[filepath.Join(cfg, "plugins", "installed_plugins.json")] = string(b)
 	for _, skill := range []string{"pptx", "docx", "xlsx", "pdf", "deep-research", "browser"} {
 		files[filepath.Join(cfg, "skills", "synced", "demo-account", skill, "SKILL.md")] = fmt.Sprintf(
 			"---\nname: %s\ndescription: Use this skill whenever the user wants to create, read or edit %s content, including converting, extracting, reorganizing and polishing it into a finished deliverable for sharing, printing or presenting.\n---\nInstructions for %s.\n",
@@ -78,7 +89,11 @@ func Create(home string, now time.Time) error {
 		for i := 0; i < p.sessions; i++ {
 			started := now.AddDate(0, 0, -(i*4 + 1)).Add(-time.Duration(rng.IntN(8)) * time.Hour)
 			id := fmt.Sprintf("demo-%s-%d", filepath.Base(p.path), i)
-			if err := writeSession(filepath.Join(dir, id+".jsonl"), id, p.path, started, p.start, rng); err != nil {
+			tool := "" // shop-api drives the browser plugin now and then
+			if p.path == shop {
+				tool = "mcp__plugin_browser_browser__click"
+			}
+			if err := writeSession(filepath.Join(dir, id+".jsonl"), id, p.path, started, p.start, tool, rng); err != nil {
 				return err
 			}
 		}
@@ -104,7 +119,8 @@ func shopClaudeMD() string {
 
 // writeSession writes a transcript in Claude Code's format: each response is split over two
 // lines repeating the same usage, as the real client does.
-func writeSession(path, session, cwd string, started time.Time, startTokens int64, rng *rand.Rand) error {
+// tool, if set, is called in every fifth response.
+func writeSession(path, session, cwd string, started time.Time, startTokens int64, tool string, rng *rand.Rand) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
@@ -138,6 +154,9 @@ func writeSession(path, session, cwd string, started time.Time, startTokens int6
 				"cache_creation": map[string]any{"ephemeral_5m_input_tokens": 0, "ephemeral_1h_input_tokens": written},
 			},
 			"diagnostics": diagnostics,
+		}
+		if tool != "" && i%5 == 4 {
+			msg["content"] = []map[string]any{{"type": "tool_use", "name": tool, "input": map[string]any{}}}
 		}
 		line := map[string]any{
 			"type": "assistant", "sessionId": session, "timestamp": ts.UTC().Format(time.RFC3339),

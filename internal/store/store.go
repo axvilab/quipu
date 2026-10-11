@@ -54,7 +54,12 @@ var columns = []struct{ name, typ string }{
 	{"output_tokens", "BIGINT"},
 	{"cache_miss_type", "VARCHAR"},
 	{"cache_miss_tokens", "BIGINT"},
+	{"plugins", "VARCHAR"}, // comma-separated; added in schema 2
 }
+
+// schema is the version of the file layout above. Files of older versions are rewritten when
+// their transcript still exists, and read as they are (missing columns are NULL) when it is gone.
+const schema = 2
 
 // Store is a directory of Parquet files plus an in-memory DuckDB to query them.
 type Store struct {
@@ -80,8 +85,8 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
-// UpToDate reports whether the transcript at path has not changed since it was stored,
-// so collecting it again would change nothing.
+// UpToDate reports whether the transcript at path has not changed since it was stored with the
+// current schema, so collecting it again would change nothing.
 func (s *Store) UpToDate(path string, modTime time.Time) bool {
 	fi, err := os.Stat(filepath.Join(s.dir, fileName(path)))
 	return err == nil && !fi.ModTime().Before(modTime)
@@ -122,7 +127,11 @@ func (s *Store) WriteResponses(ctx context.Context, src Source, rs []claudecode.
 			return err
 		}
 	}
-	return os.Rename(tmp, final)
+	if err := os.Rename(tmp, final); err != nil {
+		return err
+	}
+	os.Remove(filepath.Join(s.dir, oldFileName(src.Path))) // the same transcript under schema 1
+	return nil
 }
 
 func insertRows(ctx context.Context, conn *sql.Conn, src Source, rs []claudecode.Response) error {
@@ -151,7 +160,7 @@ func insertRows(ctx context.Context, conn *sql.Conn, src Source, rs []claudecode
 			r.Model, r.StopReason, r.Sidechain,
 			u.InputTokens, u.CacheReadTokens, u.CacheCreationTokens,
 			u.CacheCreation.Ephemeral5m, u.CacheCreation.Ephemeral1h, u.OutputTokens,
-			missType, missTokens,
+			missType, missTokens, strings.Join(r.Plugins, ","),
 		)
 		if err != nil {
 			return fmt.Errorf("insert response %s: %w", r.MessageID, err)
@@ -176,14 +185,20 @@ func (s *Store) Query(ctx context.Context, query string, args ...any) (*sql.Rows
 func (s *Store) source() string {
 	files, _ := filepath.Glob(filepath.Join(s.dir, "*.parquet"))
 	if len(files) == 0 {
-		var cols []string
-		for _, c := range columns {
-			cols = append(cols, fmt.Sprintf("NULL::%s AS %s", c.typ, c.name))
-		}
-		return "SELECT " + strings.Join(cols, ", ") + " WHERE false"
+		return emptyRelation()
 	}
-	return fmt.Sprintf("SELECT * FROM read_parquet(%s, union_by_name = true)",
-		quote(filepath.Join(s.dir, "*.parquet")))
+	// The empty relation of the full shape makes every column exist even when all files are of
+	// an older schema.
+	return fmt.Sprintf("SELECT * FROM read_parquet(%s, union_by_name = true) UNION ALL BY NAME (%s)",
+		quote(filepath.Join(s.dir, "*.parquet")), emptyRelation())
+}
+
+func emptyRelation() string {
+	var cols []string
+	for _, c := range columns {
+		cols = append(cols, fmt.Sprintf("NULL::%s AS %s", c.typ, c.name))
+	}
+	return "SELECT " + strings.Join(cols, ", ") + " WHERE false"
 }
 
 func columnDefs() string {
@@ -194,8 +209,14 @@ func columnDefs() string {
 	return strings.Join(defs, ", ")
 }
 
-// fileName derives a stable Parquet file name from the transcript path.
+// fileName derives a stable Parquet file name from the transcript path and the schema version.
 func fileName(transcriptPath string) string {
+	sum := sha256.Sum256([]byte(transcriptPath))
+	return fmt.Sprintf("%s.v%d.parquet", hex.EncodeToString(sum[:12]), schema)
+}
+
+// oldFileName is the name a transcript's file had under schema 1.
+func oldFileName(transcriptPath string) string {
 	sum := sha256.Sum256([]byte(transcriptPath))
 	return hex.EncodeToString(sum[:12]) + ".parquet"
 }

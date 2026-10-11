@@ -30,7 +30,7 @@ func claudeAISkills(in Input) []Finding {
 	sort.Strings(names)
 	settings := filepath.Join(in.ConfigDir, "settings.json")
 
-	set := map[string]string{}
+	set := map[string]any{}
 	diff := []string{`+ "skillOverrides": {`}
 	for i, n := range names {
 		set[n] = "user-invocable-only"

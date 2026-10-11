@@ -1,7 +1,7 @@
 <script lang="ts">
   import { api } from "../lib/api/client";
   import type { Finding, Item, Project } from "../lib/api/types";
-  import { percent, tokens } from "../lib/format";
+  import { dateTime, percent, tokens } from "../lib/format";
   import { t } from "../lib/i18n.svelte";
   import { prefs } from "../lib/prefs.svelte";
   import { onChanged } from "../lib/changes.svelte";
@@ -107,6 +107,24 @@
 
   <div class="pt-5" role="tabpanel">
     {#if tab === "context"}
+      {#if data.plugins.length}
+        <h3 class="mb-1 text-sm font-semibold">{t("project.plugins")}</h3>
+        <p class="mb-2 text-xs text-fleece">{t("project.pluginsNote")}</p>
+        <ul class="mb-8 divide-y divide-warp">
+          {#each data.plugins as p (p.name)}
+            <li class="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 py-2 text-sm">
+              <span class="min-w-0">
+                <span class="block truncate">{p.name}</span>
+                <span class="block text-xs text-fleece">{t(`project.pluginScope.${p.scope}`)}</span>
+              </span>
+              <span class="text-xs {p.uses ? 'text-chilca' : 'text-cochineal'}">
+                {p.uses && p.last ? t("project.pluginUsed", { time: dateTime(p.last) }) : t("project.pluginUnused")}
+              </span>
+              <span class="w-20 text-right">{t("project.pluginTokens", { tokens: tokens(p.tokens) })}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
       <h3 class="mb-1 text-sm font-semibold">{t("project.always", { tokens: tokens(data.alwaysTotal) })}</h3>
       <p class="mb-2 text-xs text-fleece">{t("project.alwaysNote")}</p>
       {@render itemRows(always, always.length)}
