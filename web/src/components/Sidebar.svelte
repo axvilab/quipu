@@ -59,8 +59,8 @@
     {/each}
   {/if}
 
-  <div class="mt-3 flex items-center justify-between px-2.5">
-    <button class="text-xs text-fleece hover:text-cotton" onclick={() => (palette.help = true)}>{t("help.open")}</button>
-    {#if session?.version}<span class="text-xs text-fleece/60">{session.version}</span>{/if}
+  <div class="mt-3 flex items-center justify-between gap-3 px-2.5">
+    <button class="shrink-0 text-xs text-fleece hover:text-cotton" onclick={() => (palette.help = true)}>{t("help.open")}</button>
+    {#if session?.version}<span class="min-w-0 truncate text-xs text-fleece/60" title={session.version}>{session.version}</span>{/if}
   </div>
 </nav>
