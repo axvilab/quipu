@@ -16,9 +16,11 @@ func runUI(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("ui", flag.ExitOnError)
 	port := fs.Int("port", 0, "port on 127.0.0.1 (0 picks a free one)")
 	profile := fs.String("profile", "default", "Claude Code profile: default (~/.claude) or <name> (~/.claude-<name>)")
-	noBrowser := fs.Bool("no-browser", false, "print the link instead of opening the browser")
+	noBrowser := fs.Bool("no-browser", false, "print the link instead of opening a window")
+	browser := fs.Bool("browser", false, "open in the browser instead of the quipu window")
 	tab := fs.Bool("tab", false, "open a normal browser tab instead of an app window")
 	fs.Parse(args)
+	useWindow := !*browser && !*tab
 
 	home, dir, st, err := openData()
 	if err != nil {
@@ -28,12 +30,16 @@ func runUI(ctx context.Context, args []string) error {
 
 	// A running daemon already serves the UI: open it instead of starting a second server.
 	if url, ok := ui.Running(dir); ok && *profile == "default" && *port == 0 {
-		url = ui.Friendly(url)
-		fmt.Println("quipu UI:", url)
+		fmt.Println("quipu UI:", ui.Friendly(url))
 		if *noBrowser {
 			return nil
 		}
-		return openBrowser(url, *tab)
+		if useWindow {
+			if w := startWindow(url); w != nil {
+				return w.Process.Release()
+			}
+		}
+		return openBrowser(ui.Friendly(url), *tab)
 	}
 	configDir := filepath.Join(home, ".claude")
 	if *profile != "default" {
@@ -46,17 +52,47 @@ func runUI(ctx context.Context, args []string) error {
 	}
 	attachProfiles(srv, home)
 	defer ui.RemoveRuntime(dir)
+	ctx, stop := context.WithCancel(ctx)
+	defer stop()
 	return srv.Listen(ctx, *port, func(url string) {
 		ui.WriteRuntime(dir, url)
-		url = ui.Friendly(url)
-		fmt.Println("quipu UI:", url)
-		fmt.Println("Press Ctrl+C to stop.")
-		if !*noBrowser {
-			if err := openBrowser(url, *tab); err != nil {
-				fmt.Fprintln(os.Stderr, "quipu: could not open the browser, open the link above:", err)
+		fmt.Println("quipu UI:", ui.Friendly(url))
+		if *noBrowser {
+			fmt.Println("Press Ctrl+C to stop.")
+			return
+		}
+		// This server lives as long as the window: closing the window stops it.
+		if useWindow {
+			if w := startWindow(url); w != nil {
+				go func() { w.Wait(); stop() }()
+				return
 			}
 		}
+		fmt.Println("Press Ctrl+C to stop.")
+		if err := openBrowser(ui.Friendly(url), *tab); err != nil {
+			fmt.Fprintln(os.Stderr, "quipu: could not open the browser, open the link above:", err)
+		}
 	})
+}
+
+// startWindow starts quipu-app, the native window (ADR 0007), on the server at url. It returns nil
+// when quipu-app is not installed next to quipu or cannot run here (no GTK or WebKit on Linux),
+// so the caller falls back to the browser.
+func startWindow(url string) *exec.Cmd {
+	self, err := os.Executable()
+	if err != nil {
+		return nil
+	}
+	app := filepath.Join(filepath.Dir(self), "quipu-app")
+	if exec.Command(app, "-version").Run() != nil {
+		return nil
+	}
+	cmd := exec.Command(app)
+	cmd.Env = append(os.Environ(), "QUIPU_UI_URL="+url)
+	if cmd.Start() != nil {
+		return nil
+	}
+	return cmd
 }
 
 // openBrowser opens url in its own app window (Chrome, Chromium, Edge or Brave with --app) so

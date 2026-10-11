@@ -136,6 +136,12 @@ func (s *Server) Listen(ctx context.Context, port int, ready func(url string)) e
 
 // Handler is the full HTTP handler, guarded by the Host and token checks.
 func (s *Server) Handler() http.Handler {
+	return s.guard(s.Routes())
+}
+
+// Routes serves the app and the API without the network guard. Use it only where requests
+// cannot come from outside the process, such as the native window's asset handler (ADR 0007).
+func (s *Server) Routes() http.Handler {
 	mux := http.NewServeMux()
 	static, _ := fs.Sub(assets, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
@@ -150,7 +156,7 @@ func (s *Server) Handler() http.Handler {
 	} else {
 		mux.HandleFunc("GET /", notBuilt)
 	}
-	return s.guard(mux)
+	return mux
 }
 
 func (s *Server) guard(next http.Handler) http.Handler {
