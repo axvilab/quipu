@@ -11,17 +11,26 @@ Everything runs locally; nothing leaves your machine.
 
 > Early development. See [docs/DESIGN.md](docs/DESIGN.md).
 
-## Try it
+## Install
 
 ```sh
-quipu ui                 # web interface for your own Claude Code data
-quipu demo /tmp/qdemo    # or a fake home, so nothing of yours is touched:
+curl -fsSL https://raw.githubusercontent.com/axvilab/quipu/main/install.sh | sh
+quipu install    # start at login, add to the application menu (undo: quipu uninstall)
+quipu ui         # open http://quipu.localhost:47800
+```
+
+The script puts one binary into `~/.local/bin` and checks its checksum; no root needed.
+Linux (glibc, x86_64/arm64) and macOS (Intel/Apple Silicon).
+
+Try it on a fake home first, so nothing of yours is touched:
+
+```sh
+quipu demo /tmp/qdemo
 HOME=/tmp/qdemo quipu ui
 ```
 
 CLI: `quipu cache`, `quipu map [path]`, `quipu advise [path]`, `quipu daemon`.
 
-Linux and macOS.
 
 ## Development
 

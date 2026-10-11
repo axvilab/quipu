@@ -1,0 +1,70 @@
+name: Release
+
+# Builds quipu natively for each platform on a version tag and publishes a GitHub release with
+# checksums. DuckDB needs CGO, so there is no cross-compiling except darwin/amd64, which Apple's
+# clang builds on an arm64 runner. See ADR 0005.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { goos: linux, goarch: amd64, runner: ubuntu-22.04 }
+          - { goos: linux, goarch: arm64, runner: ubuntu-22.04-arm }
+          - { goos: darwin, goarch: arm64, runner: macos-14 }
+          - { goos: darwin, goarch: amd64, runner: macos-14, cc: "clang -arch x86_64" }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Test
+        if: ${{ !matrix.cc }}
+        run: go test ./...
+      - name: Build
+        env:
+          CGO_ENABLED: "1"
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CC: ${{ matrix.cc || 'cc' }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o quipu ./cmd/quipu
+          tar czf "quipu_${GOOS}_${GOARCH}.tar.gz" quipu LICENSE README.md
+      - name: Check the binary runs
+        if: ${{ !matrix.cc }}
+        run: ./quipu version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: quipu_${{ matrix.goos }}_${{ matrix.goarch }}
+          path: quipu_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Checksums
+        run: sha256sum quipu_*.tar.gz > checksums.txt && cat checksums.txt
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          prerelease=""
+          case "$TAG" in *-*) prerelease="--prerelease" ;; esac
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes $prerelease \
+            quipu_*.tar.gz checksums.txt
