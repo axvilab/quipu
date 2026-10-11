@@ -14,13 +14,25 @@
   async function apply() {
     busy = true;
     try {
-      report(await api.apply(finding.dir, finding.id));
+      const res = await api.apply(finding.dir, finding.id);
+      const change = res.params?.change;
+      report(res, change ? { label: t("action.undo"), run: () => undo(change) } : undefined);
       onapplied();
     } catch (e) {
       report(e);
     } finally {
       busy = false;
     }
+  }
+
+  // Undo from the toast: the panel is closed by then, so refresh through onapplied again.
+  async function undo(change: string) {
+    try {
+      report(await api.undo(change));
+    } catch (e) {
+      report(e);
+    }
+    onapplied();
   }
 </script>
 

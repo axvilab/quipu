@@ -480,12 +480,15 @@ func (s *Service) ApplyFinding(ctx context.Context, dir, id string) (Result, err
 		return Result{}, err
 	}
 	meta := fsx.Meta{Rule: target.Rule, Title: target.Title, Params: target.Params, Batch: batch}
+	var change string // any change of the batch undoes all of it
 	for _, path := range order {
-		if _, err := s.journal.Write(path, next[path], meta); err != nil {
+		c, err := s.journal.Write(path, next[path], meta)
+		if err != nil {
 			return Result{}, problem("write-failed", "path", s.shortPath(path), "error", err.Error())
 		}
+		change = c.ID
 	}
-	return ok("applied", "rule", target.Rule), nil
+	return ok("applied", "rule", target.Rule, "change", change), nil
 }
 
 // UndoChange restores a file changed by quipu, unless it was edited afterwards.

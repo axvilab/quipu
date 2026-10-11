@@ -11,6 +11,10 @@
       class="flex items-start gap-3 rounded-lg border bg-loom px-4 py-3 text-sm shadow-xl {x.kind === 'ok' ? 'border-chilca/40' : 'border-cochineal/50'}">
       <span class="mt-0.5 h-2 w-2 shrink-0 rounded-full {x.kind === 'ok' ? 'bg-chilca' : 'bg-cochineal'}" aria-hidden="true"></span>
       <p class="flex-1 leading-snug">{x.text}</p>
+      {#if x.action}
+        {@const action = x.action}
+        <button class="btn shrink-0 py-0.5" onclick={() => { dismiss(x.id); action.run(); }}>{action.label}</button>
+      {/if}
       <button class="text-fleece hover:text-cotton" onclick={() => dismiss(x.id)} aria-label={t("action.close")}><Icon name="close" size={14} /></button>
     </div>
   {/each}
