@@ -36,7 +36,7 @@ Non-goals:
 | # | Module | Command | Version |
 |---|---|---|---|
 | 1 | Collector: transcripts → Parquet before the 30-day cleanup; index CLAUDE.md, rules, skills, memory in all profiles | `quipu daemon` | v0.1 |
-| 2 | Cache analytics: cache hit % by project/profile/day, likely miss causes with confidence, session start weight | `quipu cache` | v0.1 |
+| 2 | Cache analytics: cache writes, session start weight and hit rate by project/profile/day; API-reported miss reasons | `quipu cache` | v0.1 |
 | 3 | Project map: what loads always vs on demand, weight, folders Claude does not see | `quipu map` | v0.1 |
 | 4 | Profiles: choose a subscription by folder rule or interactively; shared skills/rules library | `quipu run`, `claude` shim | v0.1 |
 | 5 | Advisor: rule-based checks, each finding a diff; later LLM grouping via `claude -p` under the same profile | `quipu advise` | v0.2 |
@@ -164,9 +164,11 @@ internal/fsx/        atomic writes, backups
 
 - History starts when quipu is installed; older transcripts are already gone.
 - Cloud sessions and other machines are invisible; the UI says the picture is partial.
-- Cache miss causes are inferred; each carries a confidence and should be checked against
-  `/usage`.
-- No absolute "good cache %"; baseline is the user's own before/after.
+- The API reports a miss reason on only part of the responses; the rest stay unexplained.
+- Cache hit rate is 97–99% for typical use (measured 2026-10-11 on real data), so it barely
+  separates good from bad setups. What costs limits is **cache writes** (priced above plain
+  input) and the **session start weight**: everything sent with the first request. Reports
+  lead with these; hit rate is secondary. Baseline is the user's own before/after.
 
 ## 7. Prior art (reviewed 2026-10)
 
