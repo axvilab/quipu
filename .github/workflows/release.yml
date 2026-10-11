@@ -24,6 +24,14 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: web/.nvmrc
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Build the web interface
+        working-directory: web
+        run: npm ci --no-audit --no-fund && npm run build
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod

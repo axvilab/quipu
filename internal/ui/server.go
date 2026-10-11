@@ -13,10 +13,10 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"html/template"
 	"io/fs"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -25,7 +25,7 @@ import (
 	"github.com/axvilab/quipu/internal/store"
 )
 
-//go:embed templates static all:dist
+//go:embed static all:dist
 var assets embed.FS
 
 const (
@@ -67,7 +67,6 @@ type Server struct {
 	*Service
 	token string
 	addr  string // host:port we listen on, for the Host check
-	pages map[string]*template.Template
 }
 
 // New prepares a server; call Listen to start it.
@@ -79,17 +78,31 @@ func New(home, configDir, profile, dataDir string, st *store.Store) (*Server, er
 	return NewServer(svc)
 }
 
-// NewServer wraps svc in an HTTP server with a fresh token.
+// NewServer wraps svc in an HTTP server. The token is kept in <dataDir>/ui-token (0600) and reused,
+// so an open tab or a bookmark keeps working after the daemon restarts (updates, reboots).
 func NewServer(svc *Service) (*Server, error) {
-	pages, err := parsePages()
+	token, err := loadToken(filepath.Join(svc.dataDir, "ui-token"))
 	if err != nil {
 		return nil, err
 	}
+	return &Server{Service: svc, token: token}, nil
+}
+
+func loadToken(file string) (string, error) {
+	if b, err := os.ReadFile(file); err == nil {
+		if t := strings.TrimSpace(string(b)); len(t) == 32 {
+			return t, nil
+		}
+	}
 	b := make([]byte, 16)
 	if _, err := rand.Read(b); err != nil {
-		return nil, err
+		return "", err
 	}
-	return &Server{Service: svc, token: hex.EncodeToString(b), pages: pages}, nil
+	t := hex.EncodeToString(b)
+	if err := os.WriteFile(file, []byte(t+"\n"), 0o600); err != nil {
+		return "", err
+	}
+	return t, nil
 }
 
 // Listen binds to 127.0.0.1:port and serves until ctx is done. If the port is taken it falls
@@ -127,26 +140,16 @@ func (s *Server) Handler() http.Handler {
 	static, _ := fs.Sub(assets, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, healthReply) })
+	mux.HandleFunc("GET /favicon.ico", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Write(Icon())
+	})
 	s.apiRoutes(mux)
 	if root := app(); root != nil {
-		// The Svelte app owns every other page; the server-rendered pages below are the fallback
-		// while the frontend is not built.
 		mux.Handle("GET /", appHandler(root))
-		return s.guard(mux)
+	} else {
+		mux.HandleFunc("GET /", notBuilt)
 	}
-	mux.HandleFunc("GET /{$}", s.overview)
-	mux.HandleFunc("GET /project", s.project)
-	mux.HandleFunc("GET /cache", s.cache)
-	mux.HandleFunc("GET /advice", s.advice)
-	mux.HandleFunc("POST /apply", s.apply)
-	mux.HandleFunc("POST /undo", s.undo)
-	mux.HandleFunc("GET /profiles", s.profilesPage)
-	mux.HandleFunc("POST /profiles/add", s.profileAdd)
-	mux.HandleFunc("POST /profiles/remove", s.profileRemove)
-	mux.HandleFunc("POST /profiles/rule", s.profileRule)
-	mux.HandleFunc("POST /profiles/unrule", s.profileUnrule)
-	mux.HandleFunc("POST /profiles/login", s.profileLogin)
-	mux.HandleFunc("POST /profiles/private", s.profilePrivate)
 	return s.guard(mux)
 }
 
@@ -158,7 +161,7 @@ func (s *Server) guard(next http.Handler) http.Handler {
 		}
 		// The health check and static files (styles, icon, app manifest) hold no data. Browsers
 		// fetch the manifest without cookies, so these must not need the token.
-		if r.Method == http.MethodGet && (r.URL.Path == "/healthz" || strings.HasPrefix(r.URL.Path, "/static/") || strings.HasPrefix(r.URL.Path, "/assets/")) {
+		if r.Method == http.MethodGet && (r.URL.Path == "/healthz" || r.URL.Path == "/favicon.ico" || strings.HasPrefix(r.URL.Path, "/static/") || strings.HasPrefix(r.URL.Path, "/assets/")) {
 			next.ServeHTTP(w, r)
 			return
 		}

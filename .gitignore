@@ -5,3 +5,5 @@
 /CLAUDE.local.md
 /.claude/worktrees/
 /.playwright-mcp/
+/internal/ui/dist/app/
+/web/node_modules/

@@ -375,7 +375,9 @@ func (s *Service) finding(f advise.Finding, dir string, projects []string) Findi
 	if out.Params == nil {
 		out.Params = map[string]string{}
 	}
-	if f.Path != "" && strings.HasPrefix(f.Path, s.configDir+string(filepath.Separator)) {
+	// Files under the config dir are the user's own settings, except per-project data in projects/.
+	sep := string(filepath.Separator)
+	if f.Path != "" && strings.HasPrefix(f.Path, s.configDir+sep) && !strings.HasPrefix(f.Path, filepath.Join(s.configDir, "projects")+sep) {
 		out.Scope = "user"
 	}
 	for _, line := range strings.Split(f.Diff, "\n") {
@@ -612,4 +614,25 @@ func (s *Service) expandHome(p string) string {
 		return s.home
 	}
 	return p
+}
+
+// shortPath shows a path with the home directory as ~.
+func (s *Service) shortPath(p string) string {
+	if rest, found := strings.CutPrefix(p, s.home); found && p != "" {
+		return "~" + rest
+	}
+	return p
+}
+
+// itemLabel names an instruction item: skills, agents, commands and memory notes by name, files by
+// their path inside the project when they are in it.
+func (s *Service) itemLabel(it claudecode.Item, project string) string {
+	switch it.Kind {
+	case "skill", "agent", "command", "memory":
+		return it.Name
+	}
+	if rel, err := filepath.Rel(project, it.Path); err == nil && !strings.HasPrefix(rel, "..") {
+		return rel
+	}
+	return s.shortPath(it.Path)
 }

@@ -3,6 +3,7 @@ package ui
 import (
 	"encoding/json"
 	"errors"
+	"io"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -168,4 +169,13 @@ func appHandler(root fs.FS) http.Handler {
 		w.Header().Set("Cache-Control", "no-store")
 		http.ServeFileFS(w, r, root, "index.html")
 	})
+}
+
+// notBuilt answers when the binary was built without the frontend (go build without make web).
+func notBuilt(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	io.WriteString(w, `<!doctype html><meta charset="utf-8"><title>Quipu</title>
+<body style="font:15px system-ui;background:#171a23;color:#e8e4d8;padding:40px">
+<p>The web interface was not built into this binary. Build it with <code>make build</code>
+(or <code>make web</code> before <code>go build</code>); the API under /api/ works.</p>`)
 }

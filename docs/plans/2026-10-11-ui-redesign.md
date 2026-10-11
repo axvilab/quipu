@@ -1,6 +1,6 @@
 # UI redesign: Svelte, keyboard-first, Ukrainian and English
 
-Status: open · 2026-10-11 · decision in [ADR 0006](../adr/0006-svelte-spa.md)
+Status: done (step 6 open) · 2026-10-11 · decision in [ADR 0006](../adr/0006-svelte-spa.md)
 
 ## Brief
 
@@ -48,8 +48,8 @@ row is selected (Linear's master–detail). Left-aligned everywhere.
 ## The one bold element: the khipu
 
 The overview opens with a khipu drawn from real data: a primary cord across the top, one pendant
-cord per project. Cord length = cache writes over the period, cord colour = profile, knots =
-findings. Hovering a cord shows the project; clicking opens it. Everything else stays quiet.
+cord per project. Cord length = cache writes over the period, colour depth = share of the total
+(per-project profiles are not known yet), knots = findings. Hovering a cord shows the project; clicking opens it. Everything else stays quiet.
 
 ## Screens
 
@@ -85,12 +85,12 @@ findings. Hovering a cord shows the project; clicking opens it. Everything else 
 
 ## Steps
 
-1. [ ] ADR 0006; `web/` with Svelte 5, Vite, Tailwind 4, fonts bundled; Node in Docker; `make web`;
+1. [x] ADR 0006; `web/` with Svelte 5, Vite, Tailwind 4, fonts bundled; Node in Docker; `make web`;
    CI builds the frontend before Go.
-2. [ ] JSON API in Go for every screen; SPA fallback; same token, Host and Origin checks.
-3. [ ] Shell: sidebar, top bar, router, i18n (`web/src/locales/{uk,en}.json`), command palette, keys.
-4. [ ] Screens: overview with khipu, project, advisor, cache, profiles.
-5. [ ] Remove the html/template pages; screenshots on the demo home; release.
+2. [x] JSON API in Go for every screen; SPA fallback; same token, Host and Origin checks.
+3. [x] Shell: sidebar, top bar, router, i18n (`web/src/locales/{uk,en}.json`), command palette, keys.
+4. [x] Screens: overview with khipu, project, advisor, cache, profiles.
+5. [x] Remove the html/template pages; screenshots on the demo home; release.
 6. [ ] Native window with Wails right after (user's request): the frontend talks to Go only
    through `web/src/lib/api/client.ts`, and Go exposes the API as plain methods with thin HTTP
    handlers, so Wails can bind the same methods without a port or token. Linux needs

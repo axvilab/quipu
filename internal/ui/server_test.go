@@ -3,14 +3,12 @@ package ui
 import (
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/axvilab/quipu/internal/advise"
 	"github.com/axvilab/quipu/internal/claudecode"
 	"github.com/axvilab/quipu/internal/store"
 )
@@ -86,108 +84,16 @@ func TestGuard(t *testing.T) {
 	}
 }
 
-func TestPages(t *testing.T) {
+func TestTokenSurvivesRestart(t *testing.T) {
 	s := testServer(t)
-	h := s.Handler()
-	cookie := &http.Cookie{Name: cookieName, Value: s.token}
-	dir := claudecode.ProjectDirName(filepath.Join(s.home, "src", "demo"))
-
-	for path, want := range map[string]string{
-		"/":                   "~/src/demo",
-		"/project?dir=" + dir: "long-claude-md",
-		"/cache?days=7":       "model_changed",
-		"/advice":             "CLAUDE.md has 251 lines",
-		"/static/style.css":   "--accent",
-	} {
-		rec := get(h, path, "127.0.0.1:4242", cookie)
-		if rec.Code != http.StatusOK {
-			t.Errorf("%s: status %d: %s", path, rec.Code, rec.Body.String())
-			continue
-		}
-		if !strings.Contains(rec.Body.String(), want) {
-			t.Errorf("%s: body does not contain %q", path, want)
-		}
+	again, err := NewServer(s.Service)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if rec := get(h, "/project?dir=nope", "127.0.0.1:4242", cookie); rec.Code != http.StatusNotFound {
-		t.Errorf("unknown project: status %d, want 404", rec.Code)
+	if again.token != s.token || len(s.token) != 32 {
+		t.Errorf("token changed across restarts: %q then %q", s.token, again.token)
 	}
-}
-
-func post(h http.Handler, path, origin string, form url.Values, cookie *http.Cookie) *httptest.ResponseRecorder {
-	req := httptest.NewRequest("POST", path, strings.NewReader(form.Encode()))
-	req.Host = "127.0.0.1:4242"
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Referer", "http://127.0.0.1:4242/advice")
-	if origin != "" {
-		req.Header.Set("Origin", origin)
-	}
-	req.AddCookie(cookie)
-	rec := httptest.NewRecorder()
-	h.ServeHTTP(rec, req)
-	return rec
-}
-
-func TestApplyAndUndo(t *testing.T) {
-	s := testServer(t)
-	h := s.Handler()
-	cookie := &http.Cookie{Name: cookieName, Value: s.token}
-	proj := filepath.Join(s.home, "src", "demo")
-	claudeMD := filepath.Join(proj, "CLAUDE.md")
-	original := "Project rules.\nDesign: @docs/DESIGN.md\n"
-	os.WriteFile(claudeMD, []byte(original), 0o644)
-	os.MkdirAll(filepath.Join(proj, "docs"), 0o755)
-	os.WriteFile(filepath.Join(proj, "docs", "DESIGN.md"), []byte(strings.Repeat("design text ", 400)), 0o644)
-
-	in := advise.Input{Home: s.home, ConfigDir: s.configDir, Project: proj, Items: claudecode.Instructions(s.home, s.configDir, proj)}
-	var id string
-	for _, f := range advise.Run(in, nil) {
-		if f.Rule == "large-import" {
-			id = f.ID()
-		}
-	}
-	if id == "" {
-		t.Fatal("large-import finding not produced")
-	}
-	form := url.Values{"dir": {claudecode.ProjectDirName(proj)}, "id": {id}}
-
-	if rec := post(h, "/apply", "http://evil.example", form, cookie); rec.Code != http.StatusForbidden {
-		t.Errorf("cross-origin apply: status %d, want 403", rec.Code)
-	}
-	if rec := post(h, "/apply", "", form, cookie); rec.Code != http.StatusForbidden {
-		t.Errorf("apply without Origin: status %d, want 403", rec.Code)
-	}
-	if b, _ := os.ReadFile(claudeMD); string(b) != original {
-		t.Fatalf("refused requests changed the file: %q", b)
-	}
-
-	rec := post(h, "/apply", "http://127.0.0.1:4242", form, cookie)
-	if rec.Code != http.StatusSeeOther || !strings.Contains(rec.Header().Get("Location"), "Applied") {
-		t.Fatalf("apply: status %d location %q", rec.Code, rec.Header().Get("Location"))
-	}
-	if b, _ := os.ReadFile(claudeMD); !strings.Contains(string(b), "`docs/DESIGN.md` (read it when relevant)") {
-		t.Fatalf("file after apply = %q", b)
-	}
-
-	changes, _ := s.journal.List()
-	if len(changes) != 1 {
-		t.Fatalf("changes = %+v", changes)
-	}
-	page := get(h, "/advice", "127.0.0.1:4242", cookie).Body.String()
-	if !strings.Contains(page, "Recent changes") || !strings.Contains(page, `action="/undo"`) {
-		t.Error("advice page does not list the change with an undo button")
-	}
-
-	rec = post(h, "/undo", "http://127.0.0.1:4242", url.Values{"id": {changes[0].ID}}, cookie)
-	if !strings.Contains(rec.Header().Get("Location"), "Undone") {
-		t.Errorf("undo: location %q", rec.Header().Get("Location"))
-	}
-	if b, _ := os.ReadFile(claudeMD); string(b) != original {
-		t.Errorf("file after undo = %q", b)
-	}
-
-	// Applying a finding that no longer exists is reported, not attempted.
-	rec = post(h, "/apply", "http://127.0.0.1:4242", url.Values{"dir": form["dir"], "id": {"0000"}}, cookie)
-	if !strings.Contains(rec.Header().Get("Location"), "gone") {
-		t.Errorf("stale apply: location %q", rec.Header().Get("Location"))
+	if fi, err := os.Stat(filepath.Join(s.dataDir, "ui-token")); err != nil || fi.Mode().Perm() != 0o600 {
+		t.Errorf("token file: %v %v", fi, err)
 	}
 }

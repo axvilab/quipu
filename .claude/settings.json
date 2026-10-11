@@ -10,7 +10,8 @@
       "Bash(make vet)",
       "Bash(make fmt)",
       "Bash(make build)",
-      "Bash(make tidy)"
+      "Bash(make tidy)",
+      "Bash(make web)"
     ],
     "ask": [
       "Bash(git push*)"

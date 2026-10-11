@@ -6,11 +6,16 @@ One Go binary, everything local. Design: `docs/DESIGN.md` (read it before archit
 
 ## Commands
 
-Go runs only in Docker; `go` is not installed on the host. Never call `go` directly.
+Go and Node run only in Docker; neither is installed on the host. Never call `go` or `npm`
+directly.
 
-- `make test`: run all tests
+- `make test`: run all Go tests
 - `make vet`, `make fmt`, `make tidy`
-- `make build`: produces `bin/quipu`
+- `make web`: build the Svelte frontend (`web/` → `internal/ui/dist/app`)
+- `make web-dev`: Vite dev server with hot reload on :5173 (run `quipu ui --port 47801` beside it)
+- `make build`: frontend + `bin/quipu`
+- Try changes on a fake home, never on the real `~/.claude`: `bin/quipu demo /tmp/qdemo`, then
+  `HOME=/tmp/qdemo bin/quipu ui`
 
 ## Before you start
 

@@ -1,0 +1,91 @@
+@import "tailwindcss";
+@import "@fontsource-variable/manrope";
+@import "@fontsource-variable/jetbrains-mono";
+
+/* Design tokens: docs/plans/2026-10-11-ui-redesign.md. Named after a khipu's materials; colour
+   carries meaning (qolle = cost, cochineal = problem, chilca = done, indigo = action). */
+@theme {
+  --color-night: #171a23;
+  --color-loom: #1f2330;
+  --color-loom-2: #262b3a;
+  --color-warp: #2c3142;
+  --color-cotton: #e8e4d8;
+  --color-fleece: #9a968a;
+  --color-indigo: #7c93f0;
+  --color-cochineal: #e06a6a;
+  --color-qolle: #e2b14a;
+  --color-chilca: #74b37a;
+
+  --font-sans: "Manrope Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+}
+
+/* Dark is the default (Linear/Raycast direction). The light variant keeps the same meanings with
+   darker dyes; it is used when <html data-theme="light"> is set. */
+:root[data-theme="light"] {
+  --color-night: #f4f2ec;
+  --color-loom: #fbfaf6;
+  --color-loom-2: #efece4;
+  --color-warp: #dcd8cc;
+  --color-cotton: #23242b;
+  --color-fleece: #6c6a63;
+  --color-indigo: #3f59c7;
+  --color-cochineal: #b83a3a;
+  --color-qolle: #9a6b0c;
+  --color-chilca: #3d7c45;
+}
+
+@layer base {
+  html {
+    background: var(--color-night);
+    color: var(--color-cotton);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    font-feature-settings: "tnum" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    margin: 0;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-indigo);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--color-indigo) 35%, transparent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex h-8 items-center gap-2 rounded-md border border-warp bg-loom px-3 text-sm text-cotton transition-colors hover:bg-loom-2 disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply border-indigo bg-indigo font-semibold text-night hover:bg-indigo/90;
+  }
+  .btn-ghost {
+    @apply border-transparent bg-transparent text-fleece hover:bg-loom hover:text-cotton;
+  }
+  .field {
+    @apply h-9 w-full rounded-md border border-warp bg-night px-3 text-sm text-cotton placeholder:text-fleece/70;
+  }
+  .kbd {
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded border border-warp px-1 font-sans text-xs text-fleece;
+  }
+}
