@@ -25,6 +25,7 @@ var version = "dev"
 const usage = `usage: quipu <command> [flags]
 
 commands:
+  cache      cache hit rate per project or day, and why the cache missed
   daemon     collect Claude Code transcripts before they are deleted
   version    print the version
 `
@@ -44,6 +45,8 @@ func main() {
 
 	var err error
 	switch os.Args[1] {
+	case "cache":
+		err = runCache(ctx, os.Args[2:])
 	case "daemon":
 		err = runDaemon(ctx, os.Args[2:])
 	case "version", "--version":
@@ -66,15 +69,7 @@ func runDaemon(ctx context.Context, args []string) error {
 	interval := fs.Duration("interval", 10*time.Minute, "time between collections")
 	fs.Parse(args)
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	dir, err := dataDir(home)
-	if err != nil {
-		return err
-	}
-	st, err := store.Open(dir)
+	home, st, err := openStore()
 	if err != nil {
 		return err
 	}
@@ -101,6 +96,20 @@ func runDaemon(ctx context.Context, args []string) error {
 		case <-time.After(*interval):
 		}
 	}
+}
+
+// openStore opens the store in the user's data dir.
+func openStore() (home string, st *store.Store, err error) {
+	home, err = os.UserHomeDir()
+	if err != nil {
+		return "", nil, err
+	}
+	dir, err := dataDir(home)
+	if err != nil {
+		return "", nil, err
+	}
+	st, err = store.Open(dir)
+	return home, st, err
 }
 
 // dataDir is where quipu keeps collected data: $XDG_DATA_HOME/quipu or ~/.local/share/quipu on
