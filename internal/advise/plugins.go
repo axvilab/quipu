@@ -70,19 +70,34 @@ func pluginOneProject(in Input) []Finding {
 		}
 		home := used[0]
 		tokens := pluginTokens(in.Items, p.Name)
-		off, d1 := enablePluginEdit(p.Settings, p.ID, false)
-		on, d2 := enablePluginEdit(claudecode.LocalSettings(home), p.ID, true)
+		off, diff := enablePluginEdit(p.Settings, p.ID, false)
+		edits := []Edit{off}
+		// Turn it on for that project, unless its own settings already do.
+		if !enabledInProject(in.ConfigDir, home, p.ID) {
+			on, d := enablePluginEdit(claudecode.LocalSettings(home), p.ID, true)
+			edits, diff = append(edits, on), diff+d
+		}
 		out = append(out, Finding{
 			Title: fmt.Sprintf("plugin %s is enabled for every project but used only in %s", p.Name, filepath.Base(home)),
 			Detail: "It is listed in every session of every project. Enable it only where it is used; the other " +
 				"projects stop paying for it.",
 			Path:  p.Settings,
 			Saves: tokens,
-			Diff:  strings.TrimRight(d1+d2, "\n"),
-			Edits: []Edit{off, on},
+			Diff:  strings.TrimRight(diff, "\n"),
+			Edits: edits,
 			Params: map[string]string{"name": p.Name, "project": filepath.Base(home), "tokens": fmt.Sprint(tokens),
 				"others": fmt.Sprint(len(in.Projects) - 1)},
 		})
 	}
 	return out
+}
+
+// enabledInProject reports whether the project's own settings (shared or local) enable the plugin.
+func enabledInProject(configDir, project, id string) bool {
+	for _, p := range claudecode.Plugins(configDir, project) {
+		if p.ID == id && p.Scope != "user" {
+			return true
+		}
+	}
+	return false
 }

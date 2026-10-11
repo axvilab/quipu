@@ -76,6 +76,14 @@ func TestPluginOneProject(t *testing.T) {
 	if other := pluginOneProject(in); len(other) != 1 || other[0].ID() != got[0].ID() {
 		t.Errorf("web reports %+v", other)
 	}
+	// When web's own settings already enable it, only the user's settings change.
+	os.MkdirAll(filepath.Join(web, ".claude"), 0o755)
+	os.WriteFile(filepath.Join(web, ".claude", "settings.json"), []byte(`{"enabledPlugins": {"browser@official": true}}`), 0o644)
+	in.Project, in.Items = api, in.Projects[api]
+	if got := pluginOneProject(in); len(got) != 1 || len(got[0].Edits) != 1 {
+		t.Errorf("already enabled in web: %+v", got)
+	}
+
 	in.PluginUse = map[string][]string{"browser": {api, web}}
 	if got := pluginOneProject(in); len(got) != 0 {
 		t.Errorf("plugin used in two projects flagged: %+v", got)
