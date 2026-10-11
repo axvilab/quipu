@@ -45,6 +45,7 @@ Non-goals:
 | 7 | Project switchboard: project × plugin matrix | — | v0.3 |
 | 8 | MCP server: search and write knowledge across projects | `quipu mcp` | v0.3 |
 | 9 | Team knowledge base: select, anonymize, confirm one by one, git repo | — | v0.4 |
+| 11 | New project wizard: scaffold from a stack template, copy skills/rules/agents from other projects | `quipu new` | v0.3 |
 
 First milestone: modules 1–4 as CLI, tested on real data. Continue only if `quipu cache` shows
 something useful.
@@ -112,12 +113,27 @@ Per-project exclusions in settings (e.g. work projects whose memory must not lea
 A secret scan runs before every commit or export. `quipu restore` applies a backup with a
 preview of every file it will write.
 
-### 4.7 UI
+### 4.7 New project wizard (v0.3)
+
+`quipu new` (and "New project" in the UI) creates a project set up the way the advisor would
+recommend, instead of fixing it afterwards:
+
+1. Basics: name, folder, stack, docs language, profile (personal / work).
+2. Scaffold from a **stack template**: `CLAUDE.md`, `.claude/settings.json`, language rules,
+   `adr-new` and `ship` skills, `docs/` (DESIGN, ADR index, plans), `.gitignore`, CI workflow.
+3. Pick skills, rules and agents from the user's other projects (known from collection), each
+   with its token cost.
+4. Preview every file as a diff, then write; optionally `git init` and a first commit.
+
+Stack templates are plain folders of files, not code; later they can be packaged as Claude Code
+plugins so the same set can be enabled in existing projects through the switchboard (module 7).
+
+### 4.8 UI
 
 Embedded web UI on 127.0.0.1 ([ADR 0004](adr/0004-embedded-web-ui.md)). Shows when a session is
 open: "changes apply after /clear".
 
-### 4.8 Code layout
+### 4.9 Code layout
 
 ```
 cmd/quipu/           entry point; role chosen by argv[0]
