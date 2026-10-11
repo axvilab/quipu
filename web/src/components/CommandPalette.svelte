@@ -40,6 +40,7 @@
     { id: "advice", label: t("nav.advice"), hint: "G A", icon: "advice", run: go("/advice") },
     { id: "cache", label: t("nav.cache"), hint: "G C", icon: "cache", run: go("/cache") },
     { id: "profiles", label: t("nav.profiles"), hint: "G R", icon: "profiles", run: go("/profiles") },
+    { id: "backup", label: t("nav.backup"), hint: "G B", icon: "backup", run: go("/backup") },
     { id: "settings", label: t("nav.settings"), hint: "G S", icon: "settings", run: go("/settings") },
     ...projects.map((p) => ({ id: "p:" + p.dir, label: p.name, hint: p.path, icon: "folder", run: go(projectPath(p.dir)) })),
     ...[7, 30, 90].map((d) => ({ id: "d" + d, label: t("palette.period", { count: d }), icon: "cache", run: () => setDays(d) })),

@@ -35,7 +35,7 @@ func loadProfiles() (string, *profile.Config, error) {
 	if err != nil {
 		return "", nil, err
 	}
-	c, err := profile.Load(home, filepath.Join(xdgDir("XDG_CONFIG_HOME", home, ".config"), "quipu", "profiles.json"))
+	c, err := profile.Load(home, profilesFile(home))
 	return home, c, err
 }
 

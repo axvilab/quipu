@@ -31,12 +31,14 @@ const usage = `usage: quipu <command> [flags]
 
 commands:
   advise     check a project's Claude Code setup and propose fixes
+  backup     save the Claude Code setup of every profile to an archive or a git repository
   cache      cache hit rate per project or day, and why the cache missed
   daemon     collect transcripts in the background and serve the web interface
   demo       create a fake home with a Claude Code setup to try quipu on
   install    start quipu at login and add it to the application menu
   map        what Claude Code loads for a project and how much it weighs
   profile    Claude accounts (personal, work…) and which folder uses which
+  restore    show what a backup would change, and write it with --apply
   run        start claude under the profile of the current folder
   ui         open the web interface
   uninstall  undo quipu install
@@ -64,6 +66,10 @@ func main() {
 	switch os.Args[1] {
 	case "advise":
 		err = runAdvise(ctx, os.Args[2:])
+	case "backup":
+		err = runBackup(ctx, os.Args[2:])
+	case "restore":
+		err = runRestore(os.Args[2:])
 	case "cache":
 		err = runCache(ctx, os.Args[2:])
 	case "daemon":

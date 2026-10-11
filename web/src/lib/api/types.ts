@@ -191,3 +191,42 @@ export interface Live {
   watching: boolean;
   autoStart: boolean;
 }
+
+export interface Archive {
+  path: string;
+  name: string;
+  size: number;
+  time: string;
+}
+
+export interface BackupInfo {
+  folder: string;
+  gitDir: string;
+  archives: Archive[];
+}
+
+export interface BackupSecret {
+  path: string;
+  line: number;
+  kind: string;
+}
+
+export interface BackupResult {
+  ok: boolean;
+  path?: string;
+  files: number;
+  changed: boolean;
+  secrets: BackupSecret[];
+}
+
+export interface RestorePlan {
+  source: string;
+  created: string;
+  from: string;
+  version: string;
+  new: number;
+  changed: number;
+  same: number;
+  files: { path: string; state: "new" | "changed" }[];
+  links: number;
+}

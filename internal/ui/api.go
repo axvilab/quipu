@@ -73,6 +73,34 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 			writeJSON(w, v, err)
 		}
 	})
+	mux.HandleFunc("GET /api/backup", func(w http.ResponseWriter, r *http.Request) {
+		v, err := s.BackupInfo()
+		writeJSON(w, v, err)
+	})
+	mux.HandleFunc("POST /api/backup", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			GitDir             string
+			Push, AllowSecrets bool
+		}
+		if readJSON(w, r, &in) {
+			v, err := s.CreateBackup(r.Context(), in.GitDir, in.Push, in.AllowSecrets)
+			writeJSON(w, v, err)
+		}
+	})
+	mux.HandleFunc("POST /api/restore/plan", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ Source string }
+		if readJSON(w, r, &in) {
+			v, err := s.PlanRestore(in.Source)
+			writeJSON(w, v, err)
+		}
+	})
+	mux.HandleFunc("POST /api/restore", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ Source string }
+		if readJSON(w, r, &in) {
+			v, err := s.ApplyRestore(in.Source)
+			writeJSON(w, v, err)
+		}
+	})
 	mux.HandleFunc("GET /api/profiles", func(w http.ResponseWriter, r *http.Request) {
 		v, err := s.ProfilesReport(r.Context())
 		writeJSON(w, v, err)

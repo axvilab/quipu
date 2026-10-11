@@ -137,7 +137,7 @@ func openBrowser(url string, tab bool) error {
 
 // attachProfiles lets the UI list every profile with its login state.
 func attachProfiles(srv *ui.Server, home string) {
-	srv.ProfilesFile = filepath.Join(xdgDir("XDG_CONFIG_HOME", home, ".config"), "quipu", "profiles.json")
+	srv.ProfilesFile = profilesFile(home)
 	if bin, err := realClaude(); err == nil {
 		srv.ClaudeBinary = bin
 	}

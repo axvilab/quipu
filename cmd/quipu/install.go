@@ -81,6 +81,11 @@ func runInstall(args []string, uninstall bool) error {
 	return nil
 }
 
+// profilesFile is quipu's own config: profiles and folder rules.
+func profilesFile(home string) string {
+	return filepath.Join(xdgDir("XDG_CONFIG_HOME", home, ".config"), "quipu", "profiles.json")
+}
+
 func xdgDir(env, home, fallback string) string {
 	if v := os.Getenv(env); v != "" {
 		return v

@@ -1,7 +1,20 @@
 // The only way the frontend talks to quipu. Today it uses the HTTP API; a native window can
 // implement the same functions over its bindings without touching any screen (redesign step 6).
 
-import type { Advice, CacheReport, EditorFile, Live, Overview, Profiles, Project, Result, Session } from "./types";
+import type {
+  Advice,
+  BackupInfo,
+  BackupResult,
+  CacheReport,
+  EditorFile,
+  Live,
+  Overview,
+  Profiles,
+  Project,
+  RestorePlan,
+  Result,
+  Session,
+} from "./types";
 
 export class ApiError extends Error {
   constructor(
@@ -42,6 +55,11 @@ export const api = {
   readFile: (path: string) => get<EditorFile>(`/api/file?path=${encodeURIComponent(path)}`),
   saveFile: (path: string, content: string, version: string) => post("/api/file", { path, content, version }),
   live: () => get<Live>("/api/live"),
+  backup: () => get<BackupInfo>("/api/backup"),
+  createBackup: (opts: { gitDir: string; push: boolean; allowSecrets: boolean }) =>
+    request<BackupResult>("POST", "/api/backup", opts),
+  planRestore: (source: string) => request<RestorePlan>("POST", "/api/restore/plan", { source }),
+  restore: (source: string) => post("/api/restore", { source }),
   watchRemoteControl: (on: boolean) => post("/api/live/watch", { on }),
   tokens: (text: string) => request<{ tokens: number }>("POST", "/api/tokens", { text }),
   profiles: () => get<Profiles>("/api/profiles"),

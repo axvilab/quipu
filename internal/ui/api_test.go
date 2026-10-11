@@ -210,3 +210,60 @@ func TestLiveAPI(t *testing.T) {
 		t.Errorf("journal has %d changes, want 2", len(changes))
 	}
 }
+
+func TestBackupAPI(t *testing.T) {
+	s := testServer(t)
+	h := s.Handler()
+	cookie := &http.Cookie{Name: cookieName, Value: s.token}
+	os.MkdirAll(filepath.Join(s.configDir, "projects"), 0o755)
+	claudeMD := filepath.Join(s.configDir, "CLAUDE.md")
+	os.WriteFile(claudeMD, []byte("# Me\n"), 0o644)
+	settings := filepath.Join(s.configDir, "settings.json")
+	// Built at run time, so the source holds no string that looks like a real token.
+	token := "ghp" + "_" + strings.Repeat("x1", 18)
+	os.WriteFile(settings, []byte(`{"env": {"GITHUB_TOKEN": "`+token+`"}}`), 0o644)
+
+	// A credential stops the backup and is reported.
+	rec := postJSON(h, "/api/backup", `{}`, cookie)
+	var res BackupResult
+	json.Unmarshal(rec.Body.Bytes(), &res)
+	if rec.Code != 200 || res.OK || len(res.Secrets) != 1 {
+		t.Fatalf("backup with a token: %d %s", rec.Code, rec.Body.String())
+	}
+	os.WriteFile(settings, []byte(`{"theme": "dark"}`), 0o644)
+	rec = postJSON(h, "/api/backup", `{}`, cookie)
+	json.Unmarshal(rec.Body.Bytes(), &res)
+	if !res.OK || res.Path == "" {
+		t.Fatalf("backup: %s", rec.Body.String())
+	}
+	var info BackupInfo
+	if code := getJSON(t, h, "/api/backup", cookie, &info); code != 200 || len(info.Archives) != 1 {
+		t.Fatalf("info = %+v", info)
+	}
+
+	// Lose CLAUDE.md, preview the restore, apply it, undo it.
+	os.Remove(claudeMD)
+	body, _ := json.Marshal(map[string]string{"source": info.Archives[0].Path})
+	rec = postJSON(h, "/api/restore/plan", string(body), cookie)
+	var plan RestorePlan
+	json.Unmarshal(rec.Body.Bytes(), &plan)
+	if plan.New != 1 || len(plan.Files) != 1 || !strings.HasSuffix(plan.Files[0].Path, "CLAUDE.md") {
+		t.Fatalf("plan: %s", rec.Body.String())
+	}
+	if rec := postJSON(h, "/api/restore", string(body), cookie); !strings.Contains(rec.Body.String(), `"restored"`) {
+		t.Fatalf("restore: %s", rec.Body.String())
+	}
+	if b, _ := os.ReadFile(claudeMD); string(b) != "# Me\n" {
+		t.Errorf("CLAUDE.md after restore = %q", b)
+	}
+	changes, _ := s.journal.List()
+	if len(changes) != 1 || changes[0].Rule != "restore" {
+		t.Fatalf("journal = %+v", changes)
+	}
+	if err := s.journal.Undo(changes[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(claudeMD); !os.IsNotExist(err) {
+		t.Errorf("undo did not remove the restored file: %v", err)
+	}
+}

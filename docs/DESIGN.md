@@ -109,10 +109,11 @@ main repo via `git rev-parse --git-common-dir`.
 - No edits to `.claude.json` ([ADR 0003](adr/0003-supported-integration-only.md)); MCP servers
   are shared through plugins or `.mcp.json`.
 
-### 4.6 Backup (v0.2)
+### 4.6 Backup
 
-Restores Claude Code setup after an OS reinstall or on a new machine. Two targets, chosen in
-quipu settings; both are explicit user actions, never automatic uploads:
+Restores Claude Code setup after an OS reinstall or on a new machine (`quipu backup`, `quipu
+restore`, the Backup page; plan: `plans/2026-10-11-backup.md`). Two targets; both are explicit
+user actions, never automatic uploads:
 
 - **git repo**: a private repo the user trusts; quipu commits locally, the user (or `quipu backup
   push`) pushes;

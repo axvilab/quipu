@@ -7,6 +7,7 @@ export type Route =
   | { name: "cache" }
   | { name: "profiles" }
   | { name: "settings" }
+  | { name: "backup" }
   | { name: "notFound" };
 
 function parse(path: string): Route {
@@ -24,6 +25,8 @@ function parse(path: string): Route {
       return { name: "profiles" };
     case "settings":
       return { name: "settings" };
+    case "backup":
+      return { name: "backup" };
   }
   return { name: "notFound" };
 }
