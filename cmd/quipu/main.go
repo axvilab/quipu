@@ -85,6 +85,8 @@ func main() {
 			fmt.Fprintln(os.Stderr, "quipu:", err)
 		}
 		os.Exit(code)
+	case "hook":
+		runHook(os.Args[2:]) // never fails: a hook error would bother the Claude Code session
 	case "ui":
 		err = runUI(ctx, os.Args[2:])
 	case "version", "--version":

@@ -173,3 +173,40 @@ func TestEditorAPI(t *testing.T) {
 		t.Errorf("tokens: %d %s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestLiveAPI(t *testing.T) {
+	s := testServer(t)
+	s.SelfBinary = "/opt/my tools/quipu"
+	h := s.Handler()
+	cookie := &http.Cookie{Name: cookieName, Value: s.token}
+	settings := filepath.Join(s.configDir, "settings.json")
+	os.MkdirAll(s.configDir, 0o755)
+	os.WriteFile(settings, []byte(`{"theme": "dark", "remoteControlAtStartup": true}`), 0o644)
+
+	var lv Live
+	if code := getJSON(t, h, "/api/live", cookie, &lv); code != 200 || lv.Watching || !lv.AutoStart || lv.Sessions == nil {
+		t.Fatalf("live = %+v (%d)", lv, code)
+	}
+
+	if rec := postJSON(h, "/api/live/watch", `{"on":true}`, cookie); rec.Code != 200 || !strings.Contains(rec.Body.String(), "watching-on") {
+		t.Fatalf("watch on: %d %s", rec.Code, rec.Body.String())
+	}
+	b, _ := os.ReadFile(settings)
+	if !strings.Contains(string(b), `"'/opt/my tools/quipu' hook claude"`) || !strings.Contains(string(b), `"theme": "dark"`) {
+		t.Errorf("settings after watch on:\n%s", b)
+	}
+	if code := getJSON(t, h, "/api/live", cookie, &lv); code != 200 || !lv.Watching {
+		t.Errorf("not watching after watch on: %+v", lv)
+	}
+
+	if rec := postJSON(h, "/api/live/watch", `{"on":false}`, cookie); rec.Code != 200 || !strings.Contains(rec.Body.String(), "watching-off") {
+		t.Fatalf("watch off: %d %s", rec.Code, rec.Body.String())
+	}
+	b, _ = os.ReadFile(settings)
+	if strings.Contains(string(b), "hook claude") || strings.Contains(string(b), `"hooks"`) {
+		t.Errorf("hook left after watch off:\n%s", b)
+	}
+	if changes, _ := s.journal.List(); len(changes) != 2 {
+		t.Errorf("journal has %d changes, want 2", len(changes))
+	}
+}

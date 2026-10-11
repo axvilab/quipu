@@ -321,5 +321,31 @@
   "result.file-not-editable": "quipu does not edit this file: {path}",
   "result.file-too-big": "The file is too big for the editor: {path}",
   "rule.edit.title": "Edited in quipu",
-  "rule.copied-extension.detail.exists": "Your settings already have a different “{name}”, so quipu does not move anything itself. Compare them and keep one."
+  "rule.copied-extension.detail.exists": "Your settings already have a different “{name}”, so quipu does not move anything itself. Compare them and keep one.",
+  "live.title": "Claude Code sessions now",
+  "live.note": "Running claude processes on this computer.",
+  "live.since": "session since {time}",
+  "live.rc.on": "Remote Control on",
+  "live.rc.off": "no Remote Control",
+  "live.rc.unknown": "Remote Control: unknown",
+  "live.unknownHint": "Remote Control turned on with /remote-control cannot be seen from outside.",
+  "live.toSettings": "Turn on watching in Settings",
+  "live.autoStart": "Claude Code's settings turn Remote Control on for every session (remoteControlAtStartup).",
+  "live.banner.title": {
+    "one": "Remote Control is on in {count} session",
+    "other": "Remote Control is on in {count} sessions"
+  },
+  "live.banner.howOff": "This session can be driven from claude.ai or the phone. To turn it off, type /remote-control in it again or close it.",
+  "settings.rc.title": "Remote Control",
+  "settings.rc.note": "quipu sees sessions started with Remote Control (claude --rc, claude remote-control). When it is turned on with /remote-control in an open session, only a hook can tell: it goes into Claude Code's settings and on every prompt records for quipu whether Remote Control is connected. The hook prints nothing into the session.",
+  "settings.rc.toggle": "Watch Remote Control (add a hook to Claude Code's settings)",
+  "settings.rc.on": "The hook is in place. Remove it here or undo it under Changes.",
+  "settings.rc.off": "No hook; only sessions started with Remote Control are seen.",
+  "result.watching-on": "Watching Remote Control. New and open sessions report from their next prompt.",
+  "result.watching-off": "Stopped watching Remote Control; the hook is removed.",
+  "result.no-self-binary": "Could not tell where quipu is installed, to put it into the hook.",
+  "result.settings-invalid": "Could not read {path}: {error}",
+  "rule.watch-remote-control.title": "Remote Control watching",
+  "rule.watch-remote-control.title.on": "Started watching Remote Control",
+  "rule.watch-remote-control.title.off": "Stopped watching Remote Control"
 }

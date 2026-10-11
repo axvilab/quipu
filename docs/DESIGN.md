@@ -166,6 +166,13 @@ on Linux, or `--browser`) it opens a browser app window (Chrome/Chromium/Edge/Br
 tab. Shows when a session is open: "changes apply after /clear". Theme (system, light, dark) and
 language are per window, on the settings page.
 
+Live sessions: the overview lists the running Claude Code sessions (the user's `claude`
+processes), and a banner on every screen says when one has Remote Control on. Sessions started
+with `--rc` or `remote-control` are seen from their command line; `/remote-control` inside a session
+only through an opt-in hook (`quipu hook claude`, added to the profile's settings.json from
+Settings, through the journal) that records `CLAUDE_CODE_BRIDGE_SESSION_ID` on session events.
+`~/.claude/sessions/` is not read: it is undocumented and holds tokens.
+
 Install: `quipu install` adds a systemd user unit (Linux) or launchd agent (macOS) for the daemon
 and a menu entry with the icon (Linux; on macOS install.sh puts Quipu.app into ~/Applications);
 `quipu uninstall` removes exactly what it created.

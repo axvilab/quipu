@@ -9,6 +9,8 @@
   import Editor from "./components/Editor.svelte";
   import Panel from "./components/Panel.svelte";
   import { closeEditor, editor } from "./lib/editor.svelte";
+  import { watchLive } from "./lib/live.svelte";
+  import RemoteControlBanner from "./components/RemoteControlBanner.svelte";
   import Help from "./components/Help.svelte";
   import Sidebar from "./components/Sidebar.svelte";
   import Toasts from "./components/Toasts.svelte";
@@ -21,6 +23,7 @@
   import Settings from "./screens/Settings.svelte";
 
   let session = $state<Session | null>(null);
+  watchLive();
   let unauthorized = $state(false);
 
   $effect(() => {
@@ -88,6 +91,7 @@
     </header>
     <main class="min-w-0 px-4 py-6 md:px-10 md:py-8">
       <div class="mx-auto max-w-[1180px]">
+        <RemoteControlBanner />
         {#if router.route.name === "overview"}<Overview />
         {:else if router.route.name === "project"}{#key router.route.dir}<Project dir={router.route.dir} />{/key}
         {:else if router.route.name === "advice"}<Advice />

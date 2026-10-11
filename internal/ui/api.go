@@ -62,6 +62,17 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 			writeJSON(w, map[string]int64{"tokens": s.Tokens(in.Text)}, nil)
 		}
 	})
+	mux.HandleFunc("GET /api/live", func(w http.ResponseWriter, r *http.Request) {
+		v, err := s.LiveSessions(r.Context())
+		writeJSON(w, v, err)
+	})
+	mux.HandleFunc("POST /api/live/watch", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ On bool }
+		if readJSON(w, r, &in) {
+			v, err := s.WatchRemoteControl(in.On)
+			writeJSON(w, v, err)
+		}
+	})
 	mux.HandleFunc("GET /api/profiles", func(w http.ResponseWriter, r *http.Request) {
 		v, err := s.ProfilesReport(r.Context())
 		writeJSON(w, v, err)

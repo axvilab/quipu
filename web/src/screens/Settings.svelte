@@ -1,12 +1,40 @@
 <script lang="ts">
   import { i18n, locales, setLocale, t } from "../lib/i18n.svelte";
   import { setTheme, theme, themes } from "../lib/theme.svelte";
+  import { api } from "../lib/api/client";
+  import { notifyChanged } from "../lib/changes.svelte";
+  import { live, refreshLive } from "../lib/live.svelte";
+  import { report } from "../lib/toast.svelte";
   import Header from "../components/Header.svelte";
   import Icon from "../components/Icon.svelte";
 
   // View preferences of this window or browser. Data and changes live in quipu itself.
   const themeIcon = { system: "monitor", light: "sun", dark: "moon" } as const;
   const languageName = { uk: "Українська", en: "English" } as const;
+
+  let busy = $state(false);
+  async function setWatching(on: boolean) {
+    busy = true;
+    try {
+      const res = await api.watchRemoteControl(on);
+      const change = res.params?.change;
+      report(res, change ? { label: t("action.undo"), run: () => undo(change) } : undefined);
+    } catch (e) {
+      report(e);
+    } finally {
+      busy = false;
+      notifyChanged();
+      refreshLive();
+    }
+  }
+  async function undo(change: string) {
+    try {
+      report(await api.undo(change));
+    } catch (e) {
+      report(e);
+    }
+    notifyChanged();
+  }
 </script>
 
 <Header title={t("settings.title")} subtitle={t("settings.subtitle")} />
@@ -47,4 +75,17 @@
       </button>
     {/each}
   </div>
+</section>
+
+<section class="max-w-xl border-t border-warp py-6">
+  <h2 class="text-md font-semibold">{t("settings.rc.title")}</h2>
+  <p class="mt-1 text-sm leading-relaxed text-fleece">{t("settings.rc.note")}</p>
+  {#if live.data}
+    <label class="mt-3 flex items-center gap-3 text-sm">
+      <input type="checkbox" class="h-4 w-4 accent-indigo" checked={live.data.watching} disabled={busy}
+        onchange={(e) => setWatching((e.currentTarget as HTMLInputElement).checked)} />
+      {t("settings.rc.toggle")}
+    </label>
+    <p class="mt-2 text-xs text-fleece">{live.data.watching ? t("settings.rc.on") : t("settings.rc.off")}</p>
+  {/if}
 </section>

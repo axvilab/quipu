@@ -10,6 +10,7 @@
   import FindingList from "../components/FindingList.svelte";
   import Header from "../components/Header.svelte";
   import Khipu from "../components/Khipu.svelte";
+  import LiveSessions from "../components/LiveSessions.svelte";
   import Loading from "../components/Loading.svelte";
   import Panel from "../components/Panel.svelte";
   import PeriodSwitch from "../components/PeriodSwitch.svelte";
@@ -107,6 +108,8 @@
       </table>
     </div>
   </section>
+
+  <LiveSessions />
 
   <p class="mt-8 text-xs text-fleece">{t("overview.partial")}</p>
 {/if}

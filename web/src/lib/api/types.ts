@@ -174,3 +174,20 @@ export interface EditorFile {
   always: boolean;
   exists: boolean;
 }
+
+/** A running Claude Code session. */
+export interface LiveSession {
+  pid: number;
+  path: string;
+  name: string;
+  started: string;
+  remoteControl: "on" | "off" | "unknown";
+  source: "command" | "hook" | "";
+  seen?: string;
+}
+
+export interface Live {
+  sessions: LiveSession[];
+  watching: boolean;
+  autoStart: boolean;
+}
