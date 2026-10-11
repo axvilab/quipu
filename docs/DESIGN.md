@@ -94,6 +94,9 @@ main repo via `git rev-parse --git-common-dir`.
   without asking; otherwise ask with a suggestion (folder rule → last used). Run the real claude
   as a child process, forward signals and exit code. The real binary is found on `PATH`,
   skipping our own executable.
+- Install method does not matter: native installer (`~/.local/bin/claude` → versions dir, self-
+  updating), npm global (deprecated) or Homebrew. Data always lives in the config dir; the shim
+  never replaces the binary. `quipu doctor` warns when several installs are on `PATH`.
 - Shared library of skills and rules for all profiles; corporate/personal boundary enforced.
 - No edits to `.claude.json` ([ADR 0003](adr/0003-supported-integration-only.md)); MCP servers
   are shared through plugins or `.mcp.json`.

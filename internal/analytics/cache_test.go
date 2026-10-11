@@ -100,3 +100,25 @@ func TestMisses(t *testing.T) {
 		t.Errorf("misses = %+v, want %+v", got, want)
 	}
 }
+
+func TestSessionStart(t *testing.T) {
+	st := testStore(t)
+	got, err := SessionStart(context.Background(), st, Filter{Since: day1.AddDate(0, 0, -1), ProjectDir: "-srv-a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Session s1 starts with 100 tokens, s2 (the latest) with 500.
+	want := StartWeight{Sessions: 2, Median: 300, Min: 100, Max: 500, Latest: 500, LatestAt: day1.Add(24 * time.Hour)}
+	if got != want {
+		t.Errorf("start weight = %+v, want %+v", got, want)
+	}
+}
+
+func TestEstimateTokens(t *testing.T) {
+	if got := EstimateTokens("abcdefgh"); got != 2 {
+		t.Errorf("ascii estimate = %d, want 2", got)
+	}
+	if got := EstimateTokens("привіт"); got != 4 {
+		t.Errorf("cyrillic estimate = %d, want 4", got)
+	}
+}

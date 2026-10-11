@@ -27,6 +27,7 @@ const usage = `usage: quipu <command> [flags]
 commands:
   cache      cache hit rate per project or day, and why the cache missed
   daemon     collect Claude Code transcripts before they are deleted
+  map        what Claude Code loads for a project and how much it weighs
   version    print the version
 `
 
@@ -49,6 +50,8 @@ func main() {
 		err = runCache(ctx, os.Args[2:])
 	case "daemon":
 		err = runDaemon(ctx, os.Args[2:])
+	case "map":
+		err = runMap(ctx, os.Args[2:])
 	case "version", "--version":
 		fmt.Println("quipu", version)
 	case "help", "-h", "--help":
