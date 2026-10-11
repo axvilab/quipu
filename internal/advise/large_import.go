@@ -28,8 +28,9 @@ func largeImport(in Input) []Finding {
 			Title: fmt.Sprintf("@%s adds ≈ %d tokens to every session", it.Ref, tokens),
 			Detail: "The whole file is loaded at session start even when the task does not need it. " +
 				"Refer to it in plain text and say when to read it; Claude opens it on demand.",
-			Path:  it.From,
-			Saves: tokens,
+			Path:   it.From,
+			Saves:  tokens,
+			Params: map[string]string{"ref": it.Ref, "tokens": fmt.Sprint(tokens)},
 		}
 		if line, fixed, ok := replaceImport(it.From, it.Ref); ok {
 			f.Diff = "- " + line + "\n+ " + fixed

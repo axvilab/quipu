@@ -91,3 +91,7 @@ findings. Hovering a cord shows the project; clicking opens it. Everything else 
 3. [ ] Shell: sidebar, top bar, router, i18n (`web/src/locales/{uk,en}.json`), command palette, keys.
 4. [ ] Screens: overview with khipu, project, advisor, cache, profiles.
 5. [ ] Remove the html/template pages; screenshots on the demo home; release.
+6. [ ] Native window with Wails right after (user's request): the frontend talks to Go only
+   through `web/src/lib/api/client.ts`, and Go exposes the API as plain methods with thin HTTP
+   handlers, so Wails can bind the same methods without a port or token. Linux needs
+   libwebkit2gtk at runtime; cover it in install.sh and the docs.

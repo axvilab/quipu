@@ -28,6 +28,10 @@ type Finding struct {
 	Diff   string // proposed change in unified-diff style, if the fix is mechanical
 	Saves  int64  // approximate tokens saved per session, 0 if unknown
 	Edits  []Edit // set when the fix can be applied automatically
+
+	// Params fill the rule's translated title and detail in the UI ("rule.<id>.title");
+	// Title and Detail above are the English text for the CLI.
+	Params map[string]string
 }
 
 // Rule is one check.

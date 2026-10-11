@@ -122,3 +122,23 @@ func TestEstimateTokens(t *testing.T) {
 		t.Errorf("cyrillic estimate = %d, want 4", got)
 	}
 }
+
+func TestTotalAndPrevious(t *testing.T) {
+	st := testStore(t)
+	f := Filter{Since: day1.AddDate(0, 0, -1), Until: day1.AddDate(0, 0, 2)}
+	got, err := Total(context.Background(), st, f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Requests != 6 || got.Sessions != 3 {
+		t.Errorf("total = %+v, want 6 requests in 3 sessions", got)
+	}
+	prev := f.Previous()
+	if !prev.Until.Equal(f.Since) || !prev.Since.Equal(f.Since.AddDate(0, 0, -3)) {
+		t.Errorf("previous = %+v", prev)
+	}
+	old, _ := Total(context.Background(), st, Filter{Since: day1.AddDate(0, -3, 0), Until: day1.AddDate(0, -1, 0)})
+	if old.Requests != 1 {
+		t.Errorf("old window = %+v, want the one old response", old)
+	}
+}

@@ -25,7 +25,7 @@ import (
 	"github.com/axvilab/quipu/internal/store"
 )
 
-//go:embed templates static
+//go:embed templates static all:dist
 var assets embed.FS
 
 const (
@@ -33,20 +33,19 @@ const (
 	healthReply = "quipu"
 )
 
-// Server is the web UI over one store and one Claude Code profile.
-type Server struct {
+// Service is everything the UI can read and do, as plain methods: the HTTP API wraps it, and a
+// native window can bind the same methods later (redesign plan, step 6).
+type Service struct {
 	home      string
 	configDir string
 	profile   string
 	st        *store.Store
 	dataDir   string
 	journal   *fsx.Journal
-	token     string
-	addr      string // host:port we listen on, for the Host check
-	pages     map[string]*template.Template
+	version   string
 
 	// Optional: where profiles are configured and the real claude binary, to show every
-	// profile with its login state in the sidebar.
+	// profile with its login state.
 	ProfilesFile string
 	ClaudeBinary string
 	SelfBinary   string // quipu itself, used as BROWSER for `claude auth login`
@@ -54,14 +53,35 @@ type Server struct {
 	logins       logins
 }
 
-// New prepares a server; call Listen to start it. Backups of files changed through the UI go
-// to <dataDir>/backups.
-func New(home, configDir, profile, dataDir string, st *store.Store) (*Server, error) {
-	pages, err := parsePages()
+// NewService opens the backup journal under <dataDir>/backups.
+func NewService(home, configDir, profile, dataDir, version string, st *store.Store) (*Service, error) {
+	journal, err := fsx.OpenJournal(filepath.Join(dataDir, "backups"))
 	if err != nil {
 		return nil, err
 	}
-	journal, err := fsx.OpenJournal(filepath.Join(dataDir, "backups"))
+	return &Service{home: home, configDir: configDir, profile: profile, st: st, dataDir: dataDir, journal: journal, version: version}, nil
+}
+
+// Server serves a Service over HTTP on the loopback interface, guarded by a token.
+type Server struct {
+	*Service
+	token string
+	addr  string // host:port we listen on, for the Host check
+	pages map[string]*template.Template
+}
+
+// New prepares a server; call Listen to start it.
+func New(home, configDir, profile, dataDir string, st *store.Store) (*Server, error) {
+	svc, err := NewService(home, configDir, profile, dataDir, "", st)
+	if err != nil {
+		return nil, err
+	}
+	return NewServer(svc)
+}
+
+// NewServer wraps svc in an HTTP server with a fresh token.
+func NewServer(svc *Service) (*Server, error) {
+	pages, err := parsePages()
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +89,7 @@ func New(home, configDir, profile, dataDir string, st *store.Store) (*Server, er
 	if _, err := rand.Read(b); err != nil {
 		return nil, err
 	}
-	return &Server{home: home, configDir: configDir, profile: profile, st: st, dataDir: dataDir, journal: journal, token: hex.EncodeToString(b), pages: pages}, nil
+	return &Server{Service: svc, token: hex.EncodeToString(b), pages: pages}, nil
 }
 
 // Listen binds to 127.0.0.1:port and serves until ctx is done. If the port is taken it falls
@@ -107,6 +127,13 @@ func (s *Server) Handler() http.Handler {
 	static, _ := fs.Sub(assets, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, healthReply) })
+	s.apiRoutes(mux)
+	if root := app(); root != nil {
+		// The Svelte app owns every other page; the server-rendered pages below are the fallback
+		// while the frontend is not built.
+		mux.Handle("GET /", appHandler(root))
+		return s.guard(mux)
+	}
 	mux.HandleFunc("GET /{$}", s.overview)
 	mux.HandleFunc("GET /project", s.project)
 	mux.HandleFunc("GET /cache", s.cache)
@@ -131,7 +158,7 @@ func (s *Server) guard(next http.Handler) http.Handler {
 		}
 		// The health check and static files (styles, icon, app manifest) hold no data. Browsers
 		// fetch the manifest without cookies, so these must not need the token.
-		if r.Method == http.MethodGet && (r.URL.Path == "/healthz" || strings.HasPrefix(r.URL.Path, "/static/")) {
+		if r.Method == http.MethodGet && (r.URL.Path == "/healthz" || strings.HasPrefix(r.URL.Path, "/static/") || strings.HasPrefix(r.URL.Path, "/assets/")) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -144,6 +171,10 @@ func (s *Server) guard(next http.Handler) http.Handler {
 			return
 		}
 		if c, err := r.Cookie(cookieName); err != nil || !s.validToken(c.Value) {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				writeJSON(w, nil, &Problem{Code: "unauthorized"})
+				return
+			}
 			http.Error(w, "open quipu through the link printed by `quipu ui`", http.StatusUnauthorized)
 			return
 		}

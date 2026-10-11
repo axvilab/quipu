@@ -53,14 +53,29 @@ type MissRow struct {
 	MissedTokens int64 // only part of the misses report this, so it is a lower bound
 }
 
-// Filter limits a report to responses since a time and optionally to one project.
+// Filter limits a report to responses in [Since, Until) and optionally to one project.
 type Filter struct {
 	Since      time.Time
-	ProjectDir string // empty for all projects
+	Until      time.Time // zero: up to now
+	ProjectDir string    // empty for all projects
+}
+
+// Previous is the window of the same length right before f, for comparisons.
+func (f Filter) Previous() Filter {
+	until := f.Until
+	if until.IsZero() {
+		until = time.Now()
+	}
+	length := until.Sub(f.Since)
+	return Filter{Since: f.Since.Add(-length), Until: f.Since, ProjectDir: f.ProjectDir}
 }
 
 func (f Filter) where() (string, []any) {
 	w, args := "ts >= ?", []any{f.Since.UTC()}
+	if !f.Until.IsZero() {
+		w += " AND ts < ?"
+		args = append(args, f.Until.UTC())
+	}
 	if f.ProjectDir != "" {
 		w += " AND project_dir = ?"
 		args = append(args, f.ProjectDir)
@@ -100,6 +115,21 @@ func ByProject(ctx context.Context, st *store.Store, f Filter) ([]ProjectRow, er
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+// Total sums every response in the filter.
+func Total(ctx context.Context, st *store.Store, f Filter) (Totals, error) {
+	where, args := f.where()
+	rows, err := st.Query(ctx, `SELECT `+totalsCols+` FROM responses WHERE `+where, args...)
+	if err != nil {
+		return Totals{}, fmt.Errorf("query total: %w", err)
+	}
+	defer rows.Close()
+	var t Totals
+	if rows.Next() {
+		err = rows.Scan(scanTotals(&t)...)
+	}
+	return t, err
 }
 
 // ByDay reports cache use per day (UTC), oldest first.

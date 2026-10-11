@@ -47,9 +47,10 @@ func claudeAISkills(in Input) []Finding {
 			"Hide the ones code projects never use from the model with skillOverrides in " +
 			"~/.claude/settings.json (they stay available as /name), or stop syncing them with " +
 			"\"syncClaudeAiSkills\": false.",
-		Diff:  strings.Join(diff, "\n"),
-		Saves: tokens,
-		Path:  settings,
-		Edits: []Edit{{Path: settings, JSONKey: "skillOverrides", JSONSet: set}},
+		Diff:   strings.Join(diff, "\n"),
+		Saves:  tokens,
+		Path:   settings,
+		Params: map[string]string{"count": fmt.Sprint(len(names)), "tokens": fmt.Sprint(tokens), "names": strings.Join(names, ", ")},
+		Edits:  []Edit{{Path: settings, JSONKey: "skillOverrides", JSONSet: set}},
 	}}
 }

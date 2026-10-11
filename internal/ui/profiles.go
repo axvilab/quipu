@@ -12,7 +12,9 @@ import (
 // profileView is one profile in the sidebar.
 type profileView struct {
 	Name     string
-	Account  string
+	Account  string // email and plan, for the old pages
+	Email    string
+	Plan     string
 	LoggedIn bool
 	Current  bool // the profile this UI shows
 }
@@ -29,7 +31,7 @@ const profileCacheTTL = 5 * time.Minute
 
 // profiles lists the configured profiles with their login state. Without ProfilesFile or a
 // claude binary it shows just the current profile.
-func (s *Server) profiles(ctx context.Context) []profileView {
+func (s *Service) profiles(ctx context.Context) []profileView {
 	s.profileCache.mu.Lock()
 	defer s.profileCache.mu.Unlock()
 	if time.Since(s.profileCache.at) < profileCacheTTL && s.profileCache.views != nil {
@@ -43,7 +45,7 @@ func (s *Server) profiles(ctx context.Context) []profileView {
 				v := profileView{Name: p.Name, Current: p.Name == s.profile}
 				actx, cancel := context.WithTimeout(ctx, 10*time.Second)
 				if a, err := claudecode.AuthStatus(actx, s.ClaudeBinary, s.home, p.Dir); err == nil {
-					v.LoggedIn, v.Account = a.LoggedIn, a.Email
+					v.LoggedIn, v.Account, v.Email, v.Plan = a.LoggedIn, a.Email, a.Email, a.SubscriptionType
 					if a.SubscriptionType != "" {
 						v.Account += " · " + a.SubscriptionType
 					}

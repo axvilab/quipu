@@ -26,7 +26,8 @@ func longClaudeMD(in Input) []Finding {
 				Title: fmt.Sprintf("%s has %d lines (recommended ≤ %d)", it.Name, n, claudeMDMaxLines),
 				Detail: "Everything in it is sent with every request. Move topic-specific rules to " +
 					".claude/rules/*.md with paths:, and procedures to skills.",
-				Path: it.Path,
+				Path:   it.Path,
+				Params: map[string]string{"name": it.Name, "lines": fmt.Sprint(n), "limit": fmt.Sprint(claudeMDMaxLines)},
 			})
 		}
 	}
@@ -52,12 +53,14 @@ func memoryLimit(in Input) []Finding {
 				Title:  fmt.Sprintf("MEMORY.md has %d lines; only the first %d are loaded", n, memoryLoadLines),
 				Detail: "Entries past the limit are invisible to Claude. Merge or remove stale entries.",
 				Path:   it.Path,
+				Params: map[string]string{"lines": fmt.Sprint(n), "limit": fmt.Sprint(memoryLoadLines), "state": "over"},
 			})
 		case float64(n) > memoryWarnFraction*memoryLoadLines:
 			out = append(out, Finding{
 				Title:  fmt.Sprintf("MEMORY.md has %d of %d loadable lines", n, memoryLoadLines),
 				Detail: "New entries will soon be cut off. Merge or remove stale entries.",
 				Path:   it.Path,
+				Params: map[string]string{"lines": fmt.Sprint(n), "limit": fmt.Sprint(memoryLoadLines), "state": "near"},
 			})
 		}
 	}

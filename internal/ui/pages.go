@@ -85,7 +85,7 @@ func (s *Server) refresh(r *http.Request) {
 	collect.Run(r.Context(), s.home, s.st)
 }
 
-func (s *Server) shortPath(p string) string {
+func (s *Service) shortPath(p string) string {
 	if rel, ok := strings.CutPrefix(p, s.home); ok {
 		return "~" + rel
 	}
@@ -198,7 +198,7 @@ func (s *Server) project(w http.ResponseWriter, r *http.Request) {
 	}{s.shortPath(path), projects[0].Totals, start, always, onDemand, alwaysTotal, onDemandTotal, findings})
 }
 
-func (s *Server) itemLabel(it claudecode.Item, project string) string {
+func (s *Service) itemLabel(it claudecode.Item, project string) string {
 	switch it.Kind {
 	case "skill", "agent", "command", "memory":
 		return it.Name

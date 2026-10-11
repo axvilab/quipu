@@ -56,7 +56,7 @@ func (l *logins) get(name string) *login {
 // startLogin runs `claude auth login` for profile p in the background. claude opens the browser
 // through $BROWSER, which is quipu itself, so the URL ends up in a file the profiles page reads
 // and offers as a link: this works even when the daemon has no access to the desktop session.
-func (s *Server) startLogin(p *profile.Profile, email string) error {
+func (s *Service) startLogin(p *profile.Profile, email string) error {
 	s.logins.mu.Lock()
 	defer s.logins.mu.Unlock()
 	if s.logins.m == nil {
@@ -97,13 +97,13 @@ func (s *Server) startLogin(p *profile.Profile, email string) error {
 	return nil
 }
 
-func (s *Server) invalidateProfiles() {
+func (s *Service) invalidateProfiles() {
 	s.profileCache.mu.Lock()
 	s.profileCache.at = time.Time{}
 	s.profileCache.mu.Unlock()
 }
 
-func (s *Server) loadProfiles() (*profile.Config, error) {
+func (s *Service) loadProfiles() (*profile.Config, error) {
 	if s.ProfilesFile == "" {
 		return nil, fmt.Errorf("profiles are not configured")
 	}
@@ -290,7 +290,7 @@ func (s *Server) profilePrivate(w http.ResponseWriter, r *http.Request) {
 
 // waitLoginURL returns the sign-in URL of a running login, waiting up to d for claude to hand it
 // over.
-func (s *Server) waitLoginURL(name string, d time.Duration) string {
+func (s *Service) waitLoginURL(name string, d time.Duration) string {
 	deadline := time.Now().Add(d)
 	for {
 		if l := s.logins.get(name); l != nil && !l.done {
