@@ -497,48 +497,56 @@ func (s *Service) ApplyFinding(ctx context.Context, dir, id string) (Result, err
 	if target == nil || len(target.Edits) == 0 {
 		return Result{}, problem("finding-gone")
 	}
-	// Check every edit before writing anything, so a fix that touches several files is applied
-	// to all of them or to none.
+	batch, err := fsx.NewBatch()
+	if err != nil {
+		return Result{}, err
+	}
+	change, err := s.applyEdits(target.Edits, fsx.Meta{Rule: target.Rule, Title: target.Title, Params: target.Params, Batch: batch})
+	if err != nil {
+		return Result{}, err
+	}
+	return ok("applied", "rule", target.Rule, "change", change), nil
+}
+
+// applyEdits writes the edits of a fix through the journal with m. Every edit is checked before
+// anything is written, so a fix that touches several files is applied to all of them or to none.
+// It returns the id of one of the changes; any of them undoes the whole batch.
+func (s *Service) applyEdits(edits []advise.Edit, m fsx.Meta) (string, error) {
 	next := map[string][]byte{}
 	remove := map[string]string{} // files to delete → folder where pruning empty folders stops
 	var order []string
-	for _, e := range target.Edits {
+	for _, e := range edits {
 		current, seen := next[e.Path]
 		if !seen {
 			b, err := os.ReadFile(e.Path)
 			if err != nil && !errors.Is(err, fs.ErrNotExist) {
-				return Result{}, problem("read-failed", "path", s.shortPath(e.Path), "error", err.Error())
+				return "", problem("read-failed", "path", s.shortPath(e.Path), "error", err.Error())
 			}
 			current = b
 			order = append(order, e.Path)
 		}
 		changed, err := e.Apply(current)
 		if err != nil {
-			return Result{}, problem("file-changed", "path", s.shortPath(e.Path))
+			return "", problem("file-changed", "path", s.shortPath(e.Path))
 		}
 		next[e.Path] = changed
 		if e.Delete {
 			remove[e.Path] = e.Stop
 		}
 	}
-	batch, err := fsx.NewBatch()
-	if err != nil {
-		return Result{}, err
-	}
-	meta := fsx.Meta{Rule: target.Rule, Title: target.Title, Params: target.Params, Batch: batch}
-	var change string // any change of the batch undoes all of it
+	var change string
 	for _, path := range order {
-		write := func() (fsx.Change, error) { return s.journal.Write(path, next[path], meta) }
+		write := func() (fsx.Change, error) { return s.journal.Write(path, next[path], m) }
 		if stop, ok := remove[path]; ok {
-			write = func() (fsx.Change, error) { return s.journal.Remove(path, stop, meta) }
+			write = func() (fsx.Change, error) { return s.journal.Remove(path, stop, m) }
 		}
 		c, err := write()
 		if err != nil {
-			return Result{}, problem("write-failed", "path", s.shortPath(path), "error", err.Error())
+			return "", problem("write-failed", "path", s.shortPath(path), "error", err.Error())
 		}
 		change = c.ID
 	}
-	return ok("applied", "rule", target.Rule, "change", change), nil
+	return change, nil
 }
 
 // UndoChange restores a file changed by quipu, unless it was edited afterwards.

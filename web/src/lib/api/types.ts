@@ -258,3 +258,39 @@ export interface Doctor {
   checks: Check[];
   shim: ShimState;
 }
+
+export interface NewExtension {
+  kind: "skill" | "rule" | "agent";
+  name: string;
+  path: string;
+  projects: string[];
+  tokens: number;
+  variants: number;
+  global: boolean;
+}
+
+export interface NewInfo {
+  profiles: string[];
+  parent: string;
+  extensions: NewExtension[];
+  average: number;
+}
+
+export interface NewRequest {
+  folder: string;
+  summary: string;
+  extensions: string[];
+  global: string[];
+  profile: string;
+}
+
+export interface NewFile {
+  rel: string;
+  content: string;
+  from?: string;
+  about: string;
+  always: number;
+  onDemand: number;
+  existing: boolean;
+  global: boolean;
+}

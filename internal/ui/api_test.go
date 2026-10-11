@@ -8,8 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/axvilab/quipu/internal/claudecode"
+	"github.com/axvilab/quipu/internal/store"
 )
 
 func getJSON(t *testing.T, h http.Handler, path string, cookie *http.Cookie, v any) int {
@@ -307,5 +309,111 @@ func TestDoctorAndShimAPI(t *testing.T) {
 	rc, _ = os.ReadFile(filepath.Join(s.home, ".bashrc"))
 	if strings.Contains(string(rc), "quipu") {
 		t.Errorf(".bashrc after off = %q", rc)
+	}
+}
+
+func TestNewProjectAPI(t *testing.T) {
+	s := testServer(t)
+	h := s.Handler()
+	cookie := &http.Cookie{Name: cookieName, Value: s.token}
+	// A second project, so the same skill can be in two projects.
+	other := filepath.Join(s.home, "src", "api")
+	os.MkdirAll(other, 0o755)
+	r := claudecode.Response{MessageID: "m2", SessionID: "s2", Cwd: other, Timestamp: time.Now().Add(-time.Hour)}
+	src := store.Source{Path: "/t/s2.jsonl", Profile: "default", ProjectDir: claudecode.ProjectDirName(other), SessionID: "s2", Kind: claudecode.KindSession}
+	if err := s.st.WriteResponses(t.Context(), src, []claudecode.Response{r}); err != nil {
+		t.Fatal(err)
+	}
+	skill := "---\nname: release\ndescription: Cuts a release.\n---\nTag and push.\n"
+	for _, p := range []string{filepath.Join(s.home, "src", "demo"), other} {
+		os.MkdirAll(filepath.Join(p, ".claude", "skills", "release"), 0o755)
+		os.WriteFile(filepath.Join(p, ".claude", "skills", "release", "SKILL.md"), []byte(skill), 0o644)
+	}
+	os.MkdirAll(filepath.Join(other, ".claude", "agents"), 0o755)
+	os.WriteFile(filepath.Join(other, ".claude", "agents", "reviewer.md"), []byte("---\nname: reviewer\ndescription: Reviews.\n---\nReview.\n"), 0o644)
+
+	var info NewInfo
+	if code := getJSON(t, h, "/api/new", cookie, &info); code != 200 || info.Parent != "~/src" || info.Average == 0 {
+		t.Fatalf("info %d = %+v", code, info)
+	}
+	ext := map[string]NewExtension{}
+	for _, e := range info.Extensions {
+		ext[e.Name] = e
+	}
+	if e := ext["release"]; !e.Global || e.Variants != 1 || len(e.Projects) != 2 || e.Tokens == 0 {
+		t.Fatalf("release = %+v", e)
+	}
+	if e := ext["reviewer"]; e.Global || len(e.Projects) != 1 {
+		t.Fatalf("reviewer = %+v", e)
+	}
+
+	body := `{"folder":"~/src/shop","summary":"A shop.","extensions":["` + ext["reviewer"].Path + `"],"global":["` + ext["release"].Path + `"]}`
+	rec := postJSON(h, "/api/new/plan", body, cookie)
+	var files []NewFile
+	json.Unmarshal(rec.Body.Bytes(), &files)
+	byRel := map[string]NewFile{}
+	for _, f := range files {
+		byRel[f.Rel] = f
+	}
+	if f := byRel["~/.claude/skills/release/SKILL.md"]; !f.Global || f.Always == 0 {
+		t.Errorf("global release = %+v (files %+v)", f, files)
+	}
+	if f := byRel[".claude/agents/reviewer.md"]; f.From == "" || f.Always == 0 {
+		t.Errorf("reviewer = %+v", f)
+	}
+	if f := byRel["CLAUDE.md"]; f.Always == 0 || f.Existing {
+		t.Errorf("CLAUDE.md = %+v", f)
+	}
+	if _, err := os.Stat(filepath.Join(s.home, "src", "shop")); !os.IsNotExist(err) {
+		t.Fatal("plan wrote files")
+	}
+
+	rec = postJSON(h, "/api/new", body, cookie)
+	var res Result
+	json.Unmarshal(rec.Body.Bytes(), &res)
+	if rec.Code != 200 || res.Code != "project-created" || res.Params["change"] == "" {
+		t.Fatalf("create %d: %s", rec.Code, rec.Body.String())
+	}
+	user := filepath.Join(s.home, ".claude", "skills", "release", "SKILL.md")
+	if _, err := os.Stat(user); err != nil {
+		t.Errorf("release not moved to the user's skills: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(other, ".claude", "skills", "release")); !os.IsNotExist(err) {
+		t.Errorf("project copy left after moving: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(s.home, "src", "shop", ".claude", "skills", "release")); !os.IsNotExist(err) {
+		t.Errorf("a global skill was also copied: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(s.home, "src", "shop", ".claude", "agents", "reviewer.md")); err != nil {
+		t.Error(err)
+	}
+
+	// The folder now exists: its CLAUDE.md is kept and shown as existing.
+	rec = postJSON(h, "/api/new/plan", `{"folder":"~/src/shop"}`, cookie)
+	json.Unmarshal(rec.Body.Bytes(), &files)
+	for _, f := range files {
+		if f.Rel == "CLAUDE.md" && !f.Existing {
+			t.Errorf("existing CLAUDE.md not marked: %+v", f)
+		}
+	}
+	if rec := postJSON(h, "/api/new", `{"folder":"~/src/shop"}`, cookie); !strings.Contains(rec.Body.String(), "nothing-new") {
+		t.Errorf("nothing to add: %s", rec.Body.String())
+	}
+
+	// One undo reverts the project and the move.
+	if rec := postJSON(h, "/api/advice/undo", `{"id":"`+res.Params["change"]+`"}`, cookie); rec.Code != 200 {
+		t.Fatalf("undo %d: %s", rec.Code, rec.Body.String())
+	}
+	if _, err := os.Stat(filepath.Join(s.home, "src", "shop")); !os.IsNotExist(err) {
+		t.Errorf("project left after undo: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(other, ".claude", "skills", "release", "SKILL.md")); err != nil {
+		t.Errorf("project copy not restored: %v", err)
+	}
+	if _, err := os.Stat(user); !os.IsNotExist(err) {
+		t.Errorf("user skill left after undo: %v", err)
+	}
+	if rec := postJSON(h, "/api/new/plan", `{"folder":"shop"}`, cookie); !strings.Contains(rec.Body.String(), "folder-not-absolute") {
+		t.Errorf("relative folder: %s", rec.Body.String())
 	}
 }

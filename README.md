@@ -1,53 +1,128 @@
 # quipu
 
-See what Claude Code knows about each of your projects and what it costs.
+**See what Claude Code reads in each of your projects, what it costs you, and fix it in one click.**
 
-- What gets loaded into every session, what on demand, and how many tokens it takes.
-- Cache hit rate by project, profile and day, and likely reasons for misses.
-- Rules and knowledge repeated across projects and subscriptions, with fixes as diffs.
-- Several subscriptions (personal, work) with one shared library of skills and rules.
+Every Claude Code session starts by sending your `CLAUDE.md` files, imports, rules, skill
+descriptions, memory and plugins, before you have typed anything. That weight is paid again in
+every session, and it grows quietly: a design doc pulled in with `@`, a skill copied into five
+projects, a plugin nobody uses. quipu reads your Claude Code setup and transcripts locally, shows
+where the tokens go, and turns what it finds into concrete edits you can review and undo.
 
-Everything runs locally; nothing leaves your machine.
+![Overview: each project is a cord of a khipu; knots record cache writes, red side cords mark things worth fixing](docs/images/overview.png)
 
-> Early development. See [docs/DESIGN.md](docs/DESIGN.md).
+Everything runs on your machine. quipu reads no credentials, sends nothing anywhere, and changes
+a file only when you click Apply, keeping a copy so the change can be undone.
+
+## What it does
+
+**Shows what is loaded and what it costs.** For every project: what goes into each session
+(Claude Code's own prompt and tools, your files, skill and plugin listings), what loads only on
+demand, and how many tokens each file takes. Cache writes, hit rate and the miss reasons the API
+reports, per project and per day.
+
+![Project page: what is sent at the start of a session, file by file](docs/images/project.png)
+
+**Finds what is worth fixing, with a diff for each.**
+
+| Finding | Fix |
+|---|---|
+| A large file `@imported` into `CLAUDE.md`, paid in every session | mention it in plain text so Claude opens it when needed |
+| Skills synced from claude.ai listed in every code project | hide them from the model; they stay available as `/name` |
+| `CLAUDE.md` longer than 200 lines, `MEMORY.md` near its load limit | where to trim |
+| A project repeating lines your own `CLAUDE.md` already sends | remove the repeat |
+| The same `CLAUDE.md` block, skill, rule or agent copied into several projects | keep one, in your own settings |
+| A plugin unused for 30 days, or enabled everywhere but used in one project | turn it off, or enable it only there |
+
+Each fix is shown as a diff over every file it touches. Apply writes them all or none; every
+change is journaled and undone in one click, alone or with the rest of its batch.
+
+![A finding with its diff and one-click fix](docs/images/advice.png)
+
+**Edits with the cost in view.** An editor for `CLAUDE.md`, rules and skills that shows the
+token cost as you type.
+
+**Several accounts, picked by folder.** Keep personal and work Claude subscriptions side by side
+(`CLAUDE_CONFIG_DIR` profiles) with one shared library of skills and rules. A rule says which
+folder uses which account; an optional `claude` shim applies it whenever you type `claude`.
+`quipu doctor` checks the whole setup.
+
+**Starts new projects from your own work.** Set up a new or freshly cloned folder with skills,
+rules and agents from your other projects. What several projects already share is offered as
+global instead of copied again, and you see what Claude will read before anything is written.
+quipu adds no templates or conventions of its own.
+
+![New project: your own skills and rules, with what Claude will read](docs/images/new-project.png)
+
+**Also:** backup and restore of the setup of every profile, as an archive or into your own git
+repository, with a scan for credentials first; live sessions with Remote Control links; English
+and Ukrainian; light and dark themes; keyboard first (`Ctrl K`, `G` then a letter, `?` for help).
 
 ## Install
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/axvilab/quipu/main/install.sh | sh
-quipu install    # start at login, add to the application menu (undo: quipu uninstall)
+quipu install    # start at login and add Quipu to the application menu (undo: quipu uninstall)
 quipu ui         # open the Quipu window
 ```
 
 The script puts `quipu` and its window `quipu-app` into `~/.local/bin` (on macOS the window is
-`~/Applications/Quipu.app`) and checks the checksum; no root needed. Linux (glibc, x86_64/arm64)
-and macOS (Intel/Apple Silicon). On Linux the window needs WebKitGTK 4.1, which desktop
-distributions usually have (`libwebkit2gtk-4.1-0` on Debian/Ubuntu); without it, and with
-`quipu ui --browser`, quipu opens in the browser at http://quipu.localhost:47800.
+`~/Applications/Quipu.app`) after checking their checksums; no root needed. It runs on Linux
+(glibc, x86_64 and arm64) and macOS (Intel and Apple Silicon). On Linux the window needs
+WebKitGTK 4.1, which desktop distributions usually have (`libwebkit2gtk-4.1-0` on Debian and
+Ubuntu); without it, or with `quipu ui --browser`, quipu opens in the browser at
+http://quipu.localhost:47800.
 
-Try it on a fake home first, so nothing of yours is touched:
+### Try it without touching your setup
 
 ```sh
-quipu demo /tmp/qdemo
+quipu demo /tmp/qdemo          # a fake home with projects, transcripts and things to fix
 HOME=/tmp/qdemo quipu ui
 ```
 
-CLI: `quipu cache`, `quipu map [path]`, `quipu advise [path]`, `quipu daemon`.
+## Command line
 
+The window is the main way in, but everything works from a terminal too:
+
+```text
+quipu map [path]       what Claude Code loads for a project and how much it weighs
+quipu cache            cache hit rate per project or day, and why the cache missed
+quipu advise [path]    findings for a project, each with its diff
+quipu new <folder>     set up a new or freshly cloned project from your own skills and rules
+quipu profile …        accounts, folder rules and the claude shim
+quipu run              start claude under the profile of the current folder
+quipu doctor           check Claude Code, profiles, the shim and quipu itself
+quipu backup           save the setup of every profile; quipu restore brings it back
+quipu daemon           collect transcripts in the background (quipu install sets this up)
+```
+
+## How it works
+
+Claude Code deletes transcripts after 30 days by default. quipu's collector copies the usage
+from them (tokens, cache, models, plugins; not the conversation text) into Parquet files in
+`~/.local/share/quipu` (`~/Library/Application Support/quipu` on macOS) and queries them with an
+embedded DuckDB. Instructions are read from the files themselves: `CLAUDE.md` and its imports,
+rules, skills, agents, memory and plugin settings, for every profile.
+
+quipu works with Claude Code only through what it supports: config directories, settings files,
+files in `.claude/`, plugins and hooks. It never edits `~/.claude.json` and never reads login
+tokens. Token counts for your files are estimates; the totals come from what the API reported.
+
+Design and decisions: [docs/DESIGN.md](docs/DESIGN.md) and [docs/adr](docs/adr/README.md).
 
 ## Development
 
-Go runs only in Docker, so nothing gets installed on your machine:
+Go and Node run only in Docker, so nothing is installed on your machine:
 
 ```sh
-make test     # run tests
-make build    # produces bin/quipu and bin/quipu-app (the window)
-make clean    # removes bin/
-make clean-cache  # also removes the Docker volumes with caches and the window's build image
+make test         # Go tests
+make web          # build the Svelte frontend
+make build        # frontend, bin/quipu and bin/quipu-app (the window)
+make web-dev      # Vite dev server with hot reload; run `quipu ui --port 47801` beside it
+make clean-cache  # remove the Docker volumes with caches and the window's build image
 ```
 
-Want a shorter command? `alias qp=quipu`
+Try changes on a fake home (`quipu demo /tmp/qdemo`), never on your real `~/.claude`.
 
 ## License
 
-MIT
+[MIT](LICENSE)

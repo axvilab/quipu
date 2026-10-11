@@ -38,6 +38,7 @@ commands:
   doctor     check Claude Code, profiles, the claude shim and quipu itself
   install    start quipu at login and add it to the application menu
   map        what Claude Code loads for a project and how much it weighs
+  new        set up a new or freshly cloned project for Claude Code
   profile    Claude accounts (personal, work…) and which folder uses which
   restore    show what a backup would change, and write it with --apply
   run        start claude under the profile of the current folder
@@ -90,6 +91,8 @@ func main() {
 		err = runInstall(os.Args[2:], true)
 	case "map":
 		err = runMap(ctx, os.Args[2:])
+	case "new":
+		err = runNew(os.Args[2:])
 	case "profile", "profiles":
 		err = runProfile(ctx, os.Args[2:])
 	case "run":

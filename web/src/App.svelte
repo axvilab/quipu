@@ -22,6 +22,7 @@
   import Project from "./screens/Project.svelte";
   import Settings from "./screens/Settings.svelte";
   import Backup from "./screens/Backup.svelte";
+  import NewProject from "./screens/NewProject.svelte";
 
   let session = $state<Session | null>(null);
   watchLive();
@@ -55,14 +56,14 @@
       return;
     }
     if (Date.now() - pendingG < 1200) {
-      const to = { o: "/", a: "/advice", c: "/cache", r: "/profiles", b: "/backup", s: "/settings" }[e.key];
+      const to = { o: "/", a: "/advice", c: "/cache", r: "/profiles", n: "/new", b: "/backup", s: "/settings" }[e.key];
       pendingG = 0;
       if (to) navigate(to);
     }
   }
 
   // Project pages set their own title (the project name).
-  const titles: Record<string, string> = { overview: "nav.overview", advice: "nav.advice", cache: "nav.cache", profiles: "nav.profiles", backup: "nav.backup", settings: "nav.settings" };
+  const titles: Record<string, string> = { overview: "nav.overview", advice: "nav.advice", cache: "nav.cache", profiles: "nav.profiles", new: "nav.new", backup: "nav.backup", settings: "nav.settings" };
   $effect(() => {
     const key = titles[router.route.name];
     if (key) document.title = `${t(key)} · Quipu`;
@@ -100,6 +101,7 @@
         {:else if router.route.name === "profiles"}<Profiles />
         {:else if router.route.name === "settings"}<Settings />
         {:else if router.route.name === "backup"}<Backup />
+        {:else if router.route.name === "new"}<NewProject />
         {:else}<NotFound />{/if}
       </div>
     </main>

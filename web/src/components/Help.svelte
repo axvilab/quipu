@@ -9,6 +9,7 @@
     ["G A", "help.advice"],
     ["G C", "help.cache"],
     ["G R", "help.profiles"],
+    ["G N", "help.new"],
     ["G B", "help.backup"],
     ["G S", "help.settings"],
     ["J / K", "help.move"],

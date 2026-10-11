@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/duckdb/duckdb-go/v2" // registers the "duckdb" database/sql driver
@@ -65,6 +66,9 @@ const schema = 2
 type Store struct {
 	dir string // <data dir>/responses
 	db  *sql.DB
+	// view serializes rebuilding the responses view: DuckDB fails concurrent CREATE OR REPLACE
+	// of the same view with a write-write conflict, which the UI's parallel requests hit.
+	view sync.Mutex
 }
 
 // Open creates the store under dataDir if needed. The directory is private to the user.
@@ -174,6 +178,9 @@ func (s *Store) Query(ctx context.Context, query string, args ...any) (*sql.Rows
 	// The view is rebuilt on every query, so it always covers the files on disk right now.
 	// The in-memory database is shared by all connections of s.db, so a plain view is visible
 	// to the query below whichever pooled connection runs it.
+	// The query is bound to the view when it starts, so the lock is held only until then.
+	s.view.Lock()
+	defer s.view.Unlock()
 	if _, err := s.db.ExecContext(ctx, "CREATE OR REPLACE VIEW responses AS "+s.source()); err != nil {
 		return nil, fmt.Errorf("create responses view: %w", err)
 	}

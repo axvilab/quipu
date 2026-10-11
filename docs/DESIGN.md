@@ -45,7 +45,7 @@ Non-goals:
 | 7 | Project switchboard: project × plugin matrix, plugin catalog and stack-based recommendations, install via `claude plugin` | `quipu plugins` | v0.3 |
 | 8 | MCP server: search and write knowledge across projects. Postponed: its tool definitions would sit in every session, the kind of cost quipu removes, and the gain is unclear | `quipu mcp` | later |
 | 9 | Team knowledge base: select, anonymize, confirm one by one, git repo | — | v0.4 |
-| 11 | New project wizard: scaffold from a stack template, copy skills/rules/agents from other projects | `quipu new` | v0.3 |
+| 11 | New project wizard: scaffold from a stack template, copy skills/rules/agents from other projects | `quipu new` | v0.7 |
 
 First milestone: modules 1–4 as CLI, tested on real data. Continue only if `quipu cache` shows
 something useful.
@@ -145,20 +145,27 @@ does not matter, only a version that has these commands.
   MCP run with the user's rights. Only trusted marketplaces are suggested by default.
 - Advisor rule: a plugin enabled for the user but used in one project should move to project scope.
 
-### 4.8 New project wizard (v0.3)
+### 4.8 New project wizard
 
-`quipu new` (and "New project" in the UI) creates a project set up the way the advisor would
-recommend, instead of fixing it afterwards:
+`quipu new` (and New project on the overview, `G N`) sets up a new or freshly cloned folder from
+the user's own work, without imposing a way of working:
 
-1. Basics: name, folder, stack, docs language, profile (personal / work).
-2. Scaffold from a **stack template**: `CLAUDE.md`, `.claude/settings.json`, language rules,
-   `adr-new` and `ship` skills, `docs/` (DESIGN, ADR index, plans), `.gitignore`, CI workflow.
-3. Pick skills, rules and agents from the user's other projects (known from collection), each
-   with its token cost.
-4. Preview every file as a diff, then write; optionally `git init` and a first commit.
+1. Folder (new, or existing: files already there are never touched), purpose, profile.
+2. Skills, rules and agents from the user's other projects, each with what it adds to every
+   session; the most recently changed copy when versions differ. What is already identical in
+   several projects is offered as **global** (moved to the user's settings by the advice's
+   `copied-extension` fix) instead of copied again, so the wizard never makes the duplicates the
+   advice warns about.
+3. Preview "what Claude gets": files grouped by when Claude reads them, each explained and with
+   its token cost, including what the folder already has; the session start compared with the
+   user's other projects. Costs come from laying the files out in a scratch folder and reading it
+   with `claudecode.Instructions`, as for a real project. Then one journal batch for the files and
+   any move to global, so one undo reverts both; a folder rule for the profile.
 
-Stack templates are plain folders of files, not code; later they can be packaged as Claude Code
-plugins so the same set can be enabled in existing projects through the switchboard (module 7).
+Written by quipu itself: only a `CLAUDE.md` with the name and purpose, if the folder has none. No
+stack templates, permissions, docs skeletons, CI or `git init`: commands are guesses before there
+is code (`/init` writes them from the real project), not every project lives on GitHub, and a
+way of working is the user's own to bring, as their skills.
 
 ### 4.9 UI
 
@@ -194,6 +201,7 @@ internal/store/      storage interface, DuckDB backend
 internal/analytics/  cache and cost reports
 internal/project/    project identity
 internal/profile/    profiles and shim
+internal/scaffold/   setting up a project folder
 internal/advise/     rule-based advisor                           v0.2
 internal/ui/         web UI                                       v0.2
 internal/fsx/        atomic writes, backups

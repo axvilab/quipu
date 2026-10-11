@@ -345,3 +345,35 @@ func readJSON(path string, v any) bool {
 	b, err := os.ReadFile(path)
 	return err == nil && json.Unmarshal(b, v) == nil
 }
+
+// ProjectExtensionDir is where a project keeps its own skills, rules or agents (kind "skill",
+// "rule" or "agent").
+func ProjectExtensionDir(project, kind string) string {
+	return filepath.Join(project, ".claude", kind+"s")
+}
+
+// ExtensionAt tells what a path given by the user is: a skill (its folder or SKILL.md), or a rule
+// or agent file in a rules or agents folder. file is the skill's SKILL.md or the file itself.
+func ExtensionAt(path string) (kind, file string, ok bool) {
+	if info, err := os.Stat(path); err == nil && info.IsDir() {
+		path = filepath.Join(path, "SKILL.md")
+	}
+	if _, err := os.Stat(path); err != nil {
+		return "", "", false
+	}
+	if filepath.Base(path) == "SKILL.md" {
+		return "skill", path, true
+	}
+	if !strings.HasSuffix(path, ".md") {
+		return "", "", false
+	}
+	for d := filepath.Dir(path); d != filepath.Dir(d); d = filepath.Dir(d) {
+		switch filepath.Base(d) {
+		case "rules":
+			return "rule", path, true
+		case "agents":
+			return "agent", path, true
+		}
+	}
+	return "", "", false
+}

@@ -169,3 +169,30 @@ func TestSchemaUpgrade(t *testing.T) {
 		t.Errorf("plugins = %q", plugins)
 	}
 }
+
+func TestQueryConcurrent(t *testing.T) {
+	st, err := Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	src := Source{Path: "/t/a.jsonl", Profile: "default", ProjectDir: "-p", SessionID: "s", Kind: claudecode.KindSession}
+	if err := st.WriteResponses(t.Context(), src, []claudecode.Response{{MessageID: "m", SessionID: "s", Timestamp: time.Now()}}); err != nil {
+		t.Fatal(err)
+	}
+	errs := make(chan error, 16)
+	for range 16 {
+		go func() {
+			rows, err := st.Query(t.Context(), "SELECT count(*) FROM responses")
+			if err == nil {
+				rows.Close()
+			}
+			errs <- err
+		}()
+	}
+	for range 16 {
+		if err := <-errs; err != nil {
+			t.Fatal(err)
+		}
+	}
+}

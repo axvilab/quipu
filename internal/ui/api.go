@@ -101,6 +101,24 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 			writeJSON(w, v, err)
 		}
 	})
+	mux.HandleFunc("GET /api/new", func(w http.ResponseWriter, r *http.Request) {
+		v, err := s.NewInfo(r.Context())
+		writeJSON(w, v, err)
+	})
+	mux.HandleFunc("POST /api/new/plan", func(w http.ResponseWriter, r *http.Request) {
+		var in NewRequest
+		if readJSON(w, r, &in) {
+			v, err := s.PlanNew(in)
+			writeJSON(w, v, err)
+		}
+	})
+	mux.HandleFunc("POST /api/new", func(w http.ResponseWriter, r *http.Request) {
+		var in NewRequest
+		if readJSON(w, r, &in) {
+			v, err := s.CreateNew(r.Context(), in)
+			writeJSON(w, v, err)
+		}
+	})
 	mux.HandleFunc("GET /api/doctor", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]any{"checks": s.Doctor(r.Context()), "shim": s.Shim()}, nil)
 	})

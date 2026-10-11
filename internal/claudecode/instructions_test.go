@@ -87,3 +87,30 @@ func TestInstructions(t *testing.T) {
 		t.Errorf("items:\n%s\n\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
+
+func TestExtensionAt(t *testing.T) {
+	base := filepath.Join(t.TempDir(), "p", ".claude")
+	write := func(rel string) string {
+		p := filepath.Join(base, rel)
+		os.MkdirAll(filepath.Dir(p), 0o755)
+		os.WriteFile(p, []byte("x"), 0o644)
+		return p
+	}
+	skill := write("skills/release/SKILL.md")
+	rule := write("rules/go/style.md")
+	agent := write("agents/reviewer.md")
+	other := write("notes.md")
+	for _, c := range []struct{ path, kind, file string }{
+		{filepath.Dir(skill), "skill", skill},
+		{skill, "skill", skill},
+		{rule, "rule", rule},
+		{agent, "agent", agent},
+		{other, "", ""},
+		{filepath.Join(base, "missing.md"), "", ""},
+	} {
+		kind, file, ok := ExtensionAt(c.path)
+		if kind != c.kind || file != c.file || ok != (c.kind != "") {
+			t.Errorf("ExtensionAt(%s) = %q %q %v", c.path, kind, file, ok)
+		}
+	}
+}

@@ -9,6 +9,7 @@
   import FindingDetail from "../components/FindingDetail.svelte";
   import FindingList from "../components/FindingList.svelte";
   import Header from "../components/Header.svelte";
+  import Icon from "../components/Icon.svelte";
   import Khipu from "../components/Khipu.svelte";
   import LiveSessions from "../components/LiveSessions.svelte";
   import Loading from "../components/Loading.svelte";
@@ -38,7 +39,10 @@
 </script>
 
 <Header title={t("overview.title")} subtitle={t("overview.subtitle", { count: prefs.days })}>
-  {#snippet actions()}<PeriodSwitch />{/snippet}
+  {#snippet actions()}
+    <a href="/new" use:link class="btn btn-ghost" title={`${t("nav.new")} (G N)`}><Icon name="plus" />{t("nav.new")}</a>
+    <PeriodSwitch />
+  {/snippet}
 </Header>
 
 {#if !data}

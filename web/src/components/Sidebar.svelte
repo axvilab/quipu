@@ -16,7 +16,8 @@
     { href: "/settings", name: "settings", icon: "settings", key: "S" },
   ] as const;
 
-  const current = $derived(router.route.name === "project" ? "overview" : router.route.name);
+  // The project pages and the new project page belong to the overview.
+  const current = $derived(router.route.name === "project" || router.route.name === "new" ? "overview" : router.route.name);
 </script>
 
 <nav class="flex h-full flex-col gap-1 border-r border-warp bg-night px-3 py-4" aria-label={t("nav.label")}>
