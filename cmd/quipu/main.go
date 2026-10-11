@@ -36,6 +36,8 @@ commands:
   demo       create a fake home with a Claude Code setup to try quipu on
   install    start quipu at login and add it to the application menu
   map        what Claude Code loads for a project and how much it weighs
+  profile    Claude accounts (personal, work…) and which folder uses which
+  run        start claude under the profile of the current folder
   ui         open the web interface
   uninstall  undo quipu install
   version    print the version
@@ -70,6 +72,15 @@ func main() {
 		err = runInstall(os.Args[2:], true)
 	case "map":
 		err = runMap(ctx, os.Args[2:])
+	case "profile", "profiles":
+		err = runProfile(ctx, os.Args[2:])
+	case "run":
+		stop() // the child gets Ctrl+C itself; quipu run must not exit before it
+		code, err := runClaude(os.Args[2:])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "quipu:", err)
+		}
+		os.Exit(code)
 	case "ui":
 		err = runUI(ctx, os.Args[2:])
 	case "version", "--version":
@@ -105,6 +116,7 @@ func runDaemon(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
+		attachProfiles(srv, home)
 		go func() {
 			err := srv.Listen(ctx, *uiPort, func(url string) {
 				if err := ui.WriteRuntime(dir, url); err != nil {

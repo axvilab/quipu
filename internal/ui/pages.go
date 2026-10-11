@@ -57,16 +57,17 @@ func parsePages() (map[string]*template.Template, error) {
 
 // page is what every template gets: the active sidebar entry plus the page's own data.
 type page struct {
-	Nav     string
-	Title   string
-	Profile string
-	Msg     string // result of the last action, shown once
-	Data    any
+	Nav      string
+	Title    string
+	Profile  string
+	Profiles []profileView
+	Msg      string // result of the last action, shown once
+	Data     any
 }
 
 func (s *Server) render(w http.ResponseWriter, r *http.Request, name, nav, title string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	p := page{Nav: nav, Title: title, Profile: s.profile, Msg: r.URL.Query().Get("msg"), Data: data}
+	p := page{Nav: nav, Title: title, Profile: s.profile, Profiles: s.profiles(r.Context()), Msg: r.URL.Query().Get("msg"), Data: data}
 	if err := s.pages[name].Execute(w, p); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

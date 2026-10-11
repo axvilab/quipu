@@ -44,6 +44,7 @@ func runUI(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	attachProfiles(srv, home)
 	defer ui.RemoveRuntime(dir)
 	return srv.Listen(ctx, *port, func(url string) {
 		ui.WriteRuntime(dir, url)
@@ -79,4 +80,12 @@ func openBrowser(url string, tab bool) error {
 		}
 	}
 	return exec.Command("xdg-open", url).Start()
+}
+
+// attachProfiles lets the UI list every profile with its login state.
+func attachProfiles(srv *ui.Server, home string) {
+	srv.ProfilesFile = filepath.Join(xdgDir("XDG_CONFIG_HOME", home, ".config"), "quipu", "profiles.json")
+	if bin, err := realClaude(); err == nil {
+		srv.ClaudeBinary = bin
+	}
 }

@@ -17,8 +17,13 @@
     <a href="/cache" {{if eq .Nav "cache"}}class="on" aria-current="page"{{end}}>Cache</a>
     <a href="/advice" {{if eq .Nav "advice"}}class="on" aria-current="page"{{end}}>Advisor</a>
     <div class="grow"></div>
-    <div class="profile-label">Profile</div>
-    <div class="profile">{{.Profile}}</div>
+    <div class="profile-label">Profiles</div>
+    {{range .Profiles}}
+    <div class="profile{{if .Current}} current{{end}}" title="{{if .LoggedIn}}{{.Account}}{{else}}not logged in{{end}}">
+      <span><strong>{{.Name}}</strong>{{with .Account}}<br><span class="small">{{.}}</span>{{end}}</span>
+      <span class="dot{{if .LoggedIn}} on{{end}}" aria-label="{{if .LoggedIn}}logged in{{else}}not logged in{{end}}"></span>
+    </div>
+    {{end}}
   </nav>
   <main>
     {{with .Msg}}<div class="flash" role="status">{{.}}</div>{{end}}

@@ -141,3 +141,8 @@ button:hover { filter: brightness(0.96); }
 form { margin: 0; }
 .change { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
 .change:first-of-type { border-top: 0; }
+.profile { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #A8A29E; background: transparent; overflow: hidden; }
+.profile.current { background: #292524; color: var(--side-text); }
+.profile .small { font-size: 11px; color: #A8A29E; overflow-wrap: anywhere; }
+.dot { flex: none; width: 8px; height: 8px; border-radius: 4px; background: #57534E; }
+.dot.on { background: #34D399; }

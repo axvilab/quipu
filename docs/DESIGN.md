@@ -101,7 +101,11 @@ main repo via `git rev-parse --git-common-dir`.
   instead of re-implementing those checks; its output is plain text, so parsing lives in
   `internal/claudecode` and tolerates format changes. The in-session `/doctor` audits one
   project interactively; quipu complements it across projects and profiles with measured costs.
-- Shared library of skills and rules for all profiles; corporate/personal boundary enforced.
+- Shared library: at `quipu profile add` the new profile links to `~/.claude/{CLAUDE.md,skills,
+  agents,rules,commands}`; `projects/` (memory, transcripts) is never shared, which keeps the
+  personal / work boundary. Login state comes from `claude auth status --json`.
+- MVP is `quipu run` with folder rules (`quipu profile rule <folder> <name>`); the `claude` shim
+  on PATH comes later, `alias claude='quipu run'` works meanwhile.
 - No edits to `.claude.json` ([ADR 0003](adr/0003-supported-integration-only.md)); MCP servers
   are shared through plugins or `.mcp.json`.
 

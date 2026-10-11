@@ -43,6 +43,12 @@ type Server struct {
 	token     string
 	addr      string // host:port we listen on, for the Host check
 	pages     map[string]*template.Template
+
+	// Optional: where profiles are configured and the real claude binary, to show every
+	// profile with its login state in the sidebar.
+	ProfilesFile string
+	ClaudeBinary string
+	profileCache profileCache
 }
 
 // New prepares a server; call Listen to start it. Backups of files changed through the UI go
