@@ -58,7 +58,9 @@ jobs:
           else
             app=Quipu.app/Contents
             mkdir -p "$app/MacOS" "$app/Resources"
-            go build -trimpath -tags desktop,production -ldflags "$ldflags" -o "$app/MacOS/quipu-app" ./cmd/quipu-app
+            # Wails uses UTType; `wails build` links its framework, plain go build must too.
+            CGO_LDFLAGS="-framework UniformTypeIdentifiers" \
+              go build -trimpath -tags desktop,production -ldflags "$ldflags" -o "$app/MacOS/quipu-app" ./cmd/quipu-app
             sed "s/VERSION/${VERSION#v}/" build/Info.plist > "$app/Info.plist"
             mkdir quipu.iconset
             for s in 16 32 128 256 512; do

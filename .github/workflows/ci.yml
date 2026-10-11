@@ -41,6 +41,8 @@ jobs:
         run: |
           tags=desktop,production
           if [ "$RUNNER_OS" = Linux ]; then tags=$tags,webkit2_41; fi
+          # Wails uses UTType on macOS; `wails build` links its framework, plain go build must too.
+          if [ "$RUNNER_OS" = macOS ]; then export CGO_LDFLAGS="-framework UniformTypeIdentifiers"; fi
           # Errors also go out as annotations, which the public API shows without signing in.
           if ! go build -tags "$tags" -o /tmp/quipu-app ./cmd/quipu-app 2>build.log; then
             cat build.log
