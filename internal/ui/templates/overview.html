@@ -1,0 +1,43 @@
+{{define "content"}}{{with .Data}}
+<header class="head">
+  <div>
+    <div class="sub">last {{.Days}} days · {{len .Rows}} projects · {{.Total.Sessions}} sessions</div>
+    <h1>Projects</h1>
+  </div>
+  <div class="seg">
+    <a href="/?days=7" {{if eq .Days 7}}class="on"{{end}}>7 days</a>
+    <a href="/?days=30" {{if eq .Days 30}}class="on"{{end}}>30 days</a>
+    <a href="/?days=90" {{if eq .Days 90}}class="on"{{end}}>90 days</a>
+  </div>
+</header>
+
+<section class="tiles">
+  <div class="tile"><div class="k">Cache writes</div><div class="v">{{human .Total.CacheCreation}}</div><div class="n">what costs limits</div></div>
+  <div class="tile"><div class="k">Prompt tokens</div><div class="v">{{human .Total.Prompt}}</div><div class="n">{{pct .Total.HitRate}} from cache</div></div>
+  <div class="tile"><div class="k">Requests</div><div class="v">{{.Total.Requests}}</div><div class="n">{{.Total.Sessions}} sessions</div></div>
+  <div class="tile warn-soft"><div class="k">Data is partial</div><div class="n">Cloud sessions, other machines and transcripts older than 30 days before install are not included</div></div>
+</section>
+
+<section class="card">
+  <h2>By project</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Project</th><th class="r">Sessions</th><th class="r">Requests</th><th class="r">Cache writes</th><th class="r">Prompt</th><th class="r">Hit rate</th><th class="r">Session start</th><th class="r">Findings</th></tr></thead>
+    <tbody>
+    {{range .Rows}}
+      <tr>
+        <td><a href="/project?dir={{.Dir}}">{{.Path}}</a></td>
+        <td class="r mono">{{.Totals.Sessions}}</td>
+        <td class="r mono">{{.Totals.Requests}}</td>
+        <td class="r mono">{{human .Totals.CacheCreation}}</td>
+        <td class="r mono">{{human .Totals.Prompt}}</td>
+        <td class="r mono">{{pct .Totals.HitRate}}</td>
+        <td class="r mono">{{if .Start.Sessions}}{{human .Start.Latest}}{{else}}–{{end}}</td>
+        <td class="r">{{if .Findings}}<span class="badge warn">{{.Findings}}</span>{{else}}<span class="muted">0</span>{{end}}</td>
+      </tr>
+    {{end}}
+    </tbody>
+  </table>
+  </div>
+</section>
+{{end}}{{end}}

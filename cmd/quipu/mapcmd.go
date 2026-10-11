@@ -80,9 +80,9 @@ func runMap(ctx context.Context, args []string) error {
 		return nil
 	}
 	fmt.Printf("  latest %s (%s), median %s over %d sessions, range %s–%s\n",
-		human(w.Latest), w.LatestAt.Local().Format(time.DateOnly), human(w.Median), w.Sessions, human(w.Min), human(w.Max))
+		analytics.Human(w.Latest), w.LatestAt.Local().Format(time.DateOnly), analytics.Human(w.Median), w.Sessions, analytics.Human(w.Min), analytics.Human(w.Max))
 	fmt.Printf("  files above ≈ %s of it; the rest is Claude Code's system prompt, tools, MCP and the first message\n",
-		human(alwaysTotal))
+		analytics.Human(alwaysTotal))
 	return nil
 }
 
@@ -98,7 +98,7 @@ func printGroup(title string, rows []row, home, project string, limit int) int64
 	for _, r := range rows {
 		total += r.tokens
 	}
-	fmt.Printf("%s: ≈ %s tokens, %d items\n", title, human(total), len(rows))
+	fmt.Printf("%s: ≈ %s tokens, %d items\n", title, analytics.Human(total), len(rows))
 
 	shown := rows
 	if limit > 0 && len(rows) > limit {
@@ -106,7 +106,7 @@ func printGroup(title string, rows []row, home, project string, limit int) int64
 	}
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	for _, r := range shown {
-		fmt.Fprintf(w, "  %6s\t%s\t%s\t%s\n", human(r.tokens), r.item.Scope, r.item.Kind, itemLabel(r.item, home, project))
+		fmt.Fprintf(w, "  %6s\t%s\t%s\t%s\n", analytics.Human(r.tokens), r.item.Scope, r.item.Kind, itemLabel(r.item, home, project))
 	}
 	w.Flush()
 	if len(shown) < len(rows) {

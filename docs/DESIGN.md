@@ -97,6 +97,10 @@ main repo via `git rev-parse --git-common-dir`.
 - Install method does not matter: native installer (`~/.local/bin/claude` → versions dir, self-
   updating), npm global (deprecated) or Homebrew. Data always lives in the config dir; the shim
   never replaces the binary. `quipu doctor` warns when several installs are on `PATH`.
+- `quipu doctor` reuses `claude doctor` (version, install method, auto-update, managed settings)
+  instead of re-implementing those checks; its output is plain text, so parsing lives in
+  `internal/claudecode` and tolerates format changes. The in-session `/doctor` audits one
+  project interactively; quipu complements it across projects and profiles with measured costs.
 - Shared library of skills and rules for all profiles; corporate/personal boundary enforced.
 - No edits to `.claude.json` ([ADR 0003](adr/0003-supported-integration-only.md)); MCP servers
   are shared through plugins or `.mcp.json`.

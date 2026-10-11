@@ -1,0 +1,65 @@
+{{define "content"}}{{with .Data}}
+<header class="head">
+  <div>
+    <div class="sub"><a href="/">Projects</a> · last 30 days · {{.Totals.Sessions}} sessions</div>
+    <h1>What Claude knows about {{.Path}}</h1>
+  </div>
+</header>
+
+<section class="tiles">
+  <div class="tile"><div class="k">Session start (measured)</div><div class="v">{{if .Start.Sessions}}{{human .Start.Latest}}{{else}}–{{end}}</div><div class="n">{{if .Start.Sessions}}median {{human .Start.Median}} over {{.Start.Sessions}} sessions{{else}}no sessions yet{{end}}</div></div>
+  <div class="tile"><div class="k">Loaded in every session</div><div class="v">≈ {{human .AlwaysTotal}}</div><div class="n">from your files</div></div>
+  <div class="tile"><div class="k">Loaded on demand</div><div class="v">≈ {{human .OnDemandTotal}}</div><div class="n">only when used</div></div>
+  <div class="tile {{if .Findings}}warn{{end}}"><div class="k">Findings</div><div class="v">{{len .Findings}}</div><div class="n"><a href="#findings">see below</a></div></div>
+</section>
+
+<p class="note">The measured start includes Claude Code's own system prompt, tool definitions and MCP servers; the files below are the part you control.</p>
+
+<section class="cols">
+  <div class="card">
+    <h2>Loaded in every session <span class="muted">≈ {{human .AlwaysTotal}}</span></h2>
+    {{template "items" .Always}}
+  </div>
+  <div class="card">
+    <h2>Loaded on demand <span class="muted">≈ {{human .OnDemandTotal}}</span></h2>
+    {{template "items" .OnDemand}}
+  </div>
+</section>
+
+<section class="card" id="findings">
+  <h2>Findings</h2>
+  {{if not .Findings}}<p class="muted">Nothing to improve by the current rules.</p>{{end}}
+  {{range .Findings}}{{template "finding" .}}{{end}}
+</section>
+{{end}}{{end}}
+
+{{define "items"}}
+<div class="items">
+{{range head . 12}}{{template "item" .}}{{else}}<p class="muted">Nothing.</p>{{end}}
+</div>
+{{with tail . 12}}
+<details><summary>Show {{len .}} more</summary>
+<div class="items more">{{range .}}{{template "item" .}}{{end}}</div>
+</details>
+{{end}}
+{{end}}
+
+{{define "item"}}
+  <div class="item">
+    <span class="label" title="{{.Label}}">{{.Label}}</span>
+    <span class="tag">{{.Scope}} · {{.Kind}}</span>
+    <span class="bar"><span style="width: {{.Bar}}%"></span></span>
+    <span class="mono r">{{human .Tokens}}</span>
+  </div>
+{{end}}
+
+{{define "finding"}}
+<article class="finding">
+  <div class="fhead"><strong>{{.Title}}</strong>{{if .Saves}}<span class="badge">saves ≈ {{human .Saves}} / session</span>{{end}}</div>
+  <p>{{.Detail}}</p>
+  {{if .Path}}<div class="mono muted small">{{.Path}}</div>{{end}}
+  {{if .Diff}}<pre class="diff">{{range lines .Diff}}<span class="{{diffClass .}}">{{.}}</span>
+{{end}}</pre>{{end}}
+  <div class="rule muted small">rule: {{.Rule}}</div>
+</article>
+{{end}}

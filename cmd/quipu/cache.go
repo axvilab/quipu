@@ -77,25 +77,17 @@ func runCache(ctx context.Context, args []string) error {
 		fmt.Println("\nCache misses reported by the API:")
 		mw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		for _, m := range misses {
-			fmt.Fprintf(mw, "  %s\t%d\t%s\n", m.Reason, m.Count, missHint[m.Reason])
+			fmt.Fprintf(mw, "  %s\t%d\t%s\n", m.Reason, m.Count, analytics.MissHints[m.Reason])
 		}
 		mw.Flush()
 	}
 	return nil
 }
 
-var missHint = map[string]string{
-	"previous_message_not_found": "cache expired: a long pause inside a session",
-	"messages_changed":           "earlier conversation content changed",
-	"system_changed":             "system prompt changed: CLAUDE.md, settings, output style",
-	"tools_changed":              "tool list changed: MCP server or plugin toggled",
-	"model_changed":              "model switched mid-session",
-}
-
 func totalsCells(t analytics.Totals) string {
 	return fmt.Sprintf("%d\t%d\t%s\t%.1f%%\t%s\t%s\t%d\t",
-		t.Sessions, t.Requests, human(t.Prompt()), 100*t.HitRate(),
-		human(t.CacheCreation), human(t.Output), t.Misses)
+		t.Sessions, t.Requests, analytics.Human(t.Prompt()), 100*t.HitRate(),
+		analytics.Human(t.CacheCreation), analytics.Human(t.Output), t.Misses)
 }
 
 func add(sum *analytics.Totals, t analytics.Totals) {
@@ -133,17 +125,4 @@ func shortPath(home, path, fallback string) string {
 		return "~" + rel
 	}
 	return path
-}
-
-// human formats a token count as 950, 12.3K, 4.5M or 1.2B.
-func human(n int64) string {
-	switch {
-	case n >= 1e9:
-		return fmt.Sprintf("%.1fB", float64(n)/1e9)
-	case n >= 1e6:
-		return fmt.Sprintf("%.1fM", float64(n)/1e6)
-	case n >= 1e3:
-		return fmt.Sprintf("%.1fK", float64(n)/1e3)
-	}
-	return fmt.Sprint(n)
 }

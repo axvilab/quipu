@@ -28,17 +28,22 @@ func claudeAISkills(in Input) []Finding {
 	}
 	sort.Strings(names)
 
-	var overrides []string
-	for _, n := range names {
-		overrides = append(overrides, fmt.Sprintf("%q: \"user-invocable-only\"", n))
+	diff := []string{`+ "skillOverrides": {`}
+	for i, n := range names {
+		comma := ","
+		if i == len(names)-1 {
+			comma = ""
+		}
+		diff = append(diff, fmt.Sprintf(`+   %q: "user-invocable-only"%s`, n, comma))
 	}
+	diff = append(diff, "+ }")
 	return []Finding{{
 		Title: fmt.Sprintf("%d skills synced from claude.ai add ≈ %d tokens to every session", len(names), tokens),
 		Detail: "Skills: " + strings.Join(names, ", ") + ". " +
 			"Hide the ones code projects never use from the model with skillOverrides in " +
 			"~/.claude/settings.json (they stay available as /name), or stop syncing them with " +
 			"\"syncClaudeAiSkills\": false.",
-		Diff:  "+ \"skillOverrides\": {" + strings.Join(overrides, ", ") + "}",
+		Diff:  strings.Join(diff, "\n"),
 		Saves: tokens,
 	}}
 }

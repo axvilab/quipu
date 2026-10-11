@@ -1,0 +1,32 @@
+{{define "content"}}{{with .Data}}
+<header class="head">
+  <div>
+    <div class="sub">{{len .Groups}} findings across projects with sessions in the last 30 days · analysis is local</div>
+    <h1>What to improve</h1>
+  </div>
+</header>
+
+{{range .Groups}}
+<section class="card">
+  <div class="where">
+    {{if gt (len .Projects) 1}}<span class="badge warn">{{len .Projects}} projects</span> <span class="muted small">one fix covers all of them</span>
+    {{else}}<span class="badge">{{index .Projects 0}}</span>{{end}}
+  </div>
+  {{template "finding" .Finding}}
+  {{if gt (len .Projects) 1}}<details class="small"><summary>Projects</summary><div class="mono muted">{{range .Projects}}{{.}}<br>{{end}}</div></details>{{end}}
+</section>
+{{else}}
+<section class="card"><p class="muted">Nothing to improve by the current rules.</p></section>
+{{end}}
+{{end}}{{end}}
+
+{{define "finding"}}
+<article class="finding">
+  <div class="fhead"><strong>{{.Title}}</strong>{{if .Saves}}<span class="badge">saves ≈ {{human .Saves}} / session</span>{{end}}</div>
+  <p>{{.Detail}}</p>
+  {{if .Path}}<div class="mono muted small">{{.Path}}</div>{{end}}
+  {{if .Diff}}<pre class="diff">{{range lines .Diff}}<span class="{{diffClass .}}">{{.}}</span>
+{{end}}</pre>{{end}}
+  <div class="rule muted small">rule: {{.Rule}}</div>
+</article>
+{{end}}

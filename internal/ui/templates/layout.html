@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Title}} · quipu</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="app">
+  <nav class="side">
+    <a class="brand" href="/">quipu</a>
+    <a href="/" {{if eq .Nav "overview"}}class="on" aria-current="page"{{end}}>Projects</a>
+    <a href="/cache" {{if eq .Nav "cache"}}class="on" aria-current="page"{{end}}>Cache</a>
+    <a href="/advice" {{if eq .Nav "advice"}}class="on" aria-current="page"{{end}}>Advisor</a>
+    <div class="grow"></div>
+    <div class="profile-label">Profile</div>
+    <div class="profile">{{.Profile}}</div>
+  </nav>
+  <main>
+    {{template "content" .}}
+  </main>
+</div>
+</body>
+</html>

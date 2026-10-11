@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/axvilab/quipu/internal/advise"
+	"github.com/axvilab/quipu/internal/analytics"
 	"github.com/axvilab/quipu/internal/claudecode"
 )
 
@@ -77,7 +78,7 @@ func runAdvise(ctx context.Context, args []string) error {
 		saves += f.Saves
 	}
 	if saves > 0 {
-		fmt.Printf("Fixing these saves ≈ %s tokens per session.\n", human(saves))
+		fmt.Printf("Fixing these saves ≈ %s tokens per session.\n", analytics.Human(saves))
 	}
 	return nil
 }
