@@ -41,7 +41,7 @@ Non-goals:
 | 4 | Profiles: choose a subscription by folder rule or interactively; shared skills/rules library | `quipu run`, `claude` shim | v0.1 |
 | 5 | Advisor: rule-based checks, each finding a diff; later LLM grouping via `claude -p` under the same profile | `quipu advise` | v0.2 |
 | 6 | Web UI: editor with token cost, skill/agent forms, move skills between projects | `quipu ui` | v0.2 |
-| 10 | Backup: safe subset of `~/.claude` to a private repo, secret scan | `quipu backup` | v0.2 |
+| 10 | Backup: safe subset of `~/.claude` to a trusted private git repo or a local export file, secret scan | `quipu backup`, `quipu restore` | v0.2 |
 | 7 | Project switchboard: project × plugin matrix | — | v0.3 |
 | 8 | MCP server: search and write knowledge across projects | `quipu mcp` | v0.3 |
 | 9 | Team knowledge base: select, anonymize, confirm one by one, git repo | — | v0.4 |
@@ -97,12 +97,27 @@ main repo via `git rev-parse --git-common-dir`.
 - No edits to `.claude.json` ([ADR 0003](adr/0003-supported-integration-only.md)); MCP servers
   are shared through plugins or `.mcp.json`.
 
-### 4.6 UI
+### 4.6 Backup (v0.2)
+
+Restores Claude Code setup after an OS reinstall or on a new machine. Two targets, chosen in
+quipu settings; both are explicit user actions, never automatic uploads:
+
+- **git repo**: a private repo the user trusts; quipu commits locally, the user (or `quipu backup
+  push`) pushes;
+- **local export**: one archive file the user stores wherever they back up files.
+
+Included: `CLAUDE.md`, `settings.json`, `rules/`, `skills/`, `agents/`, project memory.
+Never included: credentials, `.claude.json`, transcripts, caches, installed plugins.
+Per-project exclusions in settings (e.g. work projects whose memory must not leave the machine).
+A secret scan runs before every commit or export. `quipu restore` applies a backup with a
+preview of every file it will write.
+
+### 4.7 UI
 
 Embedded web UI on 127.0.0.1 ([ADR 0004](adr/0004-embedded-web-ui.md)). Shows when a session is
 open: "changes apply after /clear".
 
-### 4.7 Code layout
+### 4.8 Code layout
 
 ```
 cmd/quipu/           entry point; role chosen by argv[0]
