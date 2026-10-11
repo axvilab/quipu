@@ -17,7 +17,12 @@
       <tr>
         <td><strong>{{.Name}}</strong></td>
         <td>
-          {{if eq .Login "url"}}<a class="button primary" href="{{.URL}}" target="_blank" rel="noopener">Open the sign-in page</a> <span class="muted small">waiting for you to sign in…</span>
+          {{if eq .Login "url"}}
+            <div class="signin">
+              <a class="button primary" href="{{.URL}}" target="_blank" rel="noopener">Open the sign-in page</a>
+              <button type="button" class="copy" data-url="{{.URL}}">Copy link</button>
+            </div>
+            <div class="muted small">Signed in to claude.ai with another account in this browser? Paste the link into a private window. Waiting for you to sign in…</div>
           {{else if eq .Login "waiting"}}<span class="muted">starting sign-in…</span>
           {{else if .LoggedIn}}<span class="dot on"></span> {{.Account}}
           {{else}}<span class="dot"></span> <span class="muted">not signed in</span>{{end}}
@@ -25,7 +30,7 @@
         <td class="mono muted">{{.Dir}}</td>
         <td class="small">{{range $i, $s := .Shares}}{{if $i}}, {{end}}{{$s}}{{else}}<span class="muted">–</span>{{end}}</td>
         <td class="r actions">
-          {{if not .Login}}<form method="post" action="/profiles/login"><input type="hidden" name="name" value="{{.Name}}"><button type="submit">{{if .LoggedIn}}Sign in again{{else}}Sign in{{end}}</button></form>{{end}}
+          {{if not .Login}}<form method="post" action="/profiles/login" class="login-form"><input type="hidden" name="name" value="{{.Name}}"><input type="email" name="email" placeholder="account email (optional)" aria-label="email of the account to sign in with"><button type="submit">{{if .LoggedIn}}Sign in again{{else}}Sign in{{end}}</button></form>{{end}}
           {{if ne .Name "default"}}<form method="post" action="/profiles/remove"><input type="hidden" name="name" value="{{.Name}}"><button type="submit" title="keeps the directory with the login">Remove</button></form>{{end}}
         </td>
       </tr>
@@ -65,5 +70,12 @@
   </div>
 </section>
 
+<script>
+document.querySelectorAll("button.copy").forEach(function (b) {
+  b.addEventListener("click", function () {
+    navigator.clipboard.writeText(b.dataset.url).then(function () { b.textContent = "Copied"; });
+  });
+});
+</script>
 <p class="note">To make plain <code>claude</code> pick the profile by folder, add <code>alias claude='quipu run'</code> to your shell's rc file.</p>
 {{end}}{{end}}

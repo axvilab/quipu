@@ -56,7 +56,7 @@ func (l *logins) get(name string) *login {
 // startLogin runs `claude auth login` for profile p in the background. claude opens the browser
 // through $BROWSER, which is quipu itself, so the URL ends up in a file the profiles page reads
 // and offers as a link: this works even when the daemon has no access to the desktop session.
-func (s *Server) startLogin(p *profile.Profile) error {
+func (s *Server) startLogin(p *profile.Profile, email string) error {
 	s.logins.mu.Lock()
 	defer s.logins.mu.Unlock()
 	if s.logins.m == nil {
@@ -72,7 +72,13 @@ func (s *Server) startLogin(p *profile.Profile) error {
 	os.Remove(l.urlFile)
 
 	ctx, cancel := context.WithTimeout(context.Background(), loginTimeout)
-	cmd := exec.CommandContext(ctx, s.ClaudeBinary, "auth", "login")
+	args := []string{"auth", "login"}
+	if email != "" {
+		// Pre-filled on the sign-in page, so a browser already signed in to another account
+		// does not just confirm that one.
+		args = append(args, "--email", email)
+	}
+	cmd := exec.CommandContext(ctx, s.ClaudeBinary, args...)
 	cmd.Env = append(claudecode.Env(s.home, p.Dir), "BROWSER="+s.SelfBinary, LoginURLEnv+"="+l.urlFile)
 	if err := cmd.Start(); err != nil {
 		cancel()
@@ -253,7 +259,12 @@ func (s *Server) profileLogin(w http.ResponseWriter, r *http.Request) {
 		s.back(w, r, "Unknown profile.")
 		return
 	}
-	if err := s.startLogin(p); err != nil {
+	email := strings.TrimSpace(r.FormValue("email"))
+	if email != "" && (!strings.Contains(email, "@") || strings.ContainsAny(email, " \t\n")) {
+		s.back(w, r, "That does not look like an email address.")
+		return
+	}
+	if err := s.startLogin(p, email); err != nil {
 		s.back(w, r, "Could not start sign-in: "+err.Error())
 		return
 	}

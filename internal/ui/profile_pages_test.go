@@ -22,7 +22,7 @@ func TestProfilesPage(t *testing.T) {
 	claude := filepath.Join(bin, "claude")
 	os.WriteFile(claude, []byte(`#!/bin/sh
 dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
-if [ "$2" = login ]; then "$BROWSER" "https://claude.com/oauth/authorize?x=1"; sleep 1; mkdir -p "$dir"; touch "$dir/.signed"; exit 0; fi
+if [ "$2" = login ]; then [ "$3" = --email ] && echo "$4" > "$HOME/email-arg"; "$BROWSER" "https://claude.com/oauth/authorize?x=1"; sleep 1; mkdir -p "$dir"; touch "$dir/.signed"; exit 0; fi
 if [ -f "$dir/.signed" ]; then echo '{"loggedIn":true,"email":"me@work.example"}'; else echo '{"loggedIn":false}'; fi
 `), 0o755)
 	browser := filepath.Join(bin, "browser")
@@ -49,7 +49,7 @@ if [ -f "$dir/.signed" ]; then echo '{"loggedIn":true,"email":"me@work.example"}
 	}
 	_ = work
 
-	post(h, "/profiles/login", origin, url.Values{"name": {"work"}}, cookie)
+	post(h, "/profiles/login", origin, url.Values{"name": {"work"}, "email": {"me@work.example"}}, cookie)
 	deadline := time.Now().Add(5 * time.Second)
 	sawURL := false
 	for time.Now().Before(deadline) {
@@ -67,6 +67,13 @@ if [ -f "$dir/.signed" ]; then echo '{"loggedIn":true,"email":"me@work.example"}
 	}
 	if !strings.Contains(page, "me@work.example") {
 		t.Error("profile not shown as signed in after login finished")
+	}
+	if b, _ := os.ReadFile(filepath.Join(s.home, "email-arg")); strings.TrimSpace(string(b)) != "me@work.example" {
+		t.Errorf("claude auth login got --email %q", b)
+	}
+	rec = post(h, "/profiles/login", origin, url.Values{"name": {"work"}, "email": {"not an email"}}, cookie)
+	if !strings.Contains(rec.Header().Get("Location"), "email") {
+		t.Errorf("bad email accepted: %q", rec.Header().Get("Location"))
 	}
 
 	rec = post(h, "/profiles/remove", origin, url.Values{"name": {"work"}}, cookie)
