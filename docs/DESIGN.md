@@ -43,7 +43,7 @@ Non-goals:
 | 6 | Web UI: editor with token cost, skill/agent forms, move skills between projects | `quipu ui` | v0.2 |
 | 10 | Backup: safe subset of `~/.claude` to a trusted private git repo or a local export file, secret scan | `quipu backup`, `quipu restore` | v0.2 |
 | 7 | Project switchboard: project × plugin matrix, plugin catalog and stack-based recommendations, install via `claude plugin` | `quipu plugins` | v0.3 |
-| 8 | MCP server: search and write knowledge across projects | `quipu mcp` | v0.3 |
+| 8 | MCP server: search and write knowledge across projects. Postponed: its tool definitions would sit in every session, the kind of cost quipu removes, and the gain is unclear | `quipu mcp` | later |
 | 9 | Team knowledge base: select, anonymize, confirm one by one, git repo | — | v0.4 |
 | 11 | New project wizard: scaffold from a stack template, copy skills/rules/agents from other projects | `quipu new` | v0.3 |
 
