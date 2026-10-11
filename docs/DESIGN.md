@@ -42,7 +42,7 @@ Non-goals:
 | 5 | Advisor: rule-based checks, each finding a diff; later LLM grouping via `claude -p` under the same profile | `quipu advise` | v0.2 |
 | 6 | Web UI: editor with token cost, skill/agent forms, move skills between projects | `quipu ui` | v0.2 |
 | 10 | Backup: safe subset of `~/.claude` to a trusted private git repo or a local export file, secret scan | `quipu backup`, `quipu restore` | v0.2 |
-| 7 | Project switchboard: project × plugin matrix | — | v0.3 |
+| 7 | Project switchboard: project × plugin matrix, plugin catalog and stack-based recommendations, install via `claude plugin` | `quipu plugins` | v0.3 |
 | 8 | MCP server: search and write knowledge across projects | `quipu mcp` | v0.3 |
 | 9 | Team knowledge base: select, anonymize, confirm one by one, git repo | — | v0.4 |
 | 11 | New project wizard: scaffold from a stack template, copy skills/rules/agents from other projects | `quipu new` | v0.3 |
@@ -116,7 +116,21 @@ Per-project exclusions in settings (e.g. work projects whose memory must not lea
 A secret scan runs before every commit or export. `quipu restore` applies a backup with a
 preview of every file it will write.
 
-### 4.7 New project wizard (v0.3)
+### 4.7 Plugins (v0.3)
+
+quipu never installs plugin files itself; it runs `claude plugin install|enable|disable … --scope
+project|local|user` (with the profile's `CLAUDE_CONFIG_DIR`), so the Claude Code install method
+does not matter, only a version that has these commands.
+
+- Catalog: marketplaces the user already added (read from the config dir, read-only).
+- Recommendations by detected stack (`go.mod`, `composer.json`, `package.json`, …), each with
+  its per-request token cost from `claude plugin details`.
+- Default scope is project or local: an enabled plugin is paid in every session.
+- Before install, show what the plugin contains (skills, agents, hooks, MCP servers); hooks and
+  MCP run with the user's rights. Only trusted marketplaces are suggested by default.
+- Advisor rule: a plugin enabled for the user but used in one project should move to project scope.
+
+### 4.8 New project wizard (v0.3)
 
 `quipu new` (and "New project" in the UI) creates a project set up the way the advisor would
 recommend, instead of fixing it afterwards:
@@ -131,12 +145,12 @@ recommend, instead of fixing it afterwards:
 Stack templates are plain folders of files, not code; later they can be packaged as Claude Code
 plugins so the same set can be enabled in existing projects through the switchboard (module 7).
 
-### 4.8 UI
+### 4.9 UI
 
 Embedded web UI on 127.0.0.1 ([ADR 0004](adr/0004-embedded-web-ui.md)). Shows when a session is
 open: "changes apply after /clear".
 
-### 4.9 Code layout
+### 4.10 Code layout
 
 ```
 cmd/quipu/           entry point; role chosen by argv[0]
