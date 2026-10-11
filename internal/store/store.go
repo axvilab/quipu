@@ -106,7 +106,8 @@ func (s *Store) WriteResponses(ctx context.Context, src Source, rs []claudecode.
 	}
 
 	final := filepath.Join(s.dir, fileName(src.Path))
-	tmp := final + ".tmp"
+	// A unique temporary name: the daemon and the UI may collect the same transcript at once.
+	tmp := fmt.Sprintf("%s.%d.tmp", final, time.Now().UnixNano())
 	copySQL := fmt.Sprintf("COPY batch TO %s (FORMAT parquet, COMPRESSION zstd)", quote(tmp))
 	if _, err := conn.ExecContext(ctx, copySQL); err != nil {
 		return fmt.Errorf("write parquet: %w", err)

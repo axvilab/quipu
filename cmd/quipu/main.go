@@ -13,24 +13,31 @@ import (
 	"os/signal"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/axvilab/quipu/internal/collect"
 	"github.com/axvilab/quipu/internal/store"
+	"github.com/axvilab/quipu/internal/ui"
 )
 
 var version = "dev"
+
+// defaultUIPort is where the daemon serves the web interface, so its address stays the same.
+const defaultUIPort = 47800
 
 const usage = `usage: quipu <command> [flags]
 
 commands:
   advise     check a project's Claude Code setup and propose fixes
   cache      cache hit rate per project or day, and why the cache missed
-  daemon     collect Claude Code transcripts before they are deleted
+  daemon     collect transcripts in the background and serve the web interface
   demo       create a fake home with a Claude Code setup to try quipu on
+  install    start quipu at login and add it to the application menu
   map        what Claude Code loads for a project and how much it weighs
   ui         open the web interface
+  uninstall  undo quipu install
   version    print the version
 `
 
@@ -57,6 +64,10 @@ func main() {
 		err = runDaemon(ctx, os.Args[2:])
 	case "demo":
 		err = runDemo(os.Args[2:])
+	case "install":
+		err = runInstall(os.Args[2:], false)
+	case "uninstall":
+		err = runInstall(os.Args[2:], true)
 	case "map":
 		err = runMap(ctx, os.Args[2:])
 	case "ui":
@@ -79,13 +90,34 @@ func runDaemon(ctx context.Context, args []string) error {
 	fs := flag.NewFlagSet("daemon", flag.ExitOnError)
 	once := fs.Bool("once", false, "collect once and exit")
 	interval := fs.Duration("interval", 10*time.Minute, "time between collections")
+	noUI := fs.Bool("no-ui", false, "do not serve the web interface")
+	uiPort := fs.Int("ui-port", defaultUIPort, "port of the web interface on 127.0.0.1")
 	fs.Parse(args)
 
-	home, st, err := openStore()
+	home, dir, st, err := openData()
 	if err != nil {
 		return err
 	}
 	defer st.Close()
+
+	if !*once && !*noUI {
+		srv, err := ui.New(home, filepath.Join(home, ".claude"), "default", dir, st)
+		if err != nil {
+			return err
+		}
+		go func() {
+			err := srv.Listen(ctx, *uiPort, func(url string) {
+				if err := ui.WriteRuntime(dir, url); err != nil {
+					fmt.Fprintln(os.Stderr, "quipu:", err)
+				}
+				fmt.Println("web interface:", strings.SplitN(ui.Friendly(url), "?", 2)[0], "(open it with `quipu ui`)")
+			})
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "quipu: web interface stopped:", err)
+			}
+		}()
+		defer ui.RemoveRuntime(dir)
+	}
 
 	for {
 		start := time.Now()

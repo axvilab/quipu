@@ -76,8 +76,13 @@ func TestGuard(t *testing.T) {
 	if len(cookies) != 1 || !cookies[0].HttpOnly {
 		t.Fatalf("cookie = %+v", cookies)
 	}
-	if rec := get(h, "/", "localhost:4242", cookies[0]); rec.Code != http.StatusOK {
-		t.Errorf("with cookie via localhost: status %d", rec.Code)
+	for _, host := range []string{"localhost:4242", "quipu.localhost:4242"} {
+		if rec := get(h, "/", host, cookies[0]); rec.Code != http.StatusOK {
+			t.Errorf("with cookie via %s: status %d", host, rec.Code)
+		}
+	}
+	if rec := get(h, "/", "quipu.localhost:9999", cookies[0]); rec.Code != http.StatusForbidden {
+		t.Errorf("our name on another port: status %d, want 403", rec.Code)
 	}
 }
 

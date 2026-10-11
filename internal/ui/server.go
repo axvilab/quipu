@@ -18,6 +18,7 @@ import (
 	"net"
 	"net/http"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/axvilab/quipu/internal/fsx"
@@ -27,7 +28,10 @@ import (
 //go:embed templates static
 var assets embed.FS
 
-const cookieName = "quipu_token"
+const (
+	cookieName  = "quipu_token"
+	healthReply = "quipu"
+)
 
 // Server is the web UI over one store and one Claude Code profile.
 type Server struct {
@@ -59,15 +63,22 @@ func New(home, configDir, profile, dataDir string, st *store.Store) (*Server, er
 	return &Server{home: home, configDir: configDir, profile: profile, st: st, journal: journal, token: hex.EncodeToString(b), pages: pages}, nil
 }
 
-// Listen binds to 127.0.0.1:port (0 picks a free port) and serves until ctx is done.
-// It calls ready with the URL to open, which includes the one-time token.
+// Listen binds to 127.0.0.1:port and serves until ctx is done. If the port is taken it falls
+// back to a free one. It calls ready with the URL to open, which includes the token.
 func (s *Server) Listen(ctx context.Context, port int, ready func(url string)) error {
 	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil && port != 0 {
+		ln, err = net.Listen("tcp", "127.0.0.1:0")
+	}
 	if err != nil {
 		return err
 	}
 	s.addr = ln.Addr().String()
 	srv := &http.Server{Handler: s.Handler(), ReadHeaderTimeout: 10 * time.Second}
+	// quipu.localhost may resolve to ::1 first, so also listen on IPv6 loopback, same port.
+	if ln6, err := net.Listen("tcp", "[::1]"+s.addr[strings.LastIndex(s.addr, ":"):]); err == nil {
+		go srv.Serve(ln6)
+	}
 	go func() {
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 2*time.Second)
@@ -86,6 +97,7 @@ func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	static, _ := fs.Sub(assets, "static")
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(static)))
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, healthReply) })
 	mux.HandleFunc("GET /{$}", s.overview)
 	mux.HandleFunc("GET /project", s.project)
 	mux.HandleFunc("GET /cache", s.cache)
@@ -97,8 +109,14 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) guard(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if s.addr != "" && r.Host != s.addr && r.Host != "localhost"+s.addr[len("127.0.0.1"):] {
+		if s.addr != "" && !s.ourHost(r.Host) {
 			http.Error(w, "unexpected Host header", http.StatusForbidden)
+			return
+		}
+		// The health check and static files (styles, icon, app manifest) hold no data. Browsers
+		// fetch the manifest without cookies, so these must not need the token.
+		if r.Method == http.MethodGet && (r.URL.Path == "/healthz" || strings.HasPrefix(r.URL.Path, "/static/")) {
+			next.ServeHTTP(w, r)
 			return
 		}
 		if t := r.URL.Query().Get("t"); t != "" && s.validToken(t) {
@@ -121,6 +139,17 @@ func (s *Server) guard(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// Hostname is the friendly name of the UI. Browsers and systemd-resolved send every *.localhost
+// name to the loopback address, so it works without editing /etc/hosts.
+const Hostname = "quipu.localhost"
+
+// ourHost accepts the names this server can be reached by on its own port. Anything else is
+// refused, which defeats DNS rebinding.
+func (s *Server) ourHost(host string) bool {
+	port := s.addr[strings.LastIndex(s.addr, ":"):]
+	return host == s.addr || host == "localhost"+port || host == "[::1]"+port || host == Hostname+port
 }
 
 // sameOrigin requires an Origin header naming this server; the Host itself is checked earlier.

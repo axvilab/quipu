@@ -151,8 +151,15 @@ plugins so the same set can be enabled in existing projects through the switchbo
 
 ### 4.9 UI
 
-Embedded web UI on 127.0.0.1 ([ADR 0004](adr/0004-embedded-web-ui.md)). Shows when a session is
-open: "changes apply after /clear".
+Embedded web UI ([ADR 0004](adr/0004-embedded-web-ui.md)), served by the daemon on a fixed loopback
+port ([ADR 0005](adr/0005-distribution-and-autostart.md)) at `http://quipu.localhost:47800`:
+browsers and systemd-resolved map `*.localhost` to loopback, so no `/etc/hosts` edit. Listens on
+127.0.0.1 and ::1; other Host headers are refused. `quipu ui` opens the running instance in an
+app window (Chrome/Chromium/Edge/Brave `--app`), or a tab otherwise; an app manifest lets the
+browser install it with its icon. Shows when a session is open: "changes apply after /clear".
+
+Install: `quipu install` adds a systemd user unit (Linux) or launchd agent (macOS) for the daemon
+and a menu entry with the icon (Linux); `quipu uninstall` removes exactly what it created.
 
 ### 4.10 Code layout
 

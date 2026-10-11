@@ -1,0 +1,13 @@
+{
+  "name": "quipu",
+  "short_name": "quipu",
+  "description": "What Claude Code knows about your projects and what it costs",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#F6F5F2",
+  "theme_color": "#1C1917",
+  "icons": [
+    { "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

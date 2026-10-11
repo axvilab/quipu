@@ -4,13 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}} · quipu</title>
-<link rel="icon" href="data:,">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/static/manifest.webmanifest">
+<meta name="theme-color" content="#1C1917">
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div class="app">
   <nav class="side">
-    <a class="brand" href="/">quipu</a>
+    <a class="brand" href="/"><img src="/static/icon.svg" alt="" width="28" height="28"> quipu</a>
     <a href="/" {{if eq .Nav "overview"}}class="on" aria-current="page"{{end}}>Projects</a>
     <a href="/cache" {{if eq .Nav "cache"}}class="on" aria-current="page"{{end}}>Cache</a>
     <a href="/advice" {{if eq .Nav "advice"}}class="on" aria-current="page"{{end}}>Advisor</a>
