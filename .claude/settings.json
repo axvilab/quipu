@@ -1,0 +1,19 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": "",
+    "sessionUrl": false
+  },
+  "permissions": {
+    "allow": [
+      "Bash(make test)",
+      "Bash(make vet)",
+      "Bash(make fmt)",
+      "Bash(make build)",
+      "Bash(make tidy)"
+    ],
+    "ask": [
+      "Bash(git push*)"
+    ]
+  }
+}

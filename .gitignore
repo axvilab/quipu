@@ -1,0 +1,7 @@
+/bin/
+/.cache/
+/dist/
+/.idea/
+/.claude/settings.local.json
+/CLAUDE.local.md
+/.claude/worktrees/
