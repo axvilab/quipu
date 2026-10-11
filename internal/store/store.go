@@ -173,6 +173,12 @@ func insertRows(ctx context.Context, conn *sql.Conn, src Source, rs []claudecode
 	return tx.Commit()
 }
 
+// Empty reports whether nothing has been stored yet.
+func (s *Store) Empty() bool {
+	files, _ := filepath.Glob(filepath.Join(s.dir, "*.parquet"))
+	return len(files) == 0
+}
+
 // Query runs SQL against the "responses" view over all stored files.
 func (s *Store) Query(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
 	// The view is rebuilt on every query, so it always covers the files on disk right now.

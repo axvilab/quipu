@@ -294,3 +294,11 @@ export interface NewFile {
   existing: boolean;
   global: boolean;
 }
+
+export interface Collection {
+  running: boolean;
+  done: number;
+  total: number;
+  generation: number;
+  first: boolean;
+}

@@ -52,6 +52,7 @@ type Service struct {
 	SelfBinary   string // quipu itself, used as BROWSER for `claude auth login`
 	profileCache profileCache
 	logins       logins
+	coll         collector
 }
 
 // NewService opens the backup journal under <dataDir>/backups.
@@ -129,6 +130,7 @@ func (s *Server) Listen(ctx context.Context, port int, ready func(url string)) e
 		defer cancel()
 		srv.Shutdown(shutdown)
 	}()
+	go s.Collect(ctx, time.Minute)
 	ready(fmt.Sprintf("http://%s/?t=%s", s.addr, s.token))
 	if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err

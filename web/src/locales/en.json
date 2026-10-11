@@ -507,5 +507,9 @@
   "new.movedGlobal": "made global: works in every project",
   "result.not-a-folder": "{folder} is a file, not a folder.",
   "result.nothing-new": "Nothing to add: the folder already has these files.",
-  "result.global-gone": "{path} can no longer be made global (the copies changed); copy it instead."
+  "result.global-gone": "{path} can no longer be made global (the copies changed); copy it instead.",
+  "collect.title": "Reading your Claude Code history",
+  "collect.body": "The first time, quipu goes through every session transcript once. Later it reads only what changed, in the background.",
+  "collect.progress": "{done} of {total} sessions",
+  "collect.finding": "Looking for sessions…"
 }

@@ -10,6 +10,8 @@
   import Panel from "./components/Panel.svelte";
   import { closeEditor, editor } from "./lib/editor.svelte";
   import { watchLive } from "./lib/live.svelte";
+  import { collection, watchCollection } from "./lib/collection.svelte";
+  import FirstCollection from "./components/FirstCollection.svelte";
   import RemoteControlBanner from "./components/RemoteControlBanner.svelte";
   import Help from "./components/Help.svelte";
   import Sidebar from "./components/Sidebar.svelte";
@@ -26,6 +28,7 @@
 
   let session = $state<Session | null>(null);
   watchLive();
+  watchCollection();
   let unauthorized = $state(false);
 
   $effect(() => {
@@ -94,7 +97,8 @@
     <main class="min-w-0 px-4 py-6 md:px-10 md:py-8">
       <div class="mx-auto max-w-[1180px]">
         <RemoteControlBanner />
-        {#if router.route.name === "overview"}<Overview />
+        {#if collection.data?.first && ["overview", "project", "advice", "cache", "new"].includes(router.route.name)}<FirstCollection state={collection.data} />
+        {:else if router.route.name === "overview"}<Overview />
         {:else if router.route.name === "project"}{#key router.route.dir}<Project dir={router.route.dir} />{/key}
         {:else if router.route.name === "advice"}<Advice />
         {:else if router.route.name === "cache"}<Cache />

@@ -14,7 +14,6 @@ import (
 	"github.com/axvilab/quipu/internal/advise"
 	"github.com/axvilab/quipu/internal/analytics"
 	"github.com/axvilab/quipu/internal/claudecode"
-	"github.com/axvilab/quipu/internal/collect"
 	"github.com/axvilab/quipu/internal/fsx"
 	"github.com/axvilab/quipu/internal/profile"
 )
@@ -237,10 +236,6 @@ func ok(code string, kv ...string) Result {
 
 // ---- reads ----
 
-func (s *Service) collect(ctx context.Context) {
-	collect.Run(ctx, s.home, s.st)
-}
-
 func window(days int) analytics.Filter {
 	if days <= 0 || days > 365 {
 		days = 30
@@ -269,7 +264,6 @@ func (s *Service) SessionInfo(ctx context.Context) Session {
 
 // Overview is the home screen: totals against the previous period, projects and what to fix.
 func (s *Service) Overview(ctx context.Context, days int) (Overview, error) {
-	s.collect(ctx)
 	f := window(days)
 	out := Overview{Days: days, Projects: []ProjectRow{}, Attention: []Finding{}}
 	t, err := analytics.Total(ctx, s.st, f)
@@ -296,7 +290,6 @@ func (s *Service) Overview(ctx context.Context, days int) (Overview, error) {
 
 // ProjectDetail is one project: what is sent at session start, findings and daily activity.
 func (s *Service) ProjectDetail(ctx context.Context, dir string, days int) (Project, error) {
-	s.collect(ctx)
 	f := window(days)
 	f.ProjectDir = dir
 	rows, err := analytics.ByProject(ctx, s.st, analytics.Filter{Since: time.Now().AddDate(0, 0, -365), ProjectDir: dir})
@@ -345,7 +338,6 @@ func (s *Service) ProjectDetail(ctx context.Context, dir string, days int) (Proj
 
 // Cache is cache use per day with the reasons for misses.
 func (s *Service) Cache(ctx context.Context, days int) (CacheReport, error) {
-	s.collect(ctx)
 	f := window(days)
 	out := CacheReport{Days: days, Daily: []Day{}, Misses: []Miss{}}
 	t, err := analytics.Total(ctx, s.st, f)
@@ -369,7 +361,6 @@ func (s *Service) Cache(ctx context.Context, days int) (CacheReport, error) {
 
 // AdviceReport is every finding across projects plus recent changes made by quipu.
 func (s *Service) AdviceReport(ctx context.Context) (Advice, error) {
-	s.collect(ctx)
 	rows, err := analytics.ByProject(ctx, s.st, window(30))
 	if err != nil {
 		return Advice{}, err

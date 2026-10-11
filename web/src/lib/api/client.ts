@@ -5,6 +5,7 @@ import type {
   Advice,
   BackupInfo,
   BackupResult,
+  Collection,
   CacheReport,
   EditorFile,
   Live,
@@ -50,6 +51,7 @@ const post = (path: string, body: unknown = {}) => request<Result>("POST", path,
 
 export const api = {
   session: () => get<Session>("/api/session"),
+  collection: () => get<Collection>("/api/collection"),
   overview: (days: number) => get<Overview>(`/api/overview?days=${days}`),
   project: (dir: string, days: number) => get<Project>(`/api/projects/${encodeURIComponent(dir)}?days=${days}`),
   cache: (days: number) => get<CacheReport>(`/api/cache?days=${days}`),

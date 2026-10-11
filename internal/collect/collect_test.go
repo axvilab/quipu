@@ -89,3 +89,25 @@ func TestRun(t *testing.T) {
 		t.Errorf("responses by profile = %v, want default:3 work:3", got)
 	}
 }
+
+func TestRunProgress(t *testing.T) {
+	home := t.TempDir()
+	copyFixture(t, filepath.Join(home, ".claude", "projects", "-srv-a", "s1.jsonl"))
+	copyFixture(t, filepath.Join(home, ".claude", "projects", "-srv-b", "s2.jsonl"))
+	st, err := store.Open(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer st.Close()
+	var calls, last, total int
+	stats, err := RunProgress(t.Context(), home, st, func(done, all int) {
+		calls++
+		last, total = done, all
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if total != 2 || last != total || calls != total+1 || stats.Seen != total {
+		t.Errorf("progress: %d calls, last %d of %d, seen %d", calls, last, total, stats.Seen)
+	}
+}

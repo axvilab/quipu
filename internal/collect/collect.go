@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/axvilab/quipu/internal/claudecode"
 	"github.com/axvilab/quipu/internal/store"
@@ -21,41 +22,68 @@ type Stats struct {
 	Failed    int // transcripts that could not be read or stored
 }
 
+// running lets one collection run at a time: the daemon, the web interface and the CLI may start
+// one together, and a second run right after the first finds everything up to date.
+var running sync.Mutex
+
 // Run collects every new or changed transcript found under home.
 // A transcript that fails is counted in Stats.Failed and the run continues; the first such
 // error is returned together with the stats.
 func Run(ctx context.Context, home string, st *store.Store) (Stats, error) {
+	return RunProgress(ctx, home, st, nil)
+}
+
+// RunProgress is Run that reports how many transcripts it has gone through out of how many,
+// before the first one and after each.
+func RunProgress(ctx context.Context, home string, st *store.Store, progress func(done, total int)) (Stats, error) {
+	running.Lock()
+	defer running.Unlock()
+
 	var stats Stats
 	dirs, err := claudecode.ConfigDirs(home)
 	if err != nil {
 		return stats, fmt.Errorf("find config dirs: %w", err)
 	}
-
-	var firstErr error
+	type profileTranscripts struct {
+		profile     string
+		transcripts []claudecode.Transcript
+	}
+	var all []profileTranscripts
+	total := 0
 	for _, dir := range dirs {
 		stats.Profiles++
 		transcripts, err := claudecode.Transcripts(dir)
 		if err != nil {
 			return stats, fmt.Errorf("list transcripts in %s: %w", dir, err)
 		}
-		profile := claudecode.ProfileName(dir)
-		for _, t := range transcripts {
+		all = append(all, profileTranscripts{claudecode.ProfileName(dir), transcripts})
+		total += len(transcripts)
+	}
+	if progress != nil {
+		progress(0, total)
+	}
+
+	var firstErr error
+	for _, p := range all {
+		for _, t := range p.transcripts {
 			if err := ctx.Err(); err != nil {
 				return stats, err
 			}
 			stats.Seen++
-			n, malformed, err := collectOne(ctx, st, profile, t)
-			if err != nil {
+			n, malformed, err := collectOne(ctx, st, p.profile, t)
+			switch {
+			case err != nil:
 				stats.Failed++
 				if firstErr == nil {
 					firstErr = err
 				}
-				continue
-			}
-			if n >= 0 {
+			case n >= 0:
 				stats.Collected++
 				stats.Responses += n
 				stats.Malformed += malformed
+			}
+			if progress != nil {
+				progress(stats.Seen, total)
 			}
 		}
 	}

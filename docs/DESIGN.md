@@ -65,6 +65,10 @@ mode 0600, excluded from backups.
 - Each transcript is converted once into Parquet, keyed by profile, project and session; the
   daemon only appends. `SessionEnd` hook gives the path of a finished transcript.
 - Queries run in DuckDB over the Parquet files ([ADR 0002](adr/0002-duckdb-parquet.md)).
+- The web interface collects in the background, at start and then every minute; pages read what
+  is stored and never wait for a run. Only the very first run on an empty store shows a progress
+  screen. One run at a time across the daemon, the interface and the CLI; a run that stored
+  something new bumps a generation, and open pages load again.
 - Parser is tolerant: the format is internal, each line carries the Claude Code version, rules
   are keyed by version. All format knowledge lives in `internal/claudecode`.
 - Optional: do not store message bodies, only metadata and token counts.

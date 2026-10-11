@@ -15,6 +15,9 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/session", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, s.SessionInfo(r.Context()), nil)
 	})
+	mux.HandleFunc("GET /api/collection", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, s.Collection(), nil)
+	})
 	mux.HandleFunc("GET /api/overview", func(w http.ResponseWriter, r *http.Request) {
 		v, err := s.Overview(r.Context(), daysParam(r))
 		writeJSON(w, v, err)
