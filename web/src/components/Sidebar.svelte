@@ -37,10 +37,10 @@
       use:link
       class="group flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors {current === it.name ? 'bg-loom-2 text-cotton' : 'text-fleece hover:bg-loom hover:text-cotton'}"
       aria-current={current === it.name ? "page" : undefined}
-      title={t("nav.shortcut", { key: it.key })}
     >
       <Icon name={it.icon} />
       <span class="flex-1">{t(`nav.${it.name}`)}</span>
+      <span class="hidden text-xs text-fleece/70 group-hover:inline" aria-hidden="true">G {it.key}</span>
     </a>
   {/each}
 
