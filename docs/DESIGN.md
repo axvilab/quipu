@@ -39,7 +39,7 @@ Non-goals:
 | 2 | Cache analytics: cache writes, session start weight and hit rate by project/profile/day; API-reported miss reasons | `quipu cache` | v0.1 |
 | 3 | Project map: what loads always vs on demand, weight, folders Claude does not see | `quipu map` | v0.1 |
 | 4 | Profiles: choose a subscription by folder rule or interactively; shared skills/rules library | `quipu run`, `claude` shim | v0.1 |
-| 5 | Advisor: rule-based checks, each finding a diff; later LLM grouping via `claude -p` under the same profile | `quipu advise` | v0.2 |
+| 5 | Advisor: rule-based checks (one rule per file, easy to add), each finding a diff; later LLM review via `claude -p` under the same profile | `quipu advise` | v0.1 (MVP), v0.2 |
 | 6 | Web UI: editor with token cost, skill/agent forms, move skills between projects | `quipu ui` | v0.2 |
 | 10 | Backup: safe subset of `~/.claude` to a trusted private git repo or a local export file, secret scan | `quipu backup`, `quipu restore` | v0.2 |
 | 7 | Project switchboard: project × plugin matrix, plugin catalog and stack-based recommendations, install via `claude plugin` | `quipu plugins` | v0.3 |

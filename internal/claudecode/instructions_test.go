@@ -25,6 +25,7 @@ func TestInstructions(t *testing.T) {
 
 	write(t, filepath.Join(cfg, "CLAUDE.md"), "Answer briefly.\n")
 	write(t, filepath.Join(cfg, "skills", "notes", "SKILL.md"), "---\nname: notes\ndescription: Take notes\n---\nSteps.\n")
+	write(t, filepath.Join(cfg, "skills", "synced", "acc_1", "pptx", "SKILL.md"), "---\nname: pptx\ndescription: Slides\n---\nBody.\n")
 	write(t, filepath.Join(cfg, "settings.json"), `{"enabledPlugins":{"fmt@market":true,"off@market":false}}`)
 	write(t, filepath.Join(cfg, "plugins", "installed_plugins.json"),
 		`{"plugins":{"fmt@market":[{"installPath":"`+filepath.Join(home, "plug", "fmt")+`"}],"off@market":[{"installPath":"`+filepath.Join(home, "plug", "off")+`"}]}}`)
@@ -52,6 +53,9 @@ func TestInstructions(t *testing.T) {
 		if it.Kind == "memory" && it.Name == "MEMORY.md" && strings.Count(it.Text, "\n") != memoryMaxLines {
 			t.Errorf("MEMORY.md not truncated to %d lines", memoryMaxLines)
 		}
+		if it.Kind == "import" && (it.Ref != "docs/adr/README.md" || filepath.Base(it.From) != "CLAUDE.md") {
+			t.Errorf("import from %q ref %q", it.From, it.Ref)
+		}
 		if it.Kind == "skill" && it.Load == Always && it.Name == "format" && it.Text != "format: Format code" {
 			t.Errorf("skill listing text = %q", it.Text)
 		}
@@ -69,6 +73,8 @@ func TestInstructions(t *testing.T) {
 		"always project rule src/demo/.claude/rules/style.md",
 		"always user CLAUDE.md .claude/CLAUDE.md",
 		"always user skill .claude/skills/notes/SKILL.md",
+		"always claude.ai skill .claude/skills/synced/acc_1/pptx/SKILL.md",
+		"on-demand claude.ai skill .claude/skills/synced/acc_1/pptx/SKILL.md",
 		"on-demand memory memory .claude/projects/" + ProjectDirName(proj) + "/memory/deploy.md",
 		"on-demand plugin fmt skill plug/fmt/skills/format/SKILL.md",
 		"on-demand project CLAUDE.md src/demo/web/CLAUDE.md",

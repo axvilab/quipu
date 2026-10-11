@@ -21,11 +21,13 @@ const (
 // Item is one piece of instructions Claude Code may send for a project.
 type Item struct {
 	Load  Load
-	Scope string // "user", "project", "local", "memory" or "plugin <name>"
+	Scope string // "user", "claude.ai", "project", "local", "memory" or "plugin <name>"
 	Kind  string // "CLAUDE.md", "import", "rule", "skill", "agent", "command", "memory"
 	Name  string
 	Path  string
 	Text  string // what enters the context: a whole file, or a skill's name and description
+	From  string // for imports: the file that contains the @reference
+	Ref   string // for imports: the reference as written, e.g. "docs/adr/README.md"
 }
 
 // Memory files are loaded only up to these limits.
@@ -115,7 +117,7 @@ func (c *collector) imports(from, text, scope string, load Load, depth int) {
 		if !ok || c.seen[string(load)+path] {
 			continue
 		}
-		c.add(Item{Load: load, Scope: scope, Kind: "import", Name: ref, Path: path, Text: body})
+		c.add(Item{Load: load, Scope: scope, Kind: "import", Name: ref, Path: path, Text: body, From: from, Ref: ref})
 		c.imports(path, body, scope, load, depth+1)
 	}
 }
@@ -168,7 +170,12 @@ func (c *collector) memory(dir string) {
 func (c *collector) extensions(base, scope string) {
 	skills := findFiles(filepath.Join(base, "skills"), func(p string) bool { return filepath.Base(p) == "SKILL.md" })
 	for _, path := range skills {
-		c.extension(path, scope, "skill", filepath.Base(filepath.Dir(path)))
+		skillScope := scope
+		// Skills enabled on claude.ai are synced into <config>/skills/synced/<id>/<name>/.
+		if strings.Contains(path, string(filepath.Separator)+filepath.Join("skills", "synced")+string(filepath.Separator)) {
+			skillScope = "claude.ai"
+		}
+		c.extension(path, skillScope, "skill", filepath.Base(filepath.Dir(path)))
 	}
 	isMD := func(p string) bool { return strings.HasSuffix(p, ".md") }
 	for _, path := range findFiles(filepath.Join(base, "agents"), isMD) {

@@ -25,6 +25,7 @@ var version = "dev"
 const usage = `usage: quipu <command> [flags]
 
 commands:
+  advise     check a project's Claude Code setup and propose fixes
   cache      cache hit rate per project or day, and why the cache missed
   daemon     collect Claude Code transcripts before they are deleted
   map        what Claude Code loads for a project and how much it weighs
@@ -46,6 +47,8 @@ func main() {
 
 	var err error
 	switch os.Args[1] {
+	case "advise":
+		err = runAdvise(ctx, os.Args[2:])
 	case "cache":
 		err = runCache(ctx, os.Args[2:])
 	case "daemon":
