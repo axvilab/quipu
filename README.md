@@ -20,7 +20,8 @@ Go runs only in Docker, so nothing gets installed on your machine:
 ```sh
 make test     # run tests
 make build    # produces bin/quipu
-make clean    # removes bin/ and the build cache
+make clean    # removes bin/
+make clean-cache  # also removes the Docker volume with Go caches
 ```
 
 Want a shorter command? `alias qp=quipu`

@@ -1,5 +1,4 @@
 /bin/
-/.cache/
 /dist/
 /.idea/
 /.claude/settings.local.json
