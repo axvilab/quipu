@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	_ "github.com/duckdb/duckdb-go/v2" // registers the "duckdb" database/sql driver
 
@@ -22,7 +23,8 @@ import (
 
 // Source identifies the transcript a set of responses came from.
 type Source struct {
-	Path       string // transcript file; only used to name the Parquet file
+	Path       string    // transcript file; only used to name the Parquet file
+	ModTime    time.Time // transcript modification time when it was read
 	Profile    string
 	ProjectDir string
 	SessionID  string
@@ -78,6 +80,13 @@ func (s *Store) Close() error {
 	return s.db.Close()
 }
 
+// UpToDate reports whether the transcript at path has not changed since it was stored,
+// so collecting it again would change nothing.
+func (s *Store) UpToDate(path string, modTime time.Time) bool {
+	fi, err := os.Stat(filepath.Join(s.dir, fileName(path)))
+	return err == nil && !fi.ModTime().Before(modTime)
+}
+
 // WriteResponses replaces the stored data of one transcript with rs.
 // The file is written to a temporary name and renamed, so readers never see a partial file.
 func (s *Store) WriteResponses(ctx context.Context, src Source, rs []claudecode.Response) error {
@@ -104,6 +113,13 @@ func (s *Store) WriteResponses(ctx context.Context, src Source, rs []claudecode.
 	}
 	if err := os.Chmod(tmp, 0o600); err != nil {
 		return err
+	}
+	// The file carries the transcript's modification time from before it was read. If lines are
+	// appended while we read, the transcript becomes newer than this and is collected again.
+	if !src.ModTime.IsZero() {
+		if err := os.Chtimes(tmp, src.ModTime, src.ModTime); err != nil {
+			return err
+		}
 	}
 	return os.Rename(tmp, final)
 }

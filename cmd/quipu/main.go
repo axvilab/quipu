@@ -1,4 +1,4 @@
-// Command quipu manages Claude Code profiles and the knowledge Claude accumulates.
+// Command quipu shows what Claude Code knows about each project and what it costs.
 //
 // The same binary has two roles, chosen by the name it was invoked under:
 //   - "quipu": the management CLI;
@@ -6,23 +6,114 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"runtime"
+	"syscall"
+	"time"
+
+	"github.com/axvilab/quipu/internal/collect"
+	"github.com/axvilab/quipu/internal/store"
 )
 
 var version = "dev"
+
+const usage = `usage: quipu <command> [flags]
+
+commands:
+  daemon     collect Claude Code transcripts before they are deleted
+  version    print the version
+`
 
 func main() {
 	if filepath.Base(os.Args[0]) == "claude" {
 		fmt.Fprintln(os.Stderr, "quipu: shim mode is not implemented yet")
 		os.Exit(1)
 	}
-
-	if len(os.Args) > 1 && (os.Args[1] == "version" || os.Args[1] == "--version") {
-		fmt.Println("quipu", version)
-		return
+	if len(os.Args) < 2 {
+		fmt.Fprint(os.Stderr, usage)
+		os.Exit(2)
 	}
 
-	fmt.Println("quipu", version, "— nothing here yet, see docs/DESIGN.md")
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	var err error
+	switch os.Args[1] {
+	case "daemon":
+		err = runDaemon(ctx, os.Args[2:])
+	case "version", "--version":
+		fmt.Println("quipu", version)
+	case "help", "-h", "--help":
+		fmt.Print(usage)
+	default:
+		fmt.Fprintf(os.Stderr, "quipu: unknown command %q\n\n%s", os.Args[1], usage)
+		os.Exit(2)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "quipu:", err)
+		os.Exit(1)
+	}
+}
+
+func runDaemon(ctx context.Context, args []string) error {
+	fs := flag.NewFlagSet("daemon", flag.ExitOnError)
+	once := fs.Bool("once", false, "collect once and exit")
+	interval := fs.Duration("interval", 10*time.Minute, "time between collections")
+	fs.Parse(args)
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	dir, err := dataDir(home)
+	if err != nil {
+		return err
+	}
+	st, err := store.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer st.Close()
+
+	for {
+		start := time.Now()
+		stats, err := collect.Run(ctx, home, st)
+		if ctx.Err() != nil {
+			return nil
+		}
+		fmt.Printf("%s collected %d of %d transcripts (%d responses, %d profiles) in %s\n",
+			start.Format(time.DateTime), stats.Collected, stats.Seen, stats.Responses, stats.Profiles,
+			time.Since(start).Round(time.Millisecond))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "quipu: %d transcripts failed, first error: %v\n", stats.Failed, err)
+		}
+		if *once {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-time.After(*interval):
+		}
+	}
+}
+
+// dataDir is where quipu keeps collected data: $XDG_DATA_HOME/quipu or ~/.local/share/quipu on
+// Linux, ~/Library/Application Support/quipu on macOS.
+func dataDir(home string) (string, error) {
+	var dir string
+	switch {
+	case runtime.GOOS == "darwin":
+		dir = filepath.Join(home, "Library", "Application Support", "quipu")
+	case os.Getenv("XDG_DATA_HOME") != "":
+		dir = filepath.Join(os.Getenv("XDG_DATA_HOME"), "quipu")
+	default:
+		dir = filepath.Join(home, ".local", "share", "quipu")
+	}
+	return dir, os.MkdirAll(dir, 0o700)
 }

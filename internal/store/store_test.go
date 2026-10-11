@@ -92,6 +92,21 @@ func TestStore(t *testing.T) {
 		t.Errorf("after rewrite totals = %+v, want %+v", got, want)
 	}
 
+	read := time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC)
+	main.ModTime = read
+	if err := s.WriteResponses(ctx, main, []claudecode.Response{response("m1", 0, 1000, nil)}); err != nil {
+		t.Fatal(err)
+	}
+	if !s.UpToDate(main.Path, read) {
+		t.Error("UpToDate = false for a transcript unchanged since it was read")
+	}
+	if s.UpToDate(main.Path, read.Add(time.Millisecond)) {
+		t.Error("UpToDate = true for a transcript appended to after it was read")
+	}
+	if s.UpToDate("/cfg/projects/p/unknown.jsonl", time.Time{}) {
+		t.Error("UpToDate = true for a transcript never stored")
+	}
+
 	files, _ := filepath.Glob(filepath.Join(dataDir, "responses", "*"))
 	if len(files) != 2 {
 		t.Fatalf("files = %v, want 2 parquet files and no leftovers", files)
