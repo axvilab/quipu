@@ -41,5 +41,10 @@ jobs:
         run: |
           tags=desktop,production
           if [ "$RUNNER_OS" = Linux ]; then tags=$tags,webkit2_41; fi
-          go build -tags "$tags" -o /tmp/quipu-app ./cmd/quipu-app
+          # Errors also go out as annotations, which the public API shows without signing in.
+          if ! go build -tags "$tags" -o /tmp/quipu-app ./cmd/quipu-app 2>build.log; then
+            cat build.log
+            head -c 4000 build.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
           /tmp/quipu-app -version
