@@ -1,8 +1,7 @@
 <script lang="ts">
   import type { Session } from "../lib/api/types";
-  import { i18n, locales, setLocale, t } from "../lib/i18n.svelte";
+  import { t } from "../lib/i18n.svelte";
   import { palette } from "../lib/palette.svelte";
-  import { setTheme, theme, themes } from "../lib/theme.svelte";
   import { link, router } from "../lib/router.svelte";
   import Icon from "./Icon.svelte";
 
@@ -13,9 +12,8 @@
     { href: "/advice", name: "advice", icon: "advice", key: "A" },
     { href: "/cache", name: "cache", icon: "cache", key: "C" },
     { href: "/profiles", name: "profiles", icon: "profiles", key: "R" },
+    { href: "/settings", name: "settings", icon: "settings", key: "S" },
   ] as const;
-
-  const themeIcon = { system: "monitor", light: "sun", dark: "moon" } as const;
 
   const current = $derived(router.route.name === "project" ? "overview" : router.route.name);
 </script>
@@ -61,23 +59,8 @@
     {/each}
   {/if}
 
-  <div class="mt-3 flex px-2.5">
-    <div class="flex rounded-md border border-warp p-0.5" role="group" aria-label={t("theme.label")}>
-      {#each themes as th (th)}
-        <button class="rounded px-2 py-1 {theme.choice === th ? 'bg-loom-2 text-cotton' : 'text-fleece hover:text-cotton'}"
-          aria-pressed={theme.choice === th} title={t(`theme.${th}`)} onclick={() => setTheme(th)}>
-          <Icon name={themeIcon[th]} size={14} label={t(`theme.${th}`)} />
-        </button>
-      {/each}
-    </div>
-  </div>
-  <div class="mt-2 flex items-center justify-between px-2.5">
-    <div class="flex rounded-md border border-warp p-0.5 text-xs" role="group" aria-label={t("lang.label")}>
-      {#each locales as l (l)}
-        <button class="rounded px-2 py-0.5 {i18n.locale === l ? 'bg-loom-2 text-cotton' : 'text-fleece'}" aria-pressed={i18n.locale === l} onclick={() => setLocale(l)}>{l === "uk" ? "Укр" : "Eng"}</button>
-      {/each}
-    </div>
+  <div class="mt-3 flex items-center justify-between px-2.5">
     <button class="text-xs text-fleece hover:text-cotton" onclick={() => (palette.help = true)}>{t("help.open")}</button>
+    {#if session?.version}<span class="text-xs text-fleece/60">{session.version}</span>{/if}
   </div>
-  {#if session?.version}<p class="px-2.5 pt-2 text-xs text-fleece/60">{session.version}</p>{/if}
 </nav>

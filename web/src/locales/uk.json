@@ -4,6 +4,7 @@
   "nav.advice": "Поради",
   "nav.cache": "Кеш і токени",
   "nav.profiles": "Профілі",
+  "nav.settings": "Налаштування",
   "nav.accounts": "Акаунти",
   "nav.shortcut": "Клавіші: G, потім {key}",
   "palette.open": "Пошук і команди",
@@ -24,6 +25,7 @@
   "help.advice": "Поради",
   "help.cache": "Кеш і токени",
   "help.profiles": "Профілі",
+  "help.settings": "Налаштування",
   "help.move": "Рух по списку",
   "help.openItem": "Відкрити",
   "help.close": "Закрити панель",
@@ -278,5 +280,7 @@
   "result.bad-request": "Некоректний запит: {error}",
   "result.unauthorized": "Немає доступу: відкрий quipu через quipu ui.",
   "result.internal": "Внутрішня помилка: {error}",
-  "palette.search": "Пошук"
+  "palette.search": "Пошук",
+  "settings.title": "Налаштування",
+  "settings.subtitle": "Вигляд цього вікна; запам'ятовується на цьому комп'ютері"
 }

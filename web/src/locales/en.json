@@ -4,6 +4,7 @@
   "nav.advice": "Advice",
   "nav.cache": "Cache and tokens",
   "nav.profiles": "Profiles",
+  "nav.settings": "Settings",
   "nav.accounts": "Accounts",
   "nav.shortcut": "Keys: G, then {key}",
   "palette.open": "Search and commands",
@@ -22,6 +23,7 @@
   "help.advice": "Advice",
   "help.cache": "Cache and tokens",
   "help.profiles": "Profiles",
+  "help.settings": "Settings",
   "help.move": "Move through a list",
   "help.openItem": "Open",
   "help.close": "Close the panel",
@@ -256,5 +258,7 @@
   "result.bad-request": "Bad request: {error}",
   "result.unauthorized": "No access: open quipu with quipu ui.",
   "result.internal": "Internal error: {error}",
-  "palette.search": "Search"
+  "palette.search": "Search",
+  "settings.title": "Settings",
+  "settings.subtitle": "How this window looks; remembered on this computer"
 }

@@ -15,6 +15,7 @@
   import Overview from "./screens/Overview.svelte";
   import Profiles from "./screens/Profiles.svelte";
   import Project from "./screens/Project.svelte";
+  import Settings from "./screens/Settings.svelte";
 
   let session = $state<Session | null>(null);
   let unauthorized = $state(false);
@@ -47,14 +48,14 @@
       return;
     }
     if (Date.now() - pendingG < 1200) {
-      const to = { o: "/", a: "/advice", c: "/cache", r: "/profiles" }[e.key];
+      const to = { o: "/", a: "/advice", c: "/cache", r: "/profiles", s: "/settings" }[e.key];
       pendingG = 0;
       if (to) navigate(to);
     }
   }
 
   // Project pages set their own title (the project name).
-  const titles: Record<string, string> = { overview: "nav.overview", advice: "nav.advice", cache: "nav.cache", profiles: "nav.profiles" };
+  const titles: Record<string, string> = { overview: "nav.overview", advice: "nav.advice", cache: "nav.cache", profiles: "nav.profiles", settings: "nav.settings" };
   $effect(() => {
     const key = titles[router.route.name];
     if (key) document.title = `${t(key)} · Quipu`;
@@ -77,7 +78,7 @@
     <div class="hidden md:block"><div class="sticky top-0 h-screen"><Sidebar {session} /></div></div>
     <header class="sticky top-0 z-20 flex h-12 items-center gap-1 border-b border-warp bg-night px-3 md:hidden">
       <a href="/" use:link class="mr-2 flex items-center gap-2 font-semibold"><img src="/static/icon.svg" alt="" width="22" height="22" class="rounded" />Quipu</a>
-      {#each [["/", "overview"], ["/advice", "advice"], ["/cache", "cache"], ["/profiles", "profiles"]] as [href, name] (name)}
+      {#each [["/", "overview"], ["/advice", "advice"], ["/cache", "cache"], ["/profiles", "profiles"], ["/settings", "settings"]] as [href, name] (name)}
         <a {href} use:link class="grid h-9 w-9 place-items-center rounded-md text-fleece hover:bg-loom hover:text-cotton" aria-label={t(`nav.${name}`)}><Icon name={name!} /></a>
       {/each}
       <button class="ml-auto grid h-9 w-9 place-items-center rounded-md text-fleece hover:bg-loom" onclick={() => (palette.open = true)} aria-label={t("palette.search")}><Icon name="search" /></button>
@@ -89,6 +90,7 @@
         {:else if router.route.name === "advice"}<Advice />
         {:else if router.route.name === "cache"}<Cache />
         {:else if router.route.name === "profiles"}<Profiles />
+        {:else if router.route.name === "settings"}<Settings />
         {:else}<NotFound />{/if}
       </div>
     </main>

@@ -6,6 +6,7 @@ export type Route =
   | { name: "advice" }
   | { name: "cache" }
   | { name: "profiles" }
+  | { name: "settings" }
   | { name: "notFound" };
 
 function parse(path: string): Route {
@@ -21,6 +22,8 @@ function parse(path: string): Route {
       return { name: "cache" };
     case "profiles":
       return { name: "profiles" };
+    case "settings":
+      return { name: "settings" };
   }
   return { name: "notFound" };
 }
