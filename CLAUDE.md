@@ -2,7 +2,7 @@
 
 Local analyzer for Claude Code: what Claude knows about each project, what it costs in tokens and
 cache, duplicated knowledge across projects and profiles, and concrete fixes as diffs.
-One Go binary, everything local. Design: @docs/DESIGN.md
+One Go binary, everything local. Design: `docs/DESIGN.md` (read it before architectural changes).
 
 ## Commands
 
