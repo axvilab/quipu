@@ -630,3 +630,23 @@ func TestProfileEditAPI(t *testing.T) {
 		t.Errorf("share into default: %s", rec.Body.String())
 	}
 }
+
+func TestUpgradeStatusLines(t *testing.T) {
+	s := testServer(t)
+	s.SelfBinary = filepath.Join(s.home, "bin", "quipu")
+	cfg := filepath.Join(s.home, ".claude")
+	os.MkdirAll(cfg, 0o755)
+	// quipu's status line from an older version: no refresh interval, another binary path.
+	os.WriteFile(filepath.Join(cfg, "settings.json"), []byte(`{"statusLine":{"type":"command","command":"/old/quipu statusline"},"theme":"dark"}`), 0o644)
+	s.upgradeStatusLines()
+	b, _ := os.ReadFile(filepath.Join(cfg, "settings.json"))
+	if !strings.Contains(string(b), `"refreshInterval": 60`) || !strings.Contains(string(b), s.SelfBinary+" statusline") || !strings.Contains(string(b), `"theme": "dark"`) {
+		t.Errorf("not upgraded: %s", b)
+	}
+	// Someone else's status line is left alone.
+	os.WriteFile(filepath.Join(cfg, "settings.json"), []byte(`{"statusLine":{"type":"command","command":"node dash.js"}}`), 0o644)
+	s.upgradeStatusLines()
+	if b, _ := os.ReadFile(filepath.Join(cfg, "settings.json")); strings.Contains(string(b), "refreshInterval") {
+		t.Errorf("another status line changed: %s", b)
+	}
+}

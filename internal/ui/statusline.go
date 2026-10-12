@@ -13,6 +13,10 @@ import (
 	"github.com/axvilab/quipu/internal/fsx"
 )
 
+// statusRefresh re-runs quipu's status line every minute, so the warm-cache countdown moves while
+// the session is idle.
+const statusRefresh = 60
+
 // statusLineOf tells which status line a profile uses: "quipu", "other" (with its command) or "".
 func statusLineOf(configDir string) (state, command string) {
 	b, err := os.ReadFile(claudecode.UserSettings(configDir))
@@ -62,7 +66,7 @@ func (s *Service) SetStatusLine(name string, on bool) (Result, error) {
 	var value json.RawMessage // nil removes the key
 	switch {
 	case on:
-		value = claudecode.StatusLineCommand(shellQuote(s.SelfBinary) + " statusline")
+		value = claudecode.StatusLineCommand(shellQuote(s.SelfBinary)+" statusline", statusRefresh)
 		if state == "other" {
 			previous, _, _ := claudecode.SettingsValue(current, "statusLine")
 			if err := os.MkdirAll(filepath.Dir(saved), 0o700); err == nil {
@@ -100,4 +104,39 @@ func (s *Service) SetStatusLine(name string, on bool) (Result, error) {
 		os.Remove(saved)
 	}
 	return ok("statusline-"+label, "name", name, "change", ch.ID), nil
+}
+
+// upgradeStatusLines brings quipu's own status line, where a profile already uses it, up to the
+// current setting (the refresh interval, the binary's path), through the journal. Other status
+// lines are left alone.
+func (s *Service) upgradeStatusLines() {
+	if s.SelfBinary == "" {
+		return
+	}
+	want := claudecode.StatusLineCommand(shellQuote(s.SelfBinary)+" statusline", statusRefresh)
+	for _, dir := range s.profileDirs() {
+		path := claudecode.UserSettings(dir)
+		current, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		raw, ok, _ := claudecode.SettingsValue(current, "statusLine")
+		var v struct {
+			Command string `json:"command"`
+		}
+		if !ok || json.Unmarshal(raw, &v) != nil || !isQuipuStatusLine(v.Command) {
+			continue
+		}
+		next, err := claudecode.SetSettingsValue(current, "statusLine", want)
+		if err != nil || bytes.Equal(next, current) {
+			continue
+		}
+		batch, err := fsx.NewBatch()
+		if err != nil {
+			continue
+		}
+		name := claudecode.ProfileName(dir)
+		s.journal.Write(path, next, fsx.Meta{Rule: "statusline", Title: "quipu status line updated for " + name,
+			Params: map[string]string{"state": "on", "name": name}, Batch: batch})
+	}
 }

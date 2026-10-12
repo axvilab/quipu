@@ -61,8 +61,14 @@ func ReadStatusInput(r io.Reader) (StatusInput, error) {
 	return in, err
 }
 
-// StatusLineCommand is the settings value that makes Claude Code run command for the status line.
-func StatusLineCommand(command string) json.RawMessage {
-	b, _ := json.Marshal(map[string]string{"type": "command", "command": command})
+// StatusLineCommand is the settings value that makes Claude Code run command for the status line,
+// again every refresh seconds as well as after each reply, so time-based parts (how long the cache
+// stays warm) keep counting while the session is idle; 0 runs it only on events.
+func StatusLineCommand(command string, refresh int) json.RawMessage {
+	v := map[string]any{"type": "command", "command": command}
+	if refresh > 0 {
+		v["refreshInterval"] = refresh
+	}
+	b, _ := json.Marshal(v)
 	return b
 }

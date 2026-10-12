@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/axvilab/quipu/internal/claudecode"
 	"github.com/axvilab/quipu/internal/profile"
+	"github.com/axvilab/quipu/internal/ui"
 )
 
 // runStatusline prints the status line Claude Code shows under the prompt, in one line: who and
@@ -26,9 +28,10 @@ func runStatusline(in io.Reader, out io.Writer) error {
 	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
 		profile = claudecode.ProfileName(dir)
 	}
+	plan := profilePlan(profile)
 	profile = profileTitle(profile)
 	st := style{color: os.Getenv("NO_COLOR") == ""}
-	line := statusTop(profile, s, st)
+	line := statusTop(profile, plan, s, st)
 	if usage := statusBottom(s, time.Now(), st); usage != "" {
 		line += st.dim(" · ") + usage
 	}
@@ -60,8 +63,12 @@ func (st style) level(pct float64, text string) string {
 	return st.paint("32", text)
 }
 
-func statusTop(profile string, s claudecode.StatusInput, st style) string {
-	parts := []string{st.bold(profile)}
+func statusTop(profile, plan string, s claudecode.StatusInput, st style) string {
+	who := st.bold(profile)
+	if plan != "" {
+		who += " " + st.dim(plan)
+	}
+	parts := []string{who}
 	if m := s.Model.DisplayName; m != "" {
 		parts = append(parts, m)
 	}
@@ -216,4 +223,24 @@ func profileTitle(name string) string {
 		return p.Title()
 	}
 	return name
+}
+
+// profilePlan is the subscription plan quipu last saw for the profile (max, pro, team…), "" if
+// none is known yet.
+func profilePlan(name string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	dir, err := dataDir(home)
+	if err != nil {
+		return ""
+	}
+	b, err := os.ReadFile(ui.PlansFile(dir))
+	if err != nil {
+		return ""
+	}
+	var plans map[string]string
+	json.Unmarshal(b, &plans)
+	return plans[name]
 }

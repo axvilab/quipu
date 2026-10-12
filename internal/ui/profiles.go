@@ -2,6 +2,9 @@ package ui
 
 import (
 	"context"
+	"encoding/json"
+	"github.com/axvilab/quipu/internal/fsx"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -56,5 +59,24 @@ func (s *Service) profiles(ctx context.Context) []profileView {
 		}
 	}
 	s.profileCache.views, s.profileCache.at = views, time.Now()
+	s.savePlans(views)
 	return views
+}
+
+// PlansFile is where quipu notes each profile's subscription plan for the status line, which runs
+// after every reply and cannot ask Claude Code itself.
+func PlansFile(dataDir string) string { return filepath.Join(dataDir, "plans.json") }
+
+func (s *Service) savePlans(views []profileView) {
+	plans := map[string]string{}
+	for _, v := range views {
+		if v.LoggedIn && v.Plan != "" {
+			plans[v.Name] = v.Plan
+		}
+	}
+	if len(plans) == 0 {
+		return
+	}
+	b, _ := json.Marshal(plans)
+	fsx.WriteFile(PlansFile(s.dataDir), b)
 }

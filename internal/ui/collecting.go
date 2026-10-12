@@ -40,6 +40,7 @@ func (s *Service) Collection() Collection {
 // Collect collects transcripts now and then every interval until ctx ends. Pages read whatever
 // is stored and never wait for it.
 func (s *Service) Collect(ctx context.Context, every time.Duration) {
+	s.upgradeStatusLines()
 	for {
 		s.collectOnce(ctx)
 		select {
