@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -212,11 +213,24 @@ func runClaudeWith(args []string, explicit string) (int, error) {
 	cwd, _ := os.Getwd()
 
 	name := explicit
+	interactive := profile.Interactive(args) && isTerminal(os.Stdin)
 	if name == "" {
-		name = c.ForFolder(cwd)
+		if r, ok := c.RuleFor(cwd); ok {
+			name = r.Profile
+			// One line, so a rule remembered by mistake is noticed at once.
+			if interactive && isTerminal(os.Stderr) {
+				fmt.Fprintf(os.Stderr, "quipu: %s (rule for %s)\n", r.Profile, shortPath(home, r.Path, r.Path))
+			}
+		}
 	}
-	if name == "" && len(c.Profiles) > 1 && profile.Interactive(args) && isTerminal(os.Stdin) {
-		name = askProfile(c)
+	if name == "" && len(c.Profiles) > 1 && interactive {
+		in := bufio.NewReader(os.Stdin)
+		name = askProfile(c, in, os.Stderr)
+		if folder := profile.RememberFolder(cwd, home); folder != "" && askRemember(name, shortPath(home, folder, folder), in, os.Stderr) {
+			if err := rememberRule(home, folder, name); err != nil {
+				fmt.Fprintln(os.Stderr, "quipu: not remembered:", err)
+			}
+		}
 	}
 	if name == "" {
 		name = profile.Default
@@ -228,17 +242,45 @@ func runClaudeWith(args []string, explicit string) (int, error) {
 	return profile.Run(binary, args, claudecode.Env(home, p.Dir))
 }
 
-func askProfile(c *profile.Config) string {
-	fmt.Fprintln(os.Stderr, "Which Claude account for this folder?")
+func askProfile(c *profile.Config, in *bufio.Reader, out io.Writer) string {
+	fmt.Fprintln(out, "Which Claude account for this folder?")
 	for i, p := range c.Profiles {
-		fmt.Fprintf(os.Stderr, "  %d) %s\n", i+1, p.Name)
+		fmt.Fprintf(out, "  %d) %s\n", i+1, p.Name)
 	}
-	fmt.Fprintf(os.Stderr, "Choose [1]: ")
-	line, _ := bufio.NewReader(os.Stdin).ReadString('\n')
+	fmt.Fprintf(out, "Choose [1]: ")
+	line, _ := in.ReadString('\n')
 	if n, err := strconv.Atoi(strings.TrimSpace(line)); err == nil && n >= 1 && n <= len(c.Profiles) {
 		return c.Profiles[n-1].Name
 	}
 	return c.Profiles[0].Name
+}
+
+// askRemember asks whether to keep the choice as a folder rule; Enter means yes.
+func askRemember(name, folder string, in *bufio.Reader, out io.Writer) bool {
+	fmt.Fprintf(out, "Remember %s for %s? [Y/n]: ", name, folder)
+	line, _ := in.ReadString('\n')
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "", "y", "yes", "т", "так", "д", "да":
+		return true
+	}
+	return false
+}
+
+// rememberRule saves a folder rule. It loads the profiles again first, so a rule another terminal
+// saved meanwhile is kept.
+func rememberRule(home, folder, name string) error {
+	c, err := profile.Load(home, profilesFile(home))
+	if err != nil {
+		return err
+	}
+	if err := c.SetRule(folder, name); err != nil {
+		return err
+	}
+	if err := c.Save(); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "quipu: remembered; change it on the Profiles page or with quipu profile unrule %s\n", shortPath(home, folder, folder))
+	return nil
 }
 
 // isTerminal is true only for a real terminal; /dev/null and pipes do not count.

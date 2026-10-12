@@ -72,11 +72,20 @@ func (c *Config) Save() error {
 	if err := os.MkdirAll(filepath.Dir(c.file), 0o700); err != nil {
 		return err
 	}
-	tmp := c.file + ".tmp"
-	if err := os.WriteFile(tmp, append(b, '\n'), 0o600); err != nil {
+	// A temp file of its own, so two terminals saving at once never mix their writes.
+	tmp, err := os.CreateTemp(filepath.Dir(c.file), filepath.Base(c.file)+".*.tmp")
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, c.file)
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(append(b, '\n')); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), c.file)
 }
 
 // Find returns the named profile or nil.
@@ -187,14 +196,43 @@ func (c *Config) DeleteRule(folder string) bool {
 
 // ForFolder returns the profile of the most specific rule covering dir, or "" if none does.
 func (c *Config) ForFolder(dir string) string {
+	r, _ := c.RuleFor(dir)
+	return r.Profile
+}
+
+// RuleFor returns the rule that applies to dir: the one for the closest folder above it.
+func (c *Config) RuleFor(dir string) (Rule, bool) {
 	dir = filepath.Clean(dir)
-	best, bestLen := "", -1
+	var best Rule
+	found := false
 	for _, r := range c.Rules {
-		if (dir == r.Path || strings.HasPrefix(dir, r.Path+string(filepath.Separator))) && len(r.Path) > bestLen {
-			best, bestLen = r.Profile, len(r.Path)
+		if (dir == r.Path || strings.HasPrefix(dir, r.Path+string(filepath.Separator))) && (!found || len(r.Path) > len(best.Path)) {
+			best, found = r, true
 		}
 	}
-	return best
+	return best, found
+}
+
+// RememberFolder is the folder a profile chosen in dir should be remembered for: the git
+// repository dir is in, or dir itself. It is "" where a rule would cover too much (home, a folder
+// above it, the filesystem root) or is pointless (the temp folder).
+func RememberFolder(dir, home string) string {
+	dir, home = filepath.Clean(dir), filepath.Clean(home)
+	folder := dir
+	for d := dir; d != home && d != filepath.Dir(d); d = filepath.Dir(d) {
+		if _, err := os.Stat(filepath.Join(d, ".git")); err == nil {
+			folder = d
+			break
+		}
+	}
+	tmp := filepath.Clean(os.TempDir())
+	switch {
+	case folder == home, folder == filepath.Dir(folder), strings.HasPrefix(home, folder+string(filepath.Separator)):
+		return ""
+	case folder == tmp, strings.HasPrefix(folder, tmp+string(filepath.Separator)):
+		return ""
+	}
+	return folder
 }
 
 func contains(list []string, s string) bool {

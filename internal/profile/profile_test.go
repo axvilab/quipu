@@ -84,3 +84,40 @@ func TestProfiles(t *testing.T) {
 		t.Error("default profile removed")
 	}
 }
+
+func TestRememberFolder(t *testing.T) {
+	home := t.TempDir()
+	// t.TempDir is under the temp folder, which RememberFolder skips; point TMPDIR elsewhere.
+	t.Setenv("TMPDIR", filepath.Join(t.TempDir(), "tmp"))
+	repo := filepath.Join(home, "work", "shop")
+	os.MkdirAll(filepath.Join(repo, ".git"), 0o755)
+	os.MkdirAll(filepath.Join(repo, "src", "api"), 0o755)
+	plain := filepath.Join(home, "notes")
+	os.MkdirAll(plain, 0o755)
+
+	for _, c := range []struct{ dir, want string }{
+		{filepath.Join(repo, "src", "api"), repo}, // the repository, not the subfolder
+		{repo, repo},
+		{plain, plain},
+		{home, ""},
+		{filepath.Dir(home), ""},
+		{"/", ""},
+		{os.Getenv("TMPDIR"), ""},
+		{filepath.Join(os.Getenv("TMPDIR"), "x"), ""},
+	} {
+		if got := RememberFolder(c.dir, home); got != c.want {
+			t.Errorf("RememberFolder(%s) = %q, want %q", c.dir, got, c.want)
+		}
+	}
+}
+
+func TestRuleFor(t *testing.T) {
+	c := &Config{Profiles: []Profile{{Name: "default"}, {Name: "work"}}}
+	c.Rules = []Rule{{Path: "/w", Profile: "default"}, {Path: "/w/shop", Profile: "work"}}
+	if r, ok := c.RuleFor("/w/shop/src"); !ok || r.Path != "/w/shop" || r.Profile != "work" {
+		t.Errorf("RuleFor = %+v %v", r, ok)
+	}
+	if _, ok := c.RuleFor("/elsewhere"); ok {
+		t.Error("a rule for an unrelated folder")
+	}
+}

@@ -114,6 +114,11 @@ main repo via `git rev-parse --git-common-dir`.
 - No edits to `.claude.json` ([ADR 0003](adr/0003-supported-integration-only.md)); MCP servers
   are shared through plugins or `.mcp.json`.
 
+In a folder without a rule, `quipu run` (and the shim) asks which account to use and offers to
+remember it as a rule for the git repository the folder is in, or the folder itself (never for
+home, a folder above it, the root or the temp folder; Enter means yes). Every run under a rule
+prints one line naming the profile and the rule, so a wrong one is noticed at once.
+
 The PATH line goes into the login shell's startup file; Settings lists bash, zsh and fish, so a
 terminal that runs another shell (an IDE's, often zsh) can be connected on its own. Turning the
 shim off removes the line from every shell.
