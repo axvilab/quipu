@@ -11,6 +11,7 @@
   import { closeEditor, editor } from "./lib/editor.svelte";
   import { watchLive } from "./lib/live.svelte";
   import { collection, watchCollection } from "./lib/collection.svelte";
+  import { onChanged } from "./lib/changes.svelte";
   import FirstCollection from "./components/FirstCollection.svelte";
   import RemoteControlBanner from "./components/RemoteControlBanner.svelte";
   import Help from "./components/Help.svelte";
@@ -35,10 +36,20 @@
     document.documentElement.lang = i18n.locale;
   });
 
-  api
-    .session()
-    .then((s) => (session = s))
-    .catch((e) => (unauthorized = e instanceof ApiError && e.status === 401));
+  // The session lists the profiles with their sign-in state for the sidebar, so it reloads after
+  // a change (a sign-in finished, a profile added) and every 30 s.
+  function loadSession() {
+    api
+      .session()
+      .then((s) => (session = s))
+      .catch((e) => (unauthorized = e instanceof ApiError && e.status === 401));
+  }
+  loadSession();
+  onChanged(loadSession);
+  $effect(() => {
+    const id = setInterval(loadSession, 30_000);
+    return () => clearInterval(id);
+  });
 
   // Keyboard: Ctrl/⌘K opens the palette, "g" then a letter jumps to a page, "?" shows shortcuts.
   let pendingG = 0;

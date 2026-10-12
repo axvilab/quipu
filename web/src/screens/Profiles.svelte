@@ -3,6 +3,7 @@
   import { api } from "../lib/api/client";
   import type { ProfileInfo, Profiles } from "../lib/api/types";
   import { t } from "../lib/i18n.svelte";
+  import { notifyChanged } from "../lib/changes.svelte";
   import { report } from "../lib/toast.svelte";
   import Header from "../components/Header.svelte";
   import Icon from "../components/Icon.svelte";
@@ -25,9 +26,14 @@
   let folder = $state("");
   let ruleProfile = $state("");
 
+  // The sign-in state of each profile, so the rest of the page (the sidebar) learns when it changes.
+  const states = (d: Profiles | null) => d?.profiles.map((p) => `${p.name}:${p.signedIn}`).join(",") ?? "";
+
   async function load() {
     try {
+      const before = states(data);
       data = await api.profiles();
+      if (before && before !== states(data)) notifyChanged();
       error = null;
       if (!share.length) share = [...data.shareable];
       if (!browser) browser = data.browsers[0]?.id ?? "";
