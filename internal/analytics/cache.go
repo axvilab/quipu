@@ -59,6 +59,7 @@ type Filter struct {
 	Since      time.Time
 	Until      time.Time // zero: up to now
 	ProjectDir string    // empty for all projects
+	Profile    string    // empty for all profiles
 }
 
 // Previous is the window of the same length right before f, for comparisons.
@@ -80,6 +81,10 @@ func (f Filter) where() (string, []any) {
 	if f.ProjectDir != "" {
 		w += " AND project_dir = ?"
 		args = append(args, f.ProjectDir)
+	}
+	if f.Profile != "" {
+		w += " AND profile = ?"
+		args = append(args, f.Profile)
 	}
 	return w, args
 }

@@ -26,6 +26,7 @@
   import Settings from "./screens/Settings.svelte";
   import Backup from "./screens/Backup.svelte";
   import NewProject from "./screens/NewProject.svelte";
+  import Plugins from "./screens/Plugins.svelte";
 
   let session = $state<Session | null>(null);
   watchLive();
@@ -70,14 +71,14 @@
       return;
     }
     if (Date.now() - pendingG < 1200) {
-      const to = { o: "/", a: "/advice", c: "/cache", r: "/profiles", n: "/new", b: "/backup", s: "/settings" }[e.key];
+      const to = { o: "/", a: "/advice", c: "/cache", r: "/profiles", p: "/plugins", n: "/new", b: "/backup", s: "/settings" }[e.key];
       pendingG = 0;
       if (to) navigate(to);
     }
   }
 
   // Project pages set their own title (the project name).
-  const titles: Record<string, string> = { overview: "nav.overview", advice: "nav.advice", cache: "nav.cache", profiles: "nav.profiles", new: "nav.new", backup: "nav.backup", settings: "nav.settings" };
+  const titles: Record<string, string> = { overview: "nav.overview", advice: "nav.advice", cache: "nav.cache", profiles: "nav.profiles", plugins: "nav.plugins", new: "nav.new", backup: "nav.backup", settings: "nav.settings" };
   $effect(() => {
     const key = titles[router.route.name];
     if (key) document.title = `${t(key)} · Quipu`;
@@ -100,7 +101,7 @@
     <div class="hidden md:block"><div class="sticky top-0 h-screen"><Sidebar {session} /></div></div>
     <header class="sticky top-0 z-20 flex h-12 items-center gap-1 border-b border-warp bg-night px-3 md:hidden">
       <a href="/" use:link class="mr-2 flex items-center gap-2 font-semibold"><img src="/static/icon.svg" alt="" width="22" height="22" class="rounded" />Quipu</a>
-      {#each [["/", "overview"], ["/advice", "advice"], ["/cache", "cache"], ["/profiles", "profiles"], ["/backup", "backup"], ["/settings", "settings"]] as [href, name] (name)}
+      {#each [["/", "overview"], ["/advice", "advice"], ["/cache", "cache"], ["/profiles", "profiles"], ["/plugins", "plugins"], ["/backup", "backup"], ["/settings", "settings"]] as [href, name] (name)}
         <a {href} use:link class="grid h-9 w-9 place-items-center rounded-md text-fleece hover:bg-loom hover:text-cotton" aria-label={t(`nav.${name}`)}><Icon name={name!} /></a>
       {/each}
       <button class="ml-auto grid h-9 w-9 place-items-center rounded-md text-fleece hover:bg-loom" onclick={() => (palette.open = true)} aria-label={t("palette.search")}><Icon name="search" /></button>
@@ -117,6 +118,7 @@
         {:else if router.route.name === "settings"}<Settings />
         {:else if router.route.name === "backup"}<Backup />
         {:else if router.route.name === "new"}<NewProject />
+        {:else if router.route.name === "plugins"}<Plugins />
         {:else}<NotFound />{/if}
       </div>
     </main>

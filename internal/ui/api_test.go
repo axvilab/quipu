@@ -528,3 +528,56 @@ func TestShareMemoryAPI(t *testing.T) {
 		t.Errorf("no rule: %s", rec.Body.String())
 	}
 }
+
+func TestPluginsAPI(t *testing.T) {
+	s := testServer(t)
+	h := s.Handler()
+	cookie := &http.Cookie{Name: cookieName, Value: s.token}
+	cfg := filepath.Join(s.home, ".claude")
+	plugDir := filepath.Join(cfg, "plugins", "cache", "market", "dash", "1.0.0")
+	os.MkdirAll(filepath.Join(plugDir, "skills", "check-usage"), 0o755)
+	os.WriteFile(filepath.Join(plugDir, "skills", "check-usage", "SKILL.md"),
+		[]byte("---\nname: check-usage\ndescription: Check usage limits of every AI CLI and recommend one.\n---\nRun it.\n"), 0o644)
+	os.WriteFile(filepath.Join(cfg, "plugins", "installed_plugins.json"),
+		[]byte(`{"version":2,"plugins":{"dash@market":[{"scope":"user","version":"1.0.0","installPath":"`+plugDir+`"}]}}`), 0o644)
+	os.WriteFile(filepath.Join(cfg, "settings.json"), []byte(`{"enabledPlugins":{"dash@market":true}}`), 0o644)
+
+	var rows []PluginRow
+	if code := getJSON(t, h, "/api/plugins", cookie, &rows); code != 200 || len(rows) != 1 {
+		t.Fatalf("plugins %d = %+v", code, rows)
+	}
+	if r := rows[0]; r.Name != "dash" || r.Profile != "default" || r.State != "everywhere" || r.Tokens == 0 || r.Uses != 0 {
+		t.Errorf("row = %+v", r)
+	}
+
+	rec := postJSON(h, "/api/plugins/enable", `{"profile":"default","id":"dash@market","on":false}`, cookie)
+	var res Result
+	json.Unmarshal(rec.Body.Bytes(), &res)
+	if res.Code != "plugin-off" {
+		t.Fatalf("off: %s", rec.Body.String())
+	}
+	getJSON(t, h, "/api/plugins", cookie, &rows)
+	if rows[0].State != "off" {
+		t.Errorf("after off: %+v", rows[0])
+	}
+	postJSON(h, "/api/advice/undo", `{"id":"`+res.Params["change"]+`"}`, cookie)
+	getJSON(t, h, "/api/plugins", cookie, &rows)
+	if rows[0].State != "everywhere" {
+		t.Errorf("after undo: %+v", rows[0])
+	}
+
+	// Uninstall runs Claude Code's own command under the profile's config dir.
+	log := filepath.Join(s.home, "claude.log")
+	s.ClaudeBinary = filepath.Join(s.home, "bin", "claude")
+	os.MkdirAll(filepath.Dir(s.ClaudeBinary), 0o755)
+	os.WriteFile(s.ClaudeBinary, []byte("#!/bin/sh\necho \"$CLAUDE_CONFIG_DIR $*\" > "+log+"\n"), 0o755)
+	if rec := postJSON(h, "/api/plugins/uninstall", `{"profile":"default","id":"dash@market"}`, cookie); !strings.Contains(rec.Body.String(), "plugin-uninstalled") {
+		t.Fatalf("uninstall: %s", rec.Body.String())
+	}
+	if b, _ := os.ReadFile(log); !strings.Contains(string(b), "plugin uninstall dash@market") {
+		t.Errorf("claude ran with %q", b)
+	}
+	if rec := postJSON(h, "/api/plugins/uninstall", `{"profile":"default","id":"nope@x"}`, cookie); !strings.Contains(rec.Body.String(), "plugin-unknown") {
+		t.Errorf("unknown plugin: %s", rec.Body.String())
+	}
+}

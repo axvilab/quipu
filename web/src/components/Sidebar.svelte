@@ -12,6 +12,7 @@
     { href: "/advice", name: "advice", icon: "advice", key: "A" },
     { href: "/cache", name: "cache", icon: "cache", key: "C" },
     { href: "/profiles", name: "profiles", icon: "profiles", key: "R" },
+    { href: "/plugins", name: "plugins", icon: "plugins", key: "P" },
     { href: "/backup", name: "backup", icon: "backup", key: "B" },
     { href: "/settings", name: "settings", icon: "settings", key: "S" },
   ] as const;

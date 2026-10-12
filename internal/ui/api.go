@@ -142,6 +142,27 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 			writeJSON(w, v, err)
 		}
 	})
+	mux.HandleFunc("GET /api/plugins", func(w http.ResponseWriter, r *http.Request) {
+		v, err := s.PluginsReport(r.Context())
+		writeJSON(w, v, err)
+	})
+	mux.HandleFunc("POST /api/plugins/enable", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Profile, ID string
+			On          bool
+		}
+		if readJSON(w, r, &in) {
+			v, err := s.SetPluginEnabled(in.Profile, in.ID, in.On)
+			writeJSON(w, v, err)
+		}
+	})
+	mux.HandleFunc("POST /api/plugins/uninstall", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ Profile, ID string }
+		if readJSON(w, r, &in) {
+			v, err := s.UninstallPlugin(r.Context(), in.Profile, in.ID)
+			writeJSON(w, v, err)
+		}
+	})
 	mux.HandleFunc("POST /api/rules/memory", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
 			Folder string

@@ -407,3 +407,85 @@ func MemorySettingValue(home, dir string) string {
 	}
 	return dir
 }
+
+// InstalledPlugin is a plugin installed in a profile, enabled or not.
+type InstalledPlugin struct {
+	ID          string // "<name>@<marketplace>"
+	Name        string
+	Marketplace string
+	Version     string
+	Dir         string
+	// Enabled is the user settings' value: true, false, or nil when they do not name it.
+	Enabled *bool
+}
+
+// InstalledPlugins lists the plugins installed in configDir, sorted by id.
+func InstalledPlugins(configDir string) []InstalledPlugin {
+	var installed struct {
+		Plugins map[string][]struct {
+			Version     string `json:"version"`
+			InstallPath string `json:"installPath"`
+		} `json:"plugins"`
+	}
+	readJSON(filepath.Join(configDir, "plugins", "installed_plugins.json"), &installed)
+	var s struct {
+		EnabledPlugins map[string]json.RawMessage `json:"enabledPlugins"`
+	}
+	readJSON(UserSettings(configDir), &s)
+
+	var out []InstalledPlugin
+	for id, inst := range installed.Plugins {
+		name, market, _ := strings.Cut(id, "@")
+		p := InstalledPlugin{ID: id, Name: name, Marketplace: market}
+		if len(inst) > 0 {
+			p.Version, p.Dir = inst[0].Version, inst[0].InstallPath
+		}
+		if raw, ok := s.EnabledPlugins[id]; ok {
+			var on bool
+			on = json.Unmarshal(raw, &on) != nil || on // a list of version constraints means enabled
+			p.Enabled = &on
+		}
+		out = append(out, p)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
+	return out
+}
+
+// PluginListing is what a plugin adds to every session where it is enabled: the descriptions of
+// its skills, agents and commands. Its MCP tools cost too, but only Claude Code knows how much.
+func PluginListing(dir, name string) []Item {
+	c := collector{seen: map[string]bool{}}
+	c.extensions(dir, "plugin "+name)
+	var out []Item
+	for _, it := range c.items {
+		if it.Load == Always {
+			out = append(out, it)
+		}
+	}
+	return out
+}
+
+// PluginsEnabledIn lists the plugin ids a project's own settings (shared or local) enable.
+func PluginsEnabledIn(projectPath string) map[string]string {
+	out := map[string]string{}
+	for _, f := range []struct{ scope, path string }{
+		{"project", filepath.Join(projectPath, ".claude", "settings.json")},
+		{"local", LocalSettings(projectPath)},
+	} {
+		var s struct {
+			EnabledPlugins map[string]json.RawMessage `json:"enabledPlugins"`
+		}
+		if !readJSON(f.path, &s) {
+			continue
+		}
+		for id, raw := range s.EnabledPlugins {
+			var on bool
+			if json.Unmarshal(raw, &on) != nil || on {
+				out[id] = f.scope
+			} else {
+				delete(out, id)
+			}
+		}
+	}
+	return out
+}

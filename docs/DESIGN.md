@@ -170,6 +170,12 @@ does not matter, only a version that has these commands.
   MCP run with the user's rights. Only trusted marketplaces are suggested by default.
 - Advisor rule: a plugin enabled for the user but used in one project should move to project scope.
 
+A Plugins page lists every plugin installed in every profile (`installed_plugins.json`): whether
+it is on for every project, only in some, or off; what it lists in each session; its use in the
+last 30 days under that profile. Turning one on or off edits the profile's `enabledPlugins`
+through the journal; removing runs `claude plugin uninstall` under that profile's config dir, with
+a confirmation, since quipu cannot undo it.
+
 ### 4.8 New project wizard
 
 `quipu new` (and New project on the overview, `G N`) sets up a new or freshly cloned folder from

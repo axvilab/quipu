@@ -322,3 +322,17 @@ export interface Collection {
   generation: number;
   first: boolean;
 }
+
+export interface PluginRow {
+  id: string;
+  name: string;
+  marketplace: string;
+  version: string;
+  profile: string;
+  state: "everywhere" | "projects" | "off";
+  projects: string[];
+  tokens: number;
+  uses: number;
+  usedIn: string[];
+  last?: string;
+}
