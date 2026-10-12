@@ -47,8 +47,9 @@
     if (data) document.title = `${data.name} · Quipu`;
   });
 
-  const groups = $derived(data ? contextGroups(data.items, data.plugins, data.findings) : []);
-  const maxGroup = $derived(Math.max(1, ...groups.map((g) => g.always)));
+  // Claude Code's own skills come from the listing of the last session, not from files.
+  const groups = $derived(data ? contextGroups([...data.items, ...(data.listing?.own ?? [])], data.plugins, data.findings) : []);
+  const maxGroup = $derived(Math.max(1, ...groups.filter((g) => g.id !== "claudecode").map((g) => g.always)));
   // The project's own files start open, and so does any group with something to fix.
   const isOpen = (g: ContextGroup) => toggled[g.id] ?? (g.id === "project" || g.findings.length > 0);
   const tabs = $derived([
@@ -91,6 +92,14 @@
       {#if !groups.length}
         <p class="text-sm text-fleece">{t("context.empty")}</p>
       {/if}
+      {#if data.listing}
+        {@const l = data.listing}
+        {#if l.missing.length}
+          <p class="mb-3 text-sm text-cochineal">{t("context.listing.missing", { count: l.missing.length, time: dateTime(l.at), names: l.missing.join(", ") })}</p>
+        {:else}
+          <p class="mb-3 text-xs text-fleece">{t("context.listing.match", { time: dateTime(l.at) })}</p>
+        {/if}
+      {/if}
       <div class="divide-y divide-warp border-y border-warp">
         {#each groups as g (g.id)}
           {@const expanded = isOpen(g)}
@@ -103,9 +112,12 @@
                 <span class="ml-2 text-xs text-fleece">{t("context.items", { count: g.rows.length })}</span>
                 {#if g.findings.length}<span class="ml-2 inline-block h-2 w-2 rounded-full bg-cochineal" title={t("context.finding")}></span>{/if}
               </span>
-              <span class="h-1.5 rounded-full bg-loom-2"><span class="block h-full rounded-full bg-qolle" style="width: {(g.always / maxGroup) * 100}%"></span></span>
+              <span class="h-1.5 rounded-full bg-loom-2"><span class="block h-full rounded-full bg-qolle" style="width: {Math.min(1, g.always / maxGroup) * 100}%"></span></span>
               <span class="text-right tabular-nums">{tokens(g.always)}</span>
             </button>
+            {#if expanded && g.id === "claudecode"}
+              <p class="-mt-1 mb-2 ml-7 text-xs text-fleece">{t("context.group.claudecode.note")}</p>
+            {/if}
             {#if expanded}
               <ul class="mb-3 ml-7 divide-y divide-warp/60">
                 {#each g.rows as r (r.key)}

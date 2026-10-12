@@ -27,8 +27,9 @@ version, or once a day if you turn that on.
 **Shows what is loaded and what it costs.** For every project: what goes into each session,
 grouped by where it comes from (the project, its memory, your settings, claude.ai, plugins), with
 each file, skill or plugin once: what it costs in every session and what it adds when used. Files
-with something to fix say what. Cache writes, hit rate and the miss reasons the API reports, per
-project and per day.
+with something to fix say what. Quipu checks its reading against the skill list Claude Code
+recorded in the project's last session, and shows Claude Code's own skills from it. Cache writes,
+hit rate and the miss reasons the API reports, per project and per day.
 
 ![Project page: what is sent at the start of a session, grouped by where it comes from](docs/images/project.png)
 

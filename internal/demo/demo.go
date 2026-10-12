@@ -105,8 +105,14 @@ func Create(home string, now time.Time) error {
 			if p.path == shop {
 				tool = "mcp__plugin_browser_browser__click"
 			}
-			if err := writeSession(filepath.Join(dir, id+".jsonl"), id, p.path, started, p.start, tool, rng); err != nil {
+			file := filepath.Join(dir, id+".jsonl")
+			if err := writeSession(file, id, p.path, started, p.start, tool, rng); err != nil {
 				return err
+			}
+			if p.path == shop {
+				if err := prependListing(file, id, started); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -188,4 +194,45 @@ func writeSession(path, session, cwd string, started time.Time, startTokens int6
 		ts = ts.Add(time.Duration(30+rng.IntN(300)) * time.Second)
 	}
 	return nil
+}
+
+// shopListing is the skill list Claude Code shows the model in shop-api: the project's and the
+// user's skills, claude.ai's, the plugins', and Claude Code's own.
+var shopListing = [][2]string{
+	{"release", "Cut a release"},
+	{"changelog", "Write a changelog entry from the commits since the last tag"},
+	{"loop", "Run a prompt or slash command on a recurring interval"},
+	{"schedule", "Create, update or run scheduled remote agents"},
+	{"update-config", "Change Claude Code settings, hooks and permissions"},
+	{"anthropic-skills:browser", "Browse the web"},
+	{"anthropic-skills:deep-research", "Research a question across many sources"},
+	{"anthropic-skills:docx", "Create and edit Word documents"},
+	{"anthropic-skills:pdf", "Work with PDF files"},
+	{"anthropic-skills:pptx", "Create and edit slide decks"},
+	{"anthropic-skills:xlsx", "Create and edit spreadsheets"},
+	{"browser:browser", "Drive a browser"},
+	{"slides:slides", "Make slides"},
+}
+
+// prependListing puts the skill listing Claude Code records at the start of a session.
+func prependListing(file, session string, started time.Time) error {
+	var names []string
+	var content strings.Builder
+	for _, s := range shopListing {
+		names = append(names, s[0])
+		fmt.Fprintf(&content, "- %s: %s\n", s[0], s[1])
+	}
+	line, err := json.Marshal(map[string]any{
+		"type": "attachment", "sessionId": session, "timestamp": started.UTC().Format(time.RFC3339),
+		"attachment": map[string]any{"type": "skill_listing", "isInitial": true, "skillCount": len(names),
+			"names": names, "content": strings.TrimRight(content.String(), "\n")},
+	})
+	if err != nil {
+		return err
+	}
+	rest, err := os.ReadFile(file)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(file, append(append(line, '\n'), rest...), 0o600)
 }

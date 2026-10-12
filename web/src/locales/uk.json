@@ -744,5 +744,14 @@
   "rule.unused-skill.detail.project": "Його назва й опис перелічуються в кожній сесії {project}, але ні Claude, ні ви його там не викликали. Виправлення ховає його від Claude через skillOverrides у settings.local.json проєкту, лише для вас; /{name} і далі працює.",
   "rule.unused-skill.row": "{name}",
   "advice.group.unused-skill": "Скіли, якими ви не користуєтеся",
-  "advice.group.unused-skill.note": "Перелічуються в кожній сесії, але не викликалися 30 днів. Сховані від Claude, вони й далі працюють як /назва."
+  "advice.group.unused-skill.note": "Перелічуються в кожній сесії, але не викликалися 30 днів. Сховані від Claude, вони й далі працюють як /назва.",
+  "context.group.claudecode": "Власні скіли Claude Code",
+  "context.group.claudecode.note": "Зі списку, який Claude Code показав моделі в останній сесії: його власні скіли й ті, що лежать там, де quipu не читає. Їхні токени входять у частку Claude Code вище, а не у ваші файли.",
+  "context.listing.match": "Звірено зі скілами, які Claude Code перелічив в останній сесії ({time}): збігається.",
+  "context.listing.missing": {
+    "one": "В останній сесії ({time}) Claude Code не перелічив {count} скіл, який рахує quipu: {names}. Або це змінилося відтоді, або quipu рахує те, що Claude Code пропускає.",
+    "few": "В останній сесії ({time}) Claude Code не перелічив {count} скіли, які рахує quipu: {names}. Або це змінилося відтоді, або quipu рахує те, що Claude Code пропускає.",
+    "many": "В останній сесії ({time}) Claude Code не перелічив {count} скілів, які рахує quipu: {names}. Або це змінилося відтоді, або quipu рахує те, що Claude Code пропускає.",
+    "other": "В останній сесії ({time}) Claude Code не перелічив {count} скіли, які рахує quipu: {names}. Або це змінилося відтоді, або quipu рахує те, що Claude Code пропускає."
+  }
 }

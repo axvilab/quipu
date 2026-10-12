@@ -665,3 +665,26 @@ func TestAddProfileWithStatusLine(t *testing.T) {
 		t.Errorf("new profile has no status line: %s", b)
 	}
 }
+
+func TestProjectListing(t *testing.T) {
+	s := testServer(t)
+	proj := filepath.Join(s.home, "src", "demo")
+	cfg := filepath.Join(s.home, ".claude")
+	for _, name := range []string{"ship", "stale"} {
+		os.MkdirAll(filepath.Join(cfg, "skills", name), 0o755)
+		os.WriteFile(filepath.Join(cfg, "skills", name, "SKILL.md"), []byte("---\nname: "+name+"\ndescription: d\n---\n"), 0o644)
+	}
+	dir := filepath.Join(cfg, "projects", claudecode.ProjectDirName(proj))
+	os.MkdirAll(dir, 0o755)
+	b, _ := json.Marshal(map[string]any{"type": "attachment", "timestamp": "2026-10-12T10:00:00Z",
+		"attachment": map[string]any{"type": "skill_listing", "isInitial": true, "names": []string{"ship", "loop"},
+			"content": "- ship: d\n- loop: Run a prompt on a recurring interval"}})
+	os.WriteFile(filepath.Join(dir, "s-2.jsonl"), append(b, '\n'), 0o600)
+
+	var p Project
+	getJSON(t, s.Handler(), "/api/projects/"+claudecode.ProjectDirName(proj), &http.Cookie{Name: cookieName, Value: s.token}, &p)
+	l := p.Listing
+	if l == nil || strings.Join(l.Missing, ",") != "stale" || len(l.Own) != 1 || l.Own[0].Label != "loop" || l.Own[0].Tokens == 0 {
+		t.Fatalf("listing = %+v", l)
+	}
+}

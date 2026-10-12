@@ -3,7 +3,7 @@
 
 import type { Finding, Item, ProjectPlugin } from "./api/types";
 
-export type GroupId = "project" | "memory" | "user" | "claude.ai" | "plugins";
+export type GroupId = "project" | "memory" | "user" | "claude.ai" | "plugins" | "claudecode";
 
 export interface ContextRow {
   key: string;
@@ -25,11 +25,11 @@ export interface ContextGroup {
   findings: Finding[];
 }
 
-const order: GroupId[] = ["project", "memory", "user", "claude.ai", "plugins"];
+const order: GroupId[] = ["project", "memory", "user", "claude.ai", "plugins", "claudecode"];
 
 function groupOf(scope: string): GroupId {
   if (scope === "project" || scope === "local") return "project";
-  if (scope === "memory" || scope === "user" || scope === "claude.ai") return scope;
+  if (scope === "memory" || scope === "user" || scope === "claude.ai" || scope === "claudecode") return scope;
   return "plugins"; // "plugin <name>"
 }
 
@@ -66,7 +66,8 @@ export function contextGroups(items: Item[], plugins: ProjectPlugin[], findings:
     const rows = groups.get(id) ?? new Map<string, ContextRow>();
     groups.set(id, rows);
     const pluginName = id === "plugins" ? it.scope.slice("plugin ".length) : "";
-    const key = pluginName ? "plugin:" + pluginName : it.kind + ":" + it.path;
+    // Claude Code's own skills have no file: their name tells them apart.
+    const key = pluginName ? "plugin:" + pluginName : it.kind + ":" + (it.path || it.label);
     let row = rows.get(key);
     if (!row) {
       row = { key, label: pluginName || it.label, kind: pluginName ? "plugin" : it.kind, path: it.path, editable: it.editable && !pluginName, always: 0, onUse: 0, findings: [] };

@@ -109,3 +109,24 @@ func TestSyncedSkillsInHomeProject(t *testing.T) {
 		t.Errorf("home project sees %v, want [pdf]", got)
 	}
 }
+
+// A skill only the user runs (disable-model-invocation) is not listed to the model.
+func TestSkillOnlyForTheUser(t *testing.T) {
+	home := t.TempDir()
+	cfg := filepath.Join(home, ".claude")
+	dir := filepath.Join(cfg, "skills", "release")
+	os.MkdirAll(dir, 0o755)
+	os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: release\ndescription: Cut a release\ndisable-model-invocation: true\n---\nSteps.\n"), 0o644)
+	var always, onDemand int
+	for _, it := range Instructions(home, cfg, filepath.Join(home, "src")) {
+		if it.Name == "release" && it.Load == Always {
+			always++
+		}
+		if it.Name == "release" && it.Load == OnDemand {
+			onDemand++
+		}
+	}
+	if always != 0 || onDemand != 1 {
+		t.Errorf("listed %d times, body %d times", always, onDemand)
+	}
+}

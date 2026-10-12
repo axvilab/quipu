@@ -84,6 +84,14 @@ export interface Project {
   daily: Day[];
   changes: Change[];
   plugins: ProjectPlugin[];
+  listing?: Listing;
+}
+
+/** The skills Claude Code listed in the project's last session, against what quipu counts. */
+export interface Listing {
+  at: string;
+  missing: string[];
+  own: Item[];
 }
 
 /** A plugin enabled for a project. */

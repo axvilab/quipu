@@ -118,6 +118,19 @@ type Project struct {
 	Daily         []Day           `json:"daily"`
 	Changes       []Change        `json:"changes"` // quipu's changes that touched this project's files
 	Plugins       []ProjectPlugin `json:"plugins"`
+	// Listing checks quipu's reading against the skills Claude Code listed in the project's last
+	// session; nil when no transcript has a listing.
+	Listing *Listing `json:"listing,omitempty"`
+}
+
+// Listing compares the skills quipu counts with the ones Claude Code itself listed.
+type Listing struct {
+	At      time.Time `json:"at"`
+	Missing []string  `json:"missing"` // quipu counts them, Claude Code did not list them
+	// Own are skills Claude Code listed that come from no file quipu reads: its own (loop,
+	// schedule…) and any from places quipu does not know. Their tokens are part of Claude Code's
+	// share of the session start.
+	Own []Item `json:"own"`
 }
 
 // ProjectPlugin is a plugin enabled for a project: where, what it lists in every session, and
@@ -331,6 +344,7 @@ func (s *Service) ProjectDetail(ctx context.Context, dir string, days int) (Proj
 		out.Findings = append(out.Findings, s.finding(fd, dir, []string{s.shortPath(path)}))
 	}
 	out.Plugins = s.projectPlugins(ctx, dir, path, items)
+	out.Listing = s.listing(path, items)
 	memory := claudecode.MemoryDir(s.configDir, path)
 	out.Changes = s.changes(func(p string) bool {
 		return strings.HasPrefix(p, path+string(filepath.Separator)) || strings.HasPrefix(p, memory+string(filepath.Separator))
@@ -830,5 +844,34 @@ func (s *Service) projectPlugins(ctx context.Context, dir, path string, items []
 		}
 		out = append(out, row)
 	}
+	return out
+}
+
+// listing reads the skills Claude Code listed in the project's last session and compares them
+// with the skills quipu counts in every session.
+func (s *Service) listing(path string, items []claudecode.Item) *Listing {
+	l, ok := claudecode.LastSkillListing(s.configDir, path)
+	if !ok {
+		return nil
+	}
+	out := &Listing{At: l.At, Missing: []string{}, Own: []Item{}}
+	counted := map[string]bool{}
+	for _, it := range items {
+		name := claudecode.ListedName(it)
+		if name == "" || it.Load != claudecode.Always {
+			continue
+		}
+		counted[name] = true
+		if _, listed := l.Skills[name]; !listed {
+			out.Missing = append(out.Missing, name)
+		}
+	}
+	for name, text := range l.Skills {
+		if !counted[name] {
+			out.Own = append(out.Own, Item{Label: name, Scope: "claudecode", Kind: "skill", Always: true, Tokens: analytics.EstimateTokens(text)})
+		}
+	}
+	sort.Strings(out.Missing)
+	sort.Slice(out.Own, func(i, j int) bool { return out.Own[i].Tokens > out.Own[j].Tokens })
 	return out
 }

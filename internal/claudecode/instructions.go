@@ -214,6 +214,9 @@ func (c *collector) extension(path, scope, kind, fallbackName string) {
 		name = fallbackName
 	}
 	listing := name + ": " + fm.Description
+	if fm.NoModel {
+		listing = "" // the model never sees it
+	}
 	// skillOverrides hides a skill from Claude or lists its name only. It applies to the user's
 	// and the project's own skills; plugin skills ignore it, and the docs do not say it covers
 	// claude.ai skills, so those keep counting.

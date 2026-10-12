@@ -7,6 +7,9 @@ type frontmatter struct {
 	Name        string
 	Description string
 	Paths       []string
+	// NoModel is disable-model-invocation: true. Claude Code then keeps the skill off the list it
+	// shows the model; only the user runs it, as /name.
+	NoModel bool
 }
 
 // parseFrontmatter splits a Markdown file into its YAML header and body.
@@ -56,6 +59,8 @@ func parseFrontmatter(text string) (frontmatter, string) {
 			}
 		case "paths":
 			fm.Paths = parseList(value, block)
+		case "disable-model-invocation":
+			fm.NoModel = unquote(value) == "true"
 		}
 	}
 	return fm, body

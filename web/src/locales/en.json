@@ -692,5 +692,12 @@
   "rule.unused-skill.detail.project": "Its name and description are listed in every session of {project}, yet neither Claude nor you invoked it there. The fix hides it from Claude with skillOverrides in the project's settings.local.json, just for you; /{name} keeps working.",
   "rule.unused-skill.row": "{name}",
   "advice.group.unused-skill": "Skills you do not use",
-  "advice.group.unused-skill.note": "Listed in every session, not invoked in 30 days. Hidden from Claude, they still work as /name."
+  "advice.group.unused-skill.note": "Listed in every session, not invoked in 30 days. Hidden from Claude, they still work as /name.",
+  "context.group.claudecode": "Claude Code's own skills",
+  "context.group.claudecode.note": "From the list Claude Code showed the model in the last session: its own skills and any from places quipu does not read. Their tokens are part of Claude Code's share above, not your files.",
+  "context.listing.match": "Checked against the skills Claude Code listed in the last session ({time}): they match.",
+  "context.listing.missing": {
+    "one": "In the last session ({time}) Claude Code did not list {count} skill quipu counts: {names}. Either it changed since, or quipu counts something Claude Code skips.",
+    "other": "In the last session ({time}) Claude Code did not list {count} skills quipu counts: {names}. Either they changed since, or quipu counts something Claude Code skips."
+  }
 }
