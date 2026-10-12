@@ -50,9 +50,12 @@ type Service struct {
 	ProfilesFile string
 	ClaudeBinary string
 	SelfBinary   string // quipu itself, used as BROWSER for `claude auth login`
+	UpdateBase   string // where releases come from; update.DefaultBase when empty
+	Restart      func() // starts the installed update in place of this process; nil when quipu cannot
 	profileCache profileCache
 	logins       logins
 	coll         collector
+	upd          updater
 }
 
 // NewService opens the backup journal under <dataDir>/backups.

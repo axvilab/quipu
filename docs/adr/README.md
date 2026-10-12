@@ -12,3 +12,4 @@ mark them superseded; a changed decision gets a new ADR. Create one with `/adr-n
 | [0005](0005-distribution-and-autostart.md) | Prebuilt binaries, install script, user-level autostart | Accepted |
 | [0006](0006-svelte-spa.md) | Svelte single-page UI embedded in the binary | Accepted |
 | [0007](0007-native-window-wails.md) | Native window with Wails in a separate binary | Accepted |
+| [0008](0008-update-from-github-releases.md) | Check for and install updates from GitHub Releases | Accepted |

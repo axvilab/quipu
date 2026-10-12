@@ -8,6 +8,7 @@
   import { prefs, setDays } from "../lib/prefs.svelte";
   import { navigate, projectPath } from "../lib/router.svelte";
   import { openEditor } from "../lib/editor.svelte";
+  import { checkUpdate, installUpdate, updates } from "../lib/update.svelte";
   import Icon from "./Icon.svelte";
 
   interface Command {
@@ -60,6 +61,9 @@
     })),
     ...(userFile ? [{ id: "edit-user", label: t("palette.editUser"), hint: userFile, icon: "edit", run: () => openEditor(userFile) }] : []),
     { id: "help", label: t("palette.shortcuts"), hint: "?", icon: "keyboard", run: () => (palette.help = true) },
+    updates.info?.available && updates.info.canInstall && updates.info.latest
+      ? { id: "update", label: t("update.install", { version: updates.info.latest }), icon: "download", run: installUpdate }
+      : { id: "update", label: t("update.check"), icon: "refresh", run: checkUpdate },
   ]);
 
   const shown = $derived(

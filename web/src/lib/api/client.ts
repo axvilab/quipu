@@ -20,6 +20,7 @@ import type {
   RestorePlan,
   Result,
   Session,
+  UpdateInfo,
 } from "./types";
 
 export class ApiError extends Error {
@@ -53,6 +54,10 @@ const post = (path: string, body: unknown = {}) => request<Result>("POST", path,
 export const api = {
   session: () => get<Session>("/api/session"),
   collection: () => get<Collection>("/api/collection"),
+  update: () => get<UpdateInfo>("/api/update"),
+  checkUpdate: () => request<UpdateInfo>("POST", "/api/update/check", {}),
+  installUpdate: () => post("/api/update/install"),
+  setAutoUpdate: (on: boolean) => post("/api/update/auto", { on }),
   overview: (days: number) => get<Overview>(`/api/overview?days=${days}`),
   project: (dir: string, days: number) => get<Project>(`/api/projects/${encodeURIComponent(dir)}?days=${days}`),
   cache: (days: number) => get<CacheReport>(`/api/cache?days=${days}`),

@@ -358,3 +358,14 @@ export interface PluginsMatrix {
   titles: Record<string, string>;
   plugins: PluginMatrix[];
 }
+
+export interface UpdateInfo {
+  current: string;
+  latest?: string;
+  available: boolean;
+  checked?: string;
+  auto: boolean;
+  canInstall: boolean;
+  restarts: boolean;
+  notes?: string;
+}

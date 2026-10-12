@@ -5,6 +5,10 @@
   import { notifyChanged } from "../lib/changes.svelte";
   import { live, refreshLive } from "../lib/live.svelte";
   import { report } from "../lib/toast.svelte";
+  import { checkUpdate, installUpdate, setAutoUpdate, updates } from "../lib/update.svelte";
+  import { dateTime } from "../lib/format";
+  import { external } from "../lib/external";
+  import Switch from "../components/Switch.svelte";
   import type { Doctor } from "../lib/api/types";
   import Header from "../components/Header.svelte";
   import Icon from "../components/Icon.svelte";
@@ -113,6 +117,43 @@
       </button>
     {/each}
   </div>
+</section>
+
+<section class="max-w-xl border-t border-warp py-6">
+  <h2 class="text-md font-semibold">{t("settings.update.title")}</h2>
+  <p class="mt-1 text-sm leading-relaxed text-fleece">{t("settings.update.note")}</p>
+  {#if updates.info}
+    {@const u = updates.info}
+    {#if u.current.startsWith("v")}
+      <p class="mt-3 text-sm">
+        {t("settings.update.current", { version: u.current })}
+        <span class="text-fleece">{u.checked ? t("settings.update.checked", { time: dateTime(u.checked) }) : t("settings.update.never")}</span>
+      </p>
+      {#if u.available && u.latest}
+        <p class="mt-3 flex flex-wrap items-center gap-3 text-sm">
+          <span class="text-indigo">{t("update.available", { version: u.latest })}</span>
+          {#if u.notes}<a href={u.notes} target="_blank" rel="noreferrer" use:external class="text-fleece underline hover:text-cotton">{t("update.notes")}</a>{/if}
+        </p>
+        {#if u.canInstall}
+          <button class="btn btn-primary mt-3" disabled={!!updates.busy} title={t("update.installHint", { version: u.latest })} onclick={installUpdate}>
+            <Icon name="download" size={14} />{updates.busy === "install" ? t("update.installing") : t("update.install", { version: u.latest })}
+          </button>
+        {:else}
+          <p class="mt-2 text-xs text-fleece">{t("update.manualHint")}</p>
+        {/if}
+      {:else}
+        <button class="btn mt-3" disabled={!!updates.busy} onclick={checkUpdate}>
+          <Icon name="refresh" size={14} />{updates.busy === "check" ? t("update.checking") : t("settings.update.now")}
+        </button>
+      {/if}
+      <div class="mt-4 flex items-center gap-3 text-sm">
+        <Switch on={u.auto} label={t("settings.update.auto")} onchange={setAutoUpdate} />
+        {t("settings.update.auto")}
+      </div>
+    {:else}
+      <p class="mt-3 text-sm text-fleece">{t("settings.update.dev")}</p>
+    {/if}
+  {/if}
 </section>
 
 <section class="max-w-xl border-t border-warp py-6">

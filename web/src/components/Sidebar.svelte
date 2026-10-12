@@ -4,6 +4,8 @@
   import { palette } from "../lib/palette.svelte";
   import { prefs, setAccountsOpen } from "../lib/prefs.svelte";
   import { link, router } from "../lib/router.svelte";
+  import { external } from "../lib/external";
+  import { checkUpdate, installUpdate, loadUpdate, updates } from "../lib/update.svelte";
   import Icon from "./Icon.svelte";
 
   let { session }: { session: Session | null } = $props();
@@ -17,6 +19,14 @@
     { href: "/backup", name: "backup", icon: "backup", key: "B" },
     { href: "/settings", name: "settings", icon: "settings", key: "S" },
   ] as const;
+
+  // What the server knows about a newer release; it checks GitHub only when asked or, if the user
+  // turned that on, once a day, so reading this now and then is enough.
+  $effect(() => {
+    loadUpdate();
+    const timer = setInterval(loadUpdate, 30 * 60_000);
+    return () => clearInterval(timer);
+  });
 
   // The project pages and the new project page belong to the overview.
   const current = $derived(router.route.name === "project" || router.route.name === "new" ? "overview" : router.route.name);
@@ -77,6 +87,28 @@
 
   <div class="mt-3 flex items-center justify-between gap-3 px-2.5">
     <button class="shrink-0 text-xs text-fleece hover:text-cotton" onclick={() => (palette.help = true)}>{t("help.open")}</button>
-    {#if session?.version}<span class="min-w-0 truncate text-xs text-fleece/60" title={session.version}>{session.version}</span>{/if}
+    {#if updates.info?.available && updates.info.latest}
+      {@const version = updates.info.latest}
+      {#if updates.info.canInstall}
+        <button class="flex min-w-0 items-center gap-1.5 text-xs text-indigo hover:text-cotton disabled:opacity-60" disabled={!!updates.busy}
+          title={t("update.installHint", { version })} onclick={installUpdate}>
+          <Icon name="download" size={12} />
+          <span class="truncate">{updates.busy === "install" ? t("update.installing") : t("update.install", { version })}</span>
+        </button>
+      {:else}
+        <a href={updates.info.notes} target="_blank" rel="noreferrer" use:external class="min-w-0 truncate text-xs text-indigo hover:text-cotton"
+          title={t("update.manualHint")}>{t("update.available", { version })}</a>
+      {/if}
+    {:else if session?.version}
+      <span class="flex min-w-0 items-center gap-1">
+        <span class="truncate text-xs text-fleece/60" title={session.version}>{session.version}</span>
+        {#if session.version.startsWith("v")}
+          <button class="btn-icon flex h-6 w-6 items-center justify-center rounded-md text-fleece/60 hover:text-cotton" disabled={!!updates.busy}
+            aria-label={updates.busy === "check" ? t("update.checking") : t("update.check")} title={t("update.check")} onclick={checkUpdate}>
+            <span class={updates.busy === "check" ? "animate-spin motion-reduce:animate-none" : ""}><Icon name="refresh" size={12} /></span>
+          </button>
+        {/if}
+      </span>
+    {/if}
   </div>
 </nav>

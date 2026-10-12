@@ -262,7 +262,8 @@ internal/fsx/        atomic writes, backups
    by explicit choice. Every change is a previewed diff with a backup.
 5. Re-read before writing files Claude Code itself writes (`settings.json`, `MEMORY.md`).
 6. Detect managed settings that forbid hooks or plugins and degrade gracefully.
-7. No network access except user-initiated git operations. No telemetry.
+7. No network access except user-initiated git operations and the update check: asked when the
+   user clicks it, or once a day if they turned that on (ADR 0008). No telemetry.
 
 ## 6. Known limits
 

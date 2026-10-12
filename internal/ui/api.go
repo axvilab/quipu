@@ -15,6 +15,24 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/session", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, s.SessionInfo(r.Context()), nil)
 	})
+	mux.HandleFunc("GET /api/update", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, s.UpdateStatus(), nil)
+	})
+	mux.HandleFunc("POST /api/update/check", func(w http.ResponseWriter, r *http.Request) {
+		v, err := s.CheckUpdate(r.Context())
+		writeJSON(w, v, err)
+	})
+	mux.HandleFunc("POST /api/update/install", func(w http.ResponseWriter, r *http.Request) {
+		v, err := s.InstallUpdate(r.Context())
+		writeJSON(w, v, err)
+	})
+	mux.HandleFunc("POST /api/update/auto", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ On bool }
+		if readJSON(w, r, &in) {
+			v, err := s.SetAutoUpdate(in.On)
+			writeJSON(w, v, err)
+		}
+	})
 	mux.HandleFunc("GET /api/collection", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, s.Collection(), nil)
 	})

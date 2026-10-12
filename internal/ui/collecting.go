@@ -46,6 +46,7 @@ func (s *Service) Collect(ctx context.Context, every time.Duration) {
 		// Keeps plans.json fresh for the status line without the UI open; the profile cache asks
 		// Claude Code at most every few minutes.
 		s.profiles(ctx)
+		s.autoCheck(ctx)
 		select {
 		case <-ctx.Done():
 			return

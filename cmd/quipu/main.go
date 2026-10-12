@@ -7,6 +7,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -82,6 +84,9 @@ func main() {
 		err = runCache(ctx, os.Args[2:])
 	case "daemon":
 		err = runDaemon(ctx, os.Args[2:])
+		if errors.Is(err, errRestart) {
+			err = restartSelf()
+		}
 	case "doctor":
 		err = runDoctor(ctx)
 	case "demo":
@@ -137,12 +142,24 @@ func runDaemon(ctx context.Context, args []string) error {
 	}
 	defer st.Close()
 
+	// An update installed from the web interface stops the daemon, and main starts the new binary.
+	ctx, stop := context.WithCancel(ctx)
+	defer stop()
+	var restart atomic.Bool
+	stopped := func() error {
+		if restart.Load() {
+			return errRestart
+		}
+		return nil
+	}
+
 	if !*once && !*noUI {
 		srv, err := ui.New(home, filepath.Join(home, ".claude"), "default", dir, version, st)
 		if err != nil {
 			return err
 		}
 		attachProfiles(srv, home)
+		srv.Restart = func() { restart.Store(true); stop() }
 		go func() {
 			err := srv.Listen(ctx, *uiPort, func(url string) {
 				if err := ui.WriteRuntime(dir, url); err != nil {
@@ -161,7 +178,7 @@ func runDaemon(ctx context.Context, args []string) error {
 		start := time.Now()
 		stats, err := collect.Run(ctx, home, st)
 		if ctx.Err() != nil {
-			return nil
+			return stopped()
 		}
 		fmt.Printf("%s collected %d of %d transcripts (%d responses, %d profiles) in %s\n",
 			start.Format(time.DateTime), stats.Collected, stats.Seen, stats.Responses, stats.Profiles,
@@ -174,10 +191,23 @@ func runDaemon(ctx context.Context, args []string) error {
 		}
 		select {
 		case <-ctx.Done():
-			return nil
+			return stopped()
 		case <-time.After(*interval):
 		}
 	}
+}
+
+// errRestart asks main to start the binary now at quipu's path in place of the daemon.
+var errRestart = errors.New("restart")
+
+// restartSelf replaces this process with the binary at quipu's path, with the same arguments. The
+// PID stays, so systemd and launchd keep tracking the daemon; the store is closed by then.
+func restartSelf() error {
+	exe, err := os.Executable() // on Linux, the path even after the old file was replaced
+	if err != nil {
+		return err
+	}
+	return syscall.Exec(exe, os.Args, os.Environ())
 }
 
 // openStore opens the store in the user's data dir.

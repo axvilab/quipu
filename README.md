@@ -1,17 +1,26 @@
-# quipu
+# Quipu
 
-**See what Claude Code reads in each of your projects, what it costs you, and fix it in one click.**
+**A local app for Claude Code: see what it reads in each of your projects and what that costs, fix
+it in one click, and keep several accounts side by side.**
+
+Quipu is a desktop window and a command-line tool for people who work in Claude Code every day.
+It is named after the Inca quipu, knotted cords that kept a state's accounts; here each cord is a
+project and its knots count tokens.
 
 Every Claude Code session starts by sending your `CLAUDE.md` files, imports, rules, skill
 descriptions, memory and plugins, before you have typed anything. That weight is paid again in
 every session, and it grows quietly: a design doc pulled in with `@`, a skill copied into five
-projects, a plugin nobody uses. quipu reads your Claude Code setup and transcripts locally, shows
-where the tokens go, and turns what it finds into concrete edits you can review and undo.
+projects, a plugin nobody uses. Quipu reads your Claude Code setup and transcripts locally, shows
+where the tokens go, and turns what it finds into concrete edits you can review and undo. It also
+runs your personal and work accounts side by side, with their plugins and a status line that shows
+each account's limits.
 
 ![Overview: each project is a cord of a quipu; knots record cache writes, red side cords mark things worth fixing](docs/images/overview.png)
 
-Everything runs on your machine. quipu reads no credentials, sends nothing anywhere, and changes
-a file only when you click Apply, keeping a copy so the change can be undone.
+Everything runs on your machine. Quipu reads no credentials, sends nothing about you anywhere, and
+changes a file only when you click Apply, keeping a copy so the change can be undone. The one
+request it makes is asking GitHub for the newest release: when you click the check next to the
+version, or once a day if you turn that on.
 
 ## What it does
 
@@ -47,10 +56,10 @@ shim, for bash, zsh and fish alike (an IDE terminal often runs a different shell
 login one). In a folder without a rule it asks which account to use and offers to remember the
 answer for the whole git repository.
 
-Each account is set up in one panel: the name quipu shows it by, its sign-in, which of
+Each account is set up in one panel: the name Quipu shows it by, its sign-in, which of
 `CLAUDE.md`, skills, agents, rules and commands it shares with your main account, and its status
 line. A new account can start like your main one, with its status line and plugins, in the same
-step. A project that moves to another account can keep its memory: quipu points both accounts at
+step. A project that moves to another account can keep its memory: Quipu points both accounts at
 one memory folder through Claude Code's own `autoMemoryDirectory` setting, so Claude remembers what
 it learned about the project under either. `quipu doctor` checks the whole setup.
 
@@ -60,7 +69,7 @@ it learned about the project under either. `quipu doctor` checks the whole setup
 from another. The Plugins page puts every plugin against every account: where it is on, where it
 is missing, what it lists in each session, and whether you used it in the last 30 days. Turn it
 off or on (undoable), remove it, or install it into an account that lacks it, one by one or all at
-once; quipu adds the marketplace from where your other account got it and runs Claude Code's own
+once; Quipu adds the marketplace from where your other account got it and runs Claude Code's own
 `claude plugin install` under that account.
 
 ![Plugins: every plugin against every account, with cost, use and what is missing](docs/images/plugins.png)
@@ -77,15 +86,14 @@ its effort, folder and branch, session cost, context used (as a bar and in token
 weekly limits with their reset, the cache hit ratio and how long the cache stays warm; past that,
 the next message pays for the whole context again. Fast mode, the branch's PR with its review and
 the cause of a recent cache miss appear when they apply. Colours go green, yellow and red as things
-fill. Everything comes from what Claude Code passes the
-status line for that session, so each account sees its own numbers; quipu reads no login and makes
-no requests for it. A status line it replaces is kept aside and comes back when you turn quipu's
-off.
+fill. Everything comes from what Claude Code passes the status line for that session, so each
+account sees its own numbers; Quipu reads no login and makes no requests for it. A status line it
+replaces is kept aside and comes back when you turn Quipu's off.
 
 **Starts new projects from your own work.** Set up a new or freshly cloned folder with skills,
 rules and agents from your other projects. What several projects already share is offered as
 global instead of copied again, and you see what Claude will read before anything is written.
-quipu adds no templates or conventions of its own.
+Quipu adds no templates or conventions of its own.
 
 ![New project: your own skills and rules, with what Claude will read](docs/images/new-project.png)
 
@@ -93,7 +101,8 @@ quipu adds no templates or conventions of its own.
 archive or into your own git repository, with a scan for credentials first and the memory of the
 projects you choose left out; live sessions with Remote Control links; a first
 run that shows its progress while it reads your history, then collects in the background; English
-and Ukrainian; light and dark themes; keyboard first (`Ctrl K`, `G` then a letter, `?` for help).
+and Ukrainian; light and dark themes; updates from the window, checked against the release's
+checksums, then a restart in place; keyboard first (`Ctrl K`, `G` then a letter, `?` for help).
 
 ## Install
 
@@ -107,7 +116,7 @@ The script puts `quipu` and its window `quipu-app` into `~/.local/bin` (on macOS
 `~/Applications/Quipu.app`) after checking their checksums; no root needed. It runs on Linux
 (glibc, x86_64 and arm64) and macOS (Intel and Apple Silicon). On Linux the window needs
 WebKitGTK 4.1, which desktop distributions usually have (`libwebkit2gtk-4.1-0` on Debian and
-Ubuntu); without it, or with `quipu ui --browser`, quipu opens in the browser at
+Ubuntu); without it, or with `quipu ui --browser`, Quipu opens in the browser at
 http://quipu.localhost:47800.
 
 ### Try it without touching your setup
@@ -136,13 +145,13 @@ quipu daemon           collect transcripts in the background (quipu install sets
 
 ## How it works
 
-Claude Code deletes transcripts after 30 days by default. quipu's collector copies the usage
+Claude Code deletes transcripts after 30 days by default. Quipu's collector copies the usage
 from them (tokens, cache, models, plugins; not the conversation text) into Parquet files in
 `~/.local/share/quipu` (`~/Library/Application Support/quipu` on macOS) and queries them with an
 embedded DuckDB. Instructions are read from the files themselves: `CLAUDE.md` and its imports,
 rules, skills, agents, memory and plugin settings, for every profile.
 
-quipu works with Claude Code only through what it supports: config directories, settings files,
+Quipu works with Claude Code only through what it supports: config directories, settings files,
 files in `.claude/`, plugins and hooks. It never edits `~/.claude.json` and never reads login
 tokens. Token counts for your files are estimates; the totals come from what the API reported.
 
