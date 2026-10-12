@@ -132,6 +132,16 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 			writeJSON(w, v, err)
 		}
 	})
+	mux.HandleFunc("POST /api/shim/rc", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Shell string
+			On    bool
+		}
+		if readJSON(w, r, &in) {
+			v, err := s.SetShimRC(in.Shell, in.On)
+			writeJSON(w, v, err)
+		}
+	})
 	mux.HandleFunc("GET /api/profiles", func(w http.ResponseWriter, r *http.Request) {
 		v, err := s.ProfilesReport(r.Context())
 		writeJSON(w, v, err)

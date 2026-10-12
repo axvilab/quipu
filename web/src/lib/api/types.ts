@@ -247,11 +247,20 @@ export interface Check {
   params: Record<string, string>;
 }
 
+export interface ShellLine {
+  name: string;
+  rcFile: string;
+  line: string;
+  inRc: boolean;
+  login: boolean;
+}
+
 export interface ShimState {
   installed: boolean;
   inRc: boolean;
   rcFile: string;
   line: string;
+  shells: ShellLine[];
 }
 
 export interface Doctor {

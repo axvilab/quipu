@@ -140,30 +140,51 @@ func HasRCBlock(path string) bool {
 	return err == nil && strings.Contains(string(b), rcMarker)
 }
 
-// SetShim turns the shim on or off: the link, and with rc also the PATH line in the shell's
-// startup file, which is written through the journal so it can be undone. It returns the rc file.
+// SetShim turns the shim on or off: the link, and with rc also the PATH line, written through the
+// journal so it can be undone: on adds it to the login shell's startup file, off removes it from
+// every shell's. It returns the login shell's rc file.
 func SetShim(on, rc bool, home, dataDir, self string, j *fsx.Journal) (string, error) {
 	dir := ShimDir(dataDir)
-	rcFile, block := RCFile(home, LoginShell(), dir)
-	change := WithoutRCBlock
-	state := "off"
+	rcFile, _ := RCFile(home, LoginShell(), dir)
 	if on {
 		if err := InstallShim(dir, self); err != nil {
 			return rcFile, err
 		}
-		change = func(s string) string { return WithRCBlock(s, block) }
-		state = "on"
 	} else if err := RemoveShim(dir); err != nil {
 		return rcFile, err
 	}
 	if !rc {
 		return rcFile, nil
 	}
+	if on {
+		return SetRC(true, LoginShell(), home, dataDir, j)
+	}
+	// Off: take the line out of every shell it was added to.
+	for _, sh := range Shells {
+		if _, err := SetRC(false, sh, home, dataDir, j); err != nil {
+			return rcFile, err
+		}
+	}
+	return rcFile, nil
+}
+
+// Shells are the shells whose startup file the shim's PATH line can go into. A terminal may run
+// another shell than the login one (an IDE's terminal often runs zsh while the login shell is
+// bash), so each can be connected on its own.
+var Shells = []string{"bash", "zsh", "fish"}
+
+// SetRC adds or removes the shim's PATH line in shell's startup file through the journal, and
+// returns the file.
+func SetRC(on bool, shell, home, dataDir string, j *fsx.Journal) (string, error) {
+	rcFile, block := RCFile(home, shell, ShimDir(dataDir))
 	current, err := os.ReadFile(rcFile)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return rcFile, err
 	}
-	next := change(string(current))
+	next, state := WithoutRCBlock(string(current)), "off"
+	if on {
+		next, state = WithRCBlock(string(current), block), "on"
+	}
 	if next == string(current) {
 		return rcFile, nil
 	}

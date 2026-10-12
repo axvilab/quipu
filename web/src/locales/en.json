@@ -242,7 +242,6 @@
   "rules.folder": "Folder",
   "rules.profile": "Profile",
   "rules.save": "Save rule",
-  "rules.alias": "To make plain claude pick the profile itself, add to ~/.bashrc:",
   "signin.title": "Sign in to {name}",
   "signin.why": "If the browser is already signed in to claude.ai with another account, the sign-in page just confirms that one. That is why quipu opens it in a private window.",
   "signin.email": "Account email",
@@ -511,5 +510,18 @@
   "collect.title": "Reading your Claude Code history",
   "collect.body": "The first time, quipu goes through every session transcript once. Later it reads only what changed, in the background.",
   "collect.progress": "{done} of {total} sessions",
-  "collect.finding": "Looking for sessions…"
+  "collect.finding": "Looking for sessions…",
+  "settings.shim.shells": "Shells",
+  "settings.shim.shellsNote": "The line goes into your login shell's startup file. A terminal that runs another shell, such as the one in PhpStorm or VS Code (often zsh), needs it in that shell's file too.",
+  "settings.shim.login": "your login shell",
+  "settings.shim.connected": "connected: the line is in {file}",
+  "settings.shim.notConnected": "not connected: no line in {file}",
+  "settings.shim.add": "Add",
+  "settings.shim.remove": "Remove",
+  "settings.shim.newTerminal": "The change applies to terminals opened after it; in an IDE, open a new terminal tab.",
+  "result.shim-rc-on": "Added the line to {file}. Open a new terminal.",
+  "result.shim-rc-off": "Removed the line from {file}.",
+  "result.shell-unknown": "quipu does not know the shell {shell}.",
+  "rules.shim": "To make plain claude pick the profile by these rules, turn on",
+  "rules.shimLink": "the claude shim in Settings"
 }

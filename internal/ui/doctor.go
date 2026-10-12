@@ -164,18 +164,51 @@ func windowApp(self string) string {
 
 // ShimState is the shim as the settings page shows it.
 type ShimState struct {
-	Installed bool   `json:"installed"`
-	InRC      bool   `json:"inRc"`
-	RCFile    string `json:"rcFile"`
-	Line      string `json:"line"` // what goes into the startup file, for doing it by hand
+	Installed bool        `json:"installed"`
+	InRC      bool        `json:"inRc"`
+	RCFile    string      `json:"rcFile"`
+	Line      string      `json:"line"`   // what goes into the startup file, for doing it by hand
+	Shells    []ShellLine `json:"shells"` // every shell, for terminals that run another one
+}
+
+// ShellLine is the shim's PATH line for one shell.
+type ShellLine struct {
+	Name   string `json:"name"`
+	RCFile string `json:"rcFile"`
+	Line   string `json:"line"`
+	InRC   bool   `json:"inRc"`
+	Login  bool   `json:"login"` // the user's login shell
 }
 
 // Shim reports the shim's state.
 func (s *Service) Shim() ShimState {
 	dir := profile.ShimDir(s.dataDir)
-	rcFile, block := profile.RCFile(s.home, profile.LoginShell(), dir)
-	return ShimState{Installed: s.SelfBinary != "" && profile.ShimInstalled(dir, s.SelfBinary), InRC: profile.HasRCBlock(rcFile),
+	login := filepath.Base(profile.LoginShell())
+	rcFile, block := profile.RCFile(s.home, login, dir)
+	st := ShimState{Installed: s.SelfBinary != "" && profile.ShimInstalled(dir, s.SelfBinary), InRC: profile.HasRCBlock(rcFile),
 		RCFile: s.shortPath(rcFile), Line: strings.TrimSpace(block)}
+	for _, sh := range profile.Shells {
+		f, b := profile.RCFile(s.home, sh, dir)
+		lines := strings.Split(strings.TrimSpace(b), "\n")
+		st.Shells = append(st.Shells, ShellLine{Name: sh, RCFile: s.shortPath(f), Line: lines[len(lines)-1],
+			InRC: profile.HasRCBlock(f), Login: sh == login})
+	}
+	return st
+}
+
+// SetShimRC adds or removes the shim's PATH line for one shell.
+func (s *Service) SetShimRC(shell string, on bool) (Result, error) {
+	if !contains(profile.Shells, shell) {
+		return Result{}, problem("shell-unknown", "shell", shell)
+	}
+	rc, err := profile.SetRC(on, shell, s.home, s.dataDir, s.journal)
+	if err != nil {
+		return Result{}, problem("shim-failed", "error", err.Error())
+	}
+	if on {
+		return ok("shim-rc-on", "file", s.shortPath(rc)), nil
+	}
+	return ok("shim-rc-off", "file", s.shortPath(rc)), nil
 }
 
 // SetShim turns the shim on or off, editing the shell startup file through the journal.

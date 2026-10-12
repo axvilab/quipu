@@ -278,7 +278,6 @@
   "rules.folder": "Папка",
   "rules.profile": "Профіль",
   "rules.save": "Зберегти правило",
-  "rules.alias": "Щоб звичайне claude саме вибирало профіль, додай у ~/.bashrc:",
   "signin.title": "Вхід у профіль {name}",
   "signin.why": "Якщо браузер уже увійшов у claude.ai іншим акаунтом, сторінка входу просто підтвердить його. Тому quipu відкриває її в приватному вікні.",
   "signin.email": "Пошта акаунта",
@@ -553,5 +552,18 @@
   "collect.title": "Читаю історію Claude Code",
   "collect.body": "Першого разу quipu один раз переглядає транскрипти всіх сесій. Далі читає лише змінене, у фоні.",
   "collect.progress": "{done} з {total} сесій",
-  "collect.finding": "Шукаю сесії…"
+  "collect.finding": "Шукаю сесії…",
+  "settings.shim.shells": "Оболонки",
+  "settings.shim.shellsNote": "Рядок додається у файл запуску вашої основної оболонки. Термінал з іншою оболонкою, наприклад у PhpStorm чи VS Code (часто zsh), потребує його і в файлі цієї оболонки.",
+  "settings.shim.login": "основна",
+  "settings.shim.connected": "підключено: рядок є в {file}",
+  "settings.shim.notConnected": "не підключено: рядка в {file} немає",
+  "settings.shim.add": "Додати",
+  "settings.shim.remove": "Прибрати",
+  "settings.shim.newTerminal": "Зміна діє в терміналах, відкритих після неї; в IDE відкрийте нову вкладку термінала.",
+  "result.shim-rc-on": "Рядок додано в {file}. Відкрийте новий термінал.",
+  "result.shim-rc-off": "Рядок прибрано з {file}.",
+  "result.shell-unknown": "quipu не знає оболонки {shell}.",
+  "rules.shim": "Щоб звичайне claude саме вибирало профіль за цими правилами, увімкніть",
+  "rules.shimLink": "підміну claude в Налаштуваннях"
 }

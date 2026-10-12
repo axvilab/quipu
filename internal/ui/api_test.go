@@ -303,12 +303,28 @@ func TestDoctorAndShimAPI(t *testing.T) {
 	if !strings.Contains(string(rc), "/shim:$PATH") {
 		t.Errorf(".bashrc = %q", rc)
 	}
+	// Another shell, as an IDE's terminal may run: zsh is listed and can be connected on its own.
+	if len(d.Shim.Shells) != 3 || !d.Shim.Shells[0].Login || d.Shim.Shells[1].InRC {
+		t.Errorf("shells = %+v", d.Shim.Shells)
+	}
+	if rec := postJSON(h, "/api/shim/rc", `{"shell":"zsh","on":true}`, cookie); !strings.Contains(rec.Body.String(), "shim-rc-on") {
+		t.Fatalf("zsh on: %s", rec.Body.String())
+	}
+	if zshrc, _ := os.ReadFile(filepath.Join(s.home, ".zshrc")); !strings.Contains(string(zshrc), "/shim:$PATH") {
+		t.Errorf(".zshrc = %q", zshrc)
+	}
+	if rec := postJSON(h, "/api/shim/rc", `{"shell":"tcsh","on":true}`, cookie); !strings.Contains(rec.Body.String(), "shell-unknown") {
+		t.Errorf("unknown shell: %s", rec.Body.String())
+	}
 	if rec := postJSON(h, "/api/shim", `{"on":false}`, cookie); !strings.Contains(rec.Body.String(), "shim-off") {
 		t.Fatalf("shim off: %s", rec.Body.String())
 	}
 	rc, _ = os.ReadFile(filepath.Join(s.home, ".bashrc"))
 	if strings.Contains(string(rc), "quipu") {
 		t.Errorf(".bashrc after off = %q", rc)
+	}
+	if zshrc, _ := os.ReadFile(filepath.Join(s.home, ".zshrc")); strings.Contains(string(zshrc), "quipu") {
+		t.Errorf(".zshrc after off = %q", zshrc)
 	}
 }
 

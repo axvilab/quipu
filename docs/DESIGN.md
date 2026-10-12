@@ -114,6 +114,10 @@ main repo via `git rev-parse --git-common-dir`.
 - No edits to `.claude.json` ([ADR 0003](adr/0003-supported-integration-only.md)); MCP servers
   are shared through plugins or `.mcp.json`.
 
+The PATH line goes into the login shell's startup file; Settings lists bash, zsh and fish, so a
+terminal that runs another shell (an IDE's, often zsh) can be connected on its own. Turning the
+shim off removes the line from every shell.
+
 ### 4.6 Backup
 
 Restores Claude Code setup after an OS reinstall or on a new machine (`quipu backup`, `quipu

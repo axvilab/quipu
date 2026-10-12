@@ -4,6 +4,7 @@
   import type { ProfileInfo, Profiles } from "../lib/api/types";
   import { t } from "../lib/i18n.svelte";
   import { notifyChanged } from "../lib/changes.svelte";
+  import { link } from "../lib/router.svelte";
   import { report } from "../lib/toast.svelte";
   import Header from "../components/Header.svelte";
   import Icon from "../components/Icon.svelte";
@@ -131,7 +132,7 @@
       </label>
       <button class="btn btn-primary h-9">{t("rules.save")}</button>
     </form>
-    <p class="mt-4 text-xs text-fleece">{t("rules.alias")} <code class="font-mono text-cotton">alias claude='quipu run'</code></p>
+    <p class="mt-4 text-xs text-fleece">{t("rules.shim")} <a href="/settings" use:link class="text-indigo hover:underline">{t("rules.shimLink")}</a></p>
   </section>
 {/if}
 

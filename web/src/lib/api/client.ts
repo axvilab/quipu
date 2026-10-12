@@ -63,6 +63,7 @@ export const api = {
   live: () => get<Live>("/api/live"),
   doctor: () => get<Doctor>("/api/doctor"),
   setShim: (on: boolean) => post("/api/shim", { on }),
+  setShimRC: (shell: string, on: boolean) => post("/api/shim/rc", { shell, on }),
   newInfo: () => get<NewInfo>("/api/new"),
   planNew: (req: NewRequest) => request<NewFile[]>("POST", "/api/new/plan", req),
   createNew: (req: NewRequest) => post("/api/new", req),

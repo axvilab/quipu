@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/axvilab/quipu/internal/fsx"
 )
 
 func TestShimLink(t *testing.T) {
@@ -52,5 +54,33 @@ func TestRCBlock(t *testing.T) {
 	}
 	if got := WithoutRCBlock(with); got != before+"\n" {
 		t.Errorf("after removal = %q, want %q", got, before+"\n")
+	}
+}
+
+func TestSetRCOtherShell(t *testing.T) {
+	home, data := t.TempDir(), t.TempDir()
+	j, err := fsx.OpenJournal(filepath.Join(data, "backups"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	os.WriteFile(filepath.Join(home, ".zshrc"), []byte("export EDITOR=vim\n"), 0o644)
+
+	rc, err := SetRC(true, "zsh", home, data, j)
+	if err != nil || rc != filepath.Join(home, ".zshrc") || !HasRCBlock(rc) {
+		t.Fatalf("zsh on: %q %v", rc, err)
+	}
+	if _, err := SetRC(true, "bash", home, data, j); err != nil || !HasRCBlock(filepath.Join(home, ".bashrc")) {
+		t.Fatalf("bash on: %v", err)
+	}
+	// Turning the shim off removes the line from every shell, keeping the rest of the file.
+	t.Setenv("SHELL", "/bin/bash")
+	if _, err := SetShim(false, true, home, data, "", j); err != nil {
+		t.Fatal(err)
+	}
+	if HasRCBlock(filepath.Join(home, ".zshrc")) || HasRCBlock(filepath.Join(home, ".bashrc")) {
+		t.Error("a PATH line is left after turning the shim off")
+	}
+	if b, _ := os.ReadFile(filepath.Join(home, ".zshrc")); string(b) != "export EDITOR=vim\n" {
+		t.Errorf(".zshrc = %q", b)
 	}
 }

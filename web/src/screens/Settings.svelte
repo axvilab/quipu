@@ -37,6 +37,18 @@
       check();
     }
   }
+  async function setShell(shell: string, on: boolean) {
+    busy = true;
+    try {
+      report(await api.setShimRC(shell, on));
+    } catch (e) {
+      report(e);
+    } finally {
+      busy = false;
+      notifyChanged();
+      check();
+    }
+  }
   const mark = { ok: "✓", info: "–", warn: "!", fail: "✕" } as const;
   const tone = { ok: "text-chilca", info: "text-fleece", warn: "text-qolle", fail: "text-cochineal" } as const;
   async function setWatching(on: boolean) {
@@ -132,7 +144,35 @@
         <button class="btn btn-primary" onclick={() => setShim(true)} disabled={busy}>{t("settings.shim.turnOn", { file: sh.rcFile })}</button>
       {/if}
     </div>
-    <p class="mt-2 text-xs text-fleece">{t("settings.shim.manual")} <code class="font-mono">{sh.line.split("\n").pop()}</code></p>
+    {#if sh.installed}
+      <h3 class="mt-6 text-sm font-semibold">{t("settings.shim.shells")}</h3>
+      <p class="mt-1 text-xs leading-relaxed text-fleece">{t("settings.shim.shellsNote")}</p>
+      <ul class="mt-3 divide-y divide-warp border-y border-warp">
+        {#each sh.shells as s (s.name)}
+          <li class="py-2.5 text-sm">
+            <div class="flex items-center gap-3">
+              <span class="h-2 w-2 shrink-0 rounded-full {s.inRc ? 'bg-chilca' : 'bg-warp'}" aria-hidden="true"></span>
+              <span class="min-w-0 flex-1">
+                <span class="font-mono text-[13px]">{s.name}</span>
+                {#if s.login}<span class="ml-1.5 text-xs text-fleece">{t("settings.shim.login")}</span>{/if}
+                <span class="block text-xs text-fleece">{s.inRc ? t("settings.shim.connected", { file: s.rcFile }) : t("settings.shim.notConnected", { file: s.rcFile })}</span>
+              </span>
+              {#if s.inRc}
+                <button class="btn btn-ghost" onclick={() => setShell(s.name, false)} disabled={busy}>{t("settings.shim.remove")}</button>
+              {:else}
+                <button class="btn" onclick={() => setShell(s.name, true)} disabled={busy}>{t("settings.shim.add")}</button>
+              {/if}
+            </div>
+            {#if !s.inRc}
+              <p class="mt-1.5 pl-5 text-xs text-fleece">{t("settings.shim.manual")} <code class="break-all font-mono">{s.line}</code></p>
+            {/if}
+          </li>
+        {/each}
+      </ul>
+      <p class="mt-2 text-xs text-fleece">{t("settings.shim.newTerminal")}</p>
+    {:else}
+      <p class="mt-2 text-xs text-fleece">{t("settings.shim.manual")} <code class="font-mono">{sh.line.split("\n").pop()}</code></p>
+    {/if}
   {/if}
 </section>
 
