@@ -62,3 +62,50 @@ func TestSyncedSkillsOfTheCurrentAccount(t *testing.T) {
 		t.Errorf("current account: %v", got)
 	}
 }
+
+// A profile that shares the main skills folder (a symlink, see profile.Share) sees every synced
+// folder too, and must still count only its own account's.
+func TestSyncedSkillsThroughSharedFolder(t *testing.T) {
+	home := t.TempDir()
+	main := filepath.Join(home, ".claude")
+	work := filepath.Join(home, ".claude-work")
+	for _, f := range []string{"org1_acc1/pdf", "org2_acc2/docx"} {
+		dir := filepath.Join(main, "skills", "synced", f)
+		os.MkdirAll(dir, 0o755)
+		os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: "+filepath.Base(f)+"\ndescription: d\n---\nBody.\n"), 0o644)
+	}
+	os.MkdirAll(work, 0o755)
+	os.Symlink(filepath.Join(main, "skills"), filepath.Join(work, "skills"))
+	os.WriteFile(filepath.Join(work, ".claude.json"), []byte(`{"oauthAccount":{"organizationUuid":"org2","accountUuid":"acc2"}}`), 0o600)
+	var got []string
+	for _, it := range Instructions(home, work, filepath.Join(home, "src")) {
+		if it.Scope == "claude.ai" && it.Load == Always {
+			got = append(got, it.Name)
+		}
+	}
+	if len(got) != 1 || got[0] != "docx" {
+		t.Errorf("work profile sees %v, want [docx]", got)
+	}
+}
+
+// A project at the home folder reads ~/.claude as its own .claude: synced skills of other
+// accounts must not come in that way either.
+func TestSyncedSkillsInHomeProject(t *testing.T) {
+	home := t.TempDir()
+	cfg := filepath.Join(home, ".claude")
+	for _, f := range []string{"org1_acc1/pdf", "org2_acc2/docx"} {
+		dir := filepath.Join(cfg, "skills", "synced", f)
+		os.MkdirAll(dir, 0o755)
+		os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: "+filepath.Base(f)+"\ndescription: d\n---\nBody.\n"), 0o644)
+	}
+	os.WriteFile(filepath.Join(home, ".claude.json"), []byte(`{"oauthAccount":{"organizationUuid":"org1","accountUuid":"acc1"}}`), 0o600)
+	var got []string
+	for _, it := range Instructions(home, cfg, home) {
+		if it.Kind == "skill" && it.Load == Always {
+			got = append(got, it.Name)
+		}
+	}
+	if len(got) != 1 || got[0] != "pdf" {
+		t.Errorf("home project sees %v, want [pdf]", got)
+	}
+}

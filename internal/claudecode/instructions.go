@@ -179,11 +179,10 @@ func (c *collector) memory(dir string) {
 // extensions adds skills, agents and commands under base: their name and description are listed
 // in every session, the body is loaded when used.
 func (c *collector) extensions(base, scope string) {
+	// A project at the home folder has ~/.claude as its .claude too, so the filter applies to any
+	// base whose account is known, not only the user's.
 	synced := filepath.Join(base, "skills", "synced")
-	current := ""
-	if scope == "user" {
-		current = syncedFolder(c.home, base)
-	}
+	current := syncedFolder(c.home, base)
 	skills := findFiles(filepath.Join(base, "skills"), func(p string) bool { return filepath.Base(p) == "SKILL.md" })
 	for _, path := range skills {
 		skillScope := scope
@@ -318,22 +317,29 @@ var skipDirs = map[string]bool{"node_modules": true, "vendor": true, ".git": tru
 // than .claude) and returns the files accepted by keep, sorted.
 func findFiles(dir string, keep func(string) bool) []string {
 	var out []string
-	filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+	// A shared folder is a symlink (profile.Share), which WalkDir does not enter: walk its target
+	// and report the paths under dir, as Claude Code sees them.
+	root := dir
+	if real, err := filepath.EvalSymlinks(dir); err == nil {
+		root = real
+	}
+	filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return nil
 		}
 		if d.IsDir() {
 			name := d.Name()
-			rel, _ := filepath.Rel(dir, path)
+			rel, _ := filepath.Rel(root, path)
 			deep := strings.Count(rel, string(filepath.Separator)) >= 6
-			hidden := path != dir && strings.HasPrefix(name, ".") && name != ".claude"
+			hidden := path != root && strings.HasPrefix(name, ".") && name != ".claude"
 			if deep || hidden || skipDirs[name] {
 				return filepath.SkipDir
 			}
 			return nil
 		}
 		if keep(path) {
-			out = append(out, path)
+			rel, _ := filepath.Rel(root, path)
+			out = append(out, filepath.Join(dir, rel))
 		}
 		return nil
 	})
