@@ -49,8 +49,11 @@ func (s *Service) profiles(ctx context.Context) []profileView {
 				actx, cancel := context.WithTimeout(ctx, 10*time.Second)
 				if a, err := claudecode.AuthStatus(actx, s.ClaudeBinary, s.home, p.Dir); err == nil {
 					v.LoggedIn, v.Account, v.Email, v.Plan = a.LoggedIn, a.Email, a.Email, a.SubscriptionType
-					if a.SubscriptionType != "" {
-						v.Account += " · " + a.SubscriptionType
+					if tier := claudecode.PlanTier(s.home, p.Dir); a.LoggedIn && tier != "" {
+						v.Plan = tier // "team standard" or "max 5×" says more about the limits than "team"
+					}
+					if v.Plan != "" {
+						v.Account += " · " + v.Plan
 					}
 				}
 				cancel()

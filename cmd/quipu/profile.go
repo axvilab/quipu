@@ -170,7 +170,11 @@ func listProfiles(ctx context.Context, home string, c *profile.Config) error {
 			case !a.LoggedIn:
 				account = "not logged in"
 			default:
-				account = strings.TrimSpace(a.Email + " " + a.SubscriptionType)
+				plan := a.SubscriptionType
+				if tier := claudecode.PlanTier(home, p.Dir); tier != "" {
+					plan = tier
+				}
+				account = strings.TrimSpace(a.Email + " " + plan)
 			}
 		}
 		var shares []string
