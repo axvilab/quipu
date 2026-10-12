@@ -9,6 +9,7 @@
   import Icon from "../components/Icon.svelte";
   import Loading from "../components/Loading.svelte";
   import Panel from "../components/Panel.svelte";
+  import Switch from "../components/Switch.svelte";
 
   // Save the Claude Code setup of every profile, and get it back with a preview first.
   let info = $state<BackupInfo | null>(null);
@@ -84,6 +85,15 @@
     notifyChanged();
   }
 
+  async function exclude(dir: string, out: boolean) {
+    try {
+      report(await api.excludeFromBackup(dir, out));
+    } catch (e) {
+      report(e);
+    }
+    load();
+  }
+
   const size = (n: number) => (n < 1024 ? `${n} B` : `${Math.ceil(n / 1024)} KB`);
 </script>
 
@@ -125,6 +135,24 @@
       </div>
     {/if}
   </section>
+
+  {#if info.projects.length}
+    <section class="max-w-2xl border-t border-warp py-6">
+      <h2 class="text-md font-semibold">{t("backup.projects")}</h2>
+      <p class="mt-1 text-sm text-fleece">{t("backup.projectsNote")}</p>
+      <ul class="mt-3 divide-y divide-warp border-y border-warp">
+        {#each info.projects as p (p.dir)}
+          <li class="flex items-center gap-3 py-2.5 text-sm">
+            <Switch on={!p.excluded} label={p.name} onchange={(on) => exclude(p.dir, !on)} />
+            <span class="min-w-0 flex-1">
+              <span class="block truncate font-mono text-[12.5px] {p.excluded ? 'text-fleece line-through' : ''}">{p.name}</span>
+              <span class="block text-xs text-fleece">{t("backup.projectFiles", { count: p.files, profiles: p.profiles.join(", ") })}</span>
+            </span>
+          </li>
+        {/each}
+      </ul>
+    </section>
+  {/if}
 
   <section class="max-w-2xl border-t border-warp py-6">
     <h2 class="text-md font-semibold">{t("backup.restore")}</h2>

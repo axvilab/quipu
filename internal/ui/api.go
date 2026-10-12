@@ -90,6 +90,16 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 			writeJSON(w, v, err)
 		}
 	})
+	mux.HandleFunc("POST /api/backup/exclude", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Dir     string
+			Exclude bool
+		}
+		if readJSON(w, r, &in) {
+			v, err := s.ExcludeFromBackup(in.Dir, in.Exclude)
+			writeJSON(w, v, err)
+		}
+	})
 	mux.HandleFunc("POST /api/restore/plan", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Source string }
 		if readJSON(w, r, &in) {
@@ -210,11 +220,12 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 	})
 	mux.HandleFunc("POST /api/profiles", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
-			Name  string
-			Share []string
+			Name       string
+			Share      []string
+			StatusLine bool
 		}
 		if readJSON(w, r, &in) {
-			v, err := s.AddProfile(in.Name, in.Share)
+			v, err := s.AddProfile(in.Name, in.Share, in.StatusLine)
 			writeJSON(w, v, err)
 		}
 	})

@@ -60,7 +60,7 @@ func projectDir(home, rel string) string {
 
 func TestCollectAndScan(t *testing.T) {
 	home := fakeHome(t)
-	m, entries, err := Collect(home, filepath.Join(home, ".config", "quipu", "profiles.json"), "test")
+	m, entries, err := Collect(home, filepath.Join(home, ".config", "quipu", "profiles.json"), "test", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +91,7 @@ func TestCollectAndScan(t *testing.T) {
 
 func TestArchiveRestoreOnAnotherHome(t *testing.T) {
 	home := fakeHome(t)
-	m, entries, _ := Collect(home, filepath.Join(home, ".config", "quipu", "profiles.json"), "test")
+	m, entries, _ := Collect(home, filepath.Join(home, ".config", "quipu", "profiles.json"), "test", nil)
 	var buf bytes.Buffer
 	if err := WriteArchive(&buf, m, entries); err != nil {
 		t.Fatal(err)
@@ -166,24 +166,24 @@ func TestGitWithLocalRemote(t *testing.T) {
 
 	// Without quipu profiles there is no quipu/ folder; saving must still work.
 	bare := filepath.Join(t.TempDir(), "no-profiles")
-	m, entries, _ := Collect(home, filepath.Join(home, "missing.json"), "test")
+	m, entries, _ := Collect(home, filepath.Join(home, "missing.json"), "test", nil)
 	if _, err := SaveToGit(ctx, bare, m, entries, false); err != nil {
 		t.Fatalf("save without profiles: %v", err)
 	}
 
-	m, entries, _ = Collect(home, profiles, "test")
+	m, entries, _ = Collect(home, profiles, "test", nil)
 	changed, err := SaveToGit(ctx, repo, m, entries, true)
 	if err != nil || !changed {
 		t.Fatalf("first save: %v, changed %v", err, changed)
 	}
 	// Nothing new: no commit, the manifest is left as it was.
-	m, entries, _ = Collect(home, profiles, "test")
+	m, entries, _ = Collect(home, profiles, "test", nil)
 	if changed, err := SaveToGit(ctx, repo, m, entries, true); err != nil || changed {
 		t.Fatalf("second save: %v, changed %v", err, changed)
 	}
 	// A removed rule disappears from the repository on the next save.
 	os.Remove(filepath.Join(home, ".claude", "rules", "go.md"))
-	m, entries, _ = Collect(home, profiles, "test")
+	m, entries, _ = Collect(home, profiles, "test", nil)
 	if changed, err := SaveToGit(ctx, repo, m, entries, true); err != nil || !changed {
 		t.Fatalf("third save: %v, changed %v", err, changed)
 	}
@@ -208,5 +208,51 @@ func TestGitWithLocalRemote(t *testing.T) {
 	log, _ := exec.Command("git", "-C", clone, "log", "--oneline").Output()
 	if n := strings.Count(string(log), "\n"); n != 2 {
 		t.Errorf("%d commits, want 2:\n%s", n, log)
+	}
+}
+
+func TestCollectExcludeAndProfilesWithoutSessions(t *testing.T) {
+	home := t.TempDir()
+	for _, p := range []string{"-srv-shop", "-srv-secret"} {
+		mem := filepath.Join(home, ".claude", "projects", p, "memory")
+		os.MkdirAll(mem, 0o755)
+		os.WriteFile(filepath.Join(mem, "MEMORY.md"), []byte("note\n"), 0o644)
+	}
+	// A profile with no session yet: no projects folder, only its settings.
+	work := filepath.Join(home, ".claude-work")
+	os.MkdirAll(work, 0o755)
+	os.WriteFile(filepath.Join(work, "settings.json"), []byte(`{"theme":"dark"}`), 0o644)
+	profiles := filepath.Join(home, "profiles.json")
+	os.WriteFile(profiles, []byte(`{"profiles":[{"name":"work","dir":"`+work+`"}]}`), 0o644)
+
+	_, entries, err := Collect(home, profiles, "test", map[string]bool{"-srv-secret": true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	paths := map[string]bool{}
+	for _, e := range entries {
+		paths[e.Path] = true
+	}
+	if !paths["claude/.claude/projects/-srv-shop/memory/MEMORY.md"] {
+		t.Errorf("shop memory missing: %v", paths)
+	}
+	if paths["claude/.claude/projects/-srv-secret/memory/MEMORY.md"] {
+		t.Error("an excluded project's memory was backed up")
+	}
+	if !paths["claude/.claude-work/settings.json"] {
+		t.Errorf("a profile without sessions was left out: %v", paths)
+	}
+
+	memories, err := ProjectMemories(home, profiles)
+	if err != nil || len(memories) != 2 || memories[1].Dir != "-srv-shop" || memories[1].Files != 1 || memories[1].Profiles[0] != "default" {
+		t.Errorf("memories = %+v, %v", memories, err)
+	}
+
+	dir := t.TempDir()
+	if err := (Settings{Exclude: []string{"-srv-secret"}}).Save(dir); err != nil {
+		t.Fatal(err)
+	}
+	if !LoadSettings(dir).Excluded()["-srv-secret"] {
+		t.Error("settings did not keep the exclusion")
 	}
 }

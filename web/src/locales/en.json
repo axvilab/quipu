@@ -59,8 +59,8 @@
   "overview.partial": "The picture is partial: cloud sessions, other machines and transcripts older than 30 days before quipu was installed are not included.",
   "overview.empty.title": "No sessions in this period yet",
   "overview.empty.body": "Quipu collects Claude Code transcripts in the background. Work in Claude Code, or pick a longer period.",
-  "khipu.label": "Khipu of your projects",
-  "khipu.legend": "Each cord is a project. Colour and length show cache writes, and the knots record the number the way Inca khipus did: thousands, hundreds, tens and units of {unit} tokens from top to bottom. A red side cord marks things worth fixing; its knot counts them.",
+  "khipu.label": "Quipu of your projects",
+  "khipu.legend": "Each cord is a project. Colour and length show cache writes, and the knots record the number the way Inca quipus did: thousands, hundreds, tens and units of {unit} tokens from top to bottom. A red side cord marks things worth fixing; its knot counts them.",
   "khipu.more": "Showing {shown} of {total} projects, those with the most cache writes; the rest are in the list below.",
   "khipu.total": "total",
   "khipu.totalTitle": "All projects: {writes} cache writes",
@@ -601,5 +601,13 @@
   "result.share-own": "This account has its own {item} ({count} files); move or delete them to share.",
   "result.share-failed": "Not changed: {error}",
   "action.save": "Save",
-  "rules.remove": "Delete the rule"
+  "rules.remove": "Delete the rule",
+  "backup.projects": "Project memory in the backup",
+  "backup.projectsNote": "What Claude remembers about each project goes into the backup. Turn one off to leave it out, from the window and from quipu backup alike.",
+  "backup.projectFiles": "{count} memory files in {profiles}",
+  "result.backup-excluded": "Left out of the next backups.",
+  "result.backup-included": "Back in the next backups.",
+  "profiles.newStatusLine": "quipu status line, as in the main account",
+  "profiles.newPlugins": "Plugins from the main account",
+  "profiles.newPluginsNote": "Installed into the new account right after it is made, one by one, with Claude Code's own command."
 }

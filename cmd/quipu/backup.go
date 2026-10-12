@@ -25,7 +25,11 @@ func runBackup(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	m, entries, err := backup.Collect(home, profilesFile(home), version)
+	var exclude map[string]bool
+	if data, err := dataDir(home); err == nil {
+		exclude = backup.LoadSettings(data).Excluded() // projects left out in the window stay out here too
+	}
+	m, entries, err := backup.Collect(home, profilesFile(home), version, exclude)
 	if err != nil {
 		return err
 	}

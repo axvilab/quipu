@@ -643,5 +643,13 @@
   "result.share-own": "У цього акаунта є власні {item} ({count} файлів); перенесіть або видаліть їх, щоб ділити.",
   "result.share-failed": "Не змінено: {error}",
   "action.save": "Зберегти",
-  "rules.remove": "Видалити правило"
+  "rules.remove": "Видалити правило",
+  "backup.projects": "Пам'ять проєктів у бекапі",
+  "backup.projectsNote": "Те, що Claude пам'ятає про кожен проєкт, потрапляє в бекап. Вимкніть проєкт, щоб не брати його, — і з вікна, і з quipu backup.",
+  "backup.projectFiles": "Файлів пам'яті: {count}, у {profiles}",
+  "result.backup-excluded": "Не потрапить у наступні бекапи.",
+  "result.backup-included": "Знову потрапить у наступні бекапи.",
+  "profiles.newStatusLine": "Рядок стану quipu, як в основному акаунті",
+  "profiles.newPlugins": "Плагіни з основного акаунта",
+  "profiles.newPluginsNote": "Встановляться в новий акаунт одразу після створення, по одному, командою самого Claude Code."
 }

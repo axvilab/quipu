@@ -20,6 +20,7 @@
   const turnStep = 3.4;
 
   let available = $state(900);
+  let hovered = $state<string | null>(null); // the cord pointed at, by its key
 
   const shown = $derived([...projects].sort((a, b) => b.totals.cacheWrite - a.totals.cacheWrite).slice(0, limit));
   const total = $derived(projects.reduce((s, p) => s + p.totals.cacheWrite, 0));
@@ -173,11 +174,14 @@
         <path d={primary} class="primary twist" />
       </g>
 
+      <!-- One shadow for all cords: a filter per cord made the browser paint it once per cord. -->
+      <g filter="url(#k-shadow)">
       {#each cords as c (c.key)}
-        <svelte:element this={c.href ? "a" : "g"} href={c.href} use:link class="cord" class:sum={c.sum}
+        <svelte:element this={c.href ? "a" : "g"} href={c.href} use:link class="cord" class:sum={c.sum} class:dim={hovered !== null && hovered !== c.key}
+          onmouseenter={() => (hovered = c.key)} onmouseleave={() => (hovered = null)} onfocus={() => (hovered = c.key)} onblur={() => (hovered = null)}
           style="--depth: {Math.round(c.depth * 100)}%" aria-label={c.title} role={c.href ? undefined : "img"}>
           <title>{c.title}</title>
-          <g transform="translate({c.x} {c.y})" filter="url(#k-shadow)">
+          <g transform="translate({c.x} {c.y})">
             <rect x={-gap / 2} y="-6" width={gap} height={c.len + 16} fill="transparent" />
             <path d={c.path} class="pendant" />
             <path d={c.path} class="pendant twist" />
@@ -203,6 +207,14 @@
             <path d="M-4 -3 Q 0 -7 4 -3 L 3.4 4 Q 0 6.4 -3.4 4 Z" class="fibre" />
             <path d="M-4 -3 Q 0 -7 4 -3 L 3.4 4 Q 0 6.4 -3.4 4 Z" fill="url(#k-volume)" />
           </g>
+        </svelte:element>
+      {/each}
+      </g>
+      <!-- Labels sit outside the shadow; pointing at one lights its cord, as pointing at the cord does. -->
+      {#each cords as c (c.key)}
+        <svelte:element this={c.href ? "a" : "g"} href={c.href} use:link tabindex="-1" aria-hidden="true" class="label" class:sum={c.sum}
+          class:lit={hovered === c.key} class:dim={hovered !== null && hovered !== c.key}
+          onmouseenter={() => (hovered = c.key)} onmouseleave={() => (hovered = null)}>
           <text x={c.x} y={labelY} class="name" text-anchor="end" transform="rotate(-35 {c.x} {labelY})">{c.label}</text>
         </svelte:element>
       {/each}
@@ -338,22 +350,23 @@
     fill: var(--color-cotton);
     font-weight: 600;
   }
-  /* Pointing at one cord dims the others. */
-  svg:has(a.cord:hover, a.cord:focus-visible) .cord:not(:hover, :focus-visible) {
+  /* Pointing at one cord, or its label, dims the others and lights its label. */
+  .cord.dim,
+  .label.dim {
     opacity: 0.45;
   }
-  a.cord:hover .name,
-  a.cord:focus-visible .name {
+  .label {
+    transition: opacity 150ms ease;
+  }
+  .label.lit .name {
     fill: var(--color-cotton);
   }
   a.cord:focus-visible {
     outline: none;
   }
-  a.cord:focus-visible .name {
-    text-decoration: underline;
-  }
   @media (prefers-reduced-motion: reduce) {
-    .cord {
+    .cord,
+    .label {
       transition: none;
     }
   }

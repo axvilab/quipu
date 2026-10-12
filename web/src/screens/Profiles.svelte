@@ -88,13 +88,54 @@
     load();
   }
 
-  const add = () => act(api.addProfile(name, share), () => ((adding = false), (signingIn = name), (name = "")));
+  // A new profile can start like the main one: its status line and its plugins. Plugins install one
+  // by one after the profile exists, each with Claude Code's own command, so each reports itself.
+  let newStatusLine = $state(true);
+  let mainPlugins = $state<{ id: string; name: string }[]>([]);
+  let newPlugins = $state<string[]>([]);
+
+  async function openAdd() {
+    adding = true;
+    try {
+      const m = await api.plugins();
+      mainPlugins = m.plugins.filter((p) => p.cells["default"]?.installed && p.cells["default"]?.state !== "off").map((p) => ({ id: p.id, name: p.name }));
+      newPlugins = mainPlugins.map((p) => p.id);
+    } catch {
+      mainPlugins = [];
+    }
+    newStatusLine = data?.profiles.find((p) => p.name === "default")?.statusLine === "quipu";
+  }
+
+  async function add() {
+    const created = name;
+    const plugins = $state.snapshot(newPlugins);
+    try {
+      const res = await api.addProfile(created, share, newStatusLine);
+      report(res);
+      if (!res.ok) return;
+      adding = false;
+      signingIn = created;
+      name = "";
+    } catch (e) {
+      report(e);
+      return;
+    }
+    load();
+    for (const id of plugins) {
+      try {
+        report(await api.installPlugin(created, id));
+      } catch (e) {
+        report(e);
+      }
+    }
+    notifyChanged();
+  }
   const startSignIn = (priv: boolean) => act(api.signIn(signingIn!, { email, browser, private: priv }));
 </script>
 
 <Header title={t("profiles.title")} subtitle={t("profiles.subtitle")}>
   {#snippet actions()}
-    <button class="btn btn-primary" onclick={() => (adding = true)}><Icon name="plus" />{t("profiles.add")}</button>
+    <button class="btn btn-primary" onclick={openAdd}><Icon name="plus" />{t("profiles.add")}</button>
   {/snippet}
 </Header>
 
@@ -243,6 +284,19 @@
         {/each}
         <p class="text-xs text-fleece">{t("profiles.shareNote")}</p>
       </fieldset>
+      <label class="flex items-center gap-3 text-sm">
+        <Switch on={newStatusLine} label={t("profiles.newStatusLine")} onchange={(on) => (newStatusLine = on)} />
+        {t("profiles.newStatusLine")}
+      </label>
+      {#if mainPlugins.length}
+        <fieldset class="flex flex-col gap-2">
+          <legend class="mb-1 text-sm">{t("profiles.newPlugins")}</legend>
+          {#each mainPlugins as p (p.id)}
+            <label class="flex items-center gap-2 text-sm"><input type="checkbox" value={p.id} bind:group={newPlugins} class="accent-indigo" /> {p.name}</label>
+          {/each}
+          <p class="text-xs text-fleece">{t("profiles.newPluginsNote")}</p>
+        </fieldset>
+      {/if}
       <div><button class="btn btn-primary">{t("profiles.create")}</button></div>
     </form>
   </Panel>

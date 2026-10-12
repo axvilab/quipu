@@ -222,10 +222,19 @@ export interface Archive {
   time: string;
 }
 
+export interface BackupProject {
+  dir: string;
+  name: string;
+  profiles: string[];
+  files: number;
+  excluded: boolean;
+}
+
 export interface BackupInfo {
   folder: string;
   gitDir: string;
   archives: Archive[];
+  projects: BackupProject[];
 }
 
 export interface BackupSecret {

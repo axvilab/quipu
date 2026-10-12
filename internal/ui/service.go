@@ -678,7 +678,9 @@ func (s *Service) ProfilesReport(ctx context.Context) (Profiles, error) {
 	return out, nil
 }
 
-func (s *Service) AddProfile(name string, share []string) (Result, error) {
+// AddProfile creates a profile sharing the chosen items, and turns quipu's status line on in it
+// when statusLine is set. Plugins are installed afterwards, one by one, from the window.
+func (s *Service) AddProfile(name string, share []string, statusLine bool) (Result, error) {
 	c, err := s.loadProfiles()
 	if err != nil {
 		return Result{}, problem("profiles-unavailable")
@@ -691,6 +693,9 @@ func (s *Service) AddProfile(name string, share []string) (Result, error) {
 		return Result{}, problem("profile-add-failed", "error", err.Error())
 	}
 	s.invalidateProfiles()
+	if statusLine {
+		s.SetStatusLine(p.Name, true) // best effort: the profile exists either way
+	}
 	return ok("profile-added", "name", p.Name, "dir", s.shortPath(p.Dir)), nil
 }
 

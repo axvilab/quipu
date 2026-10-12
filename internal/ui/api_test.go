@@ -650,3 +650,18 @@ func TestUpgradeStatusLines(t *testing.T) {
 		t.Errorf("another status line changed: %s", b)
 	}
 }
+
+func TestAddProfileWithStatusLine(t *testing.T) {
+	s := testServer(t)
+	s.ProfilesFile = filepath.Join(s.home, ".config", "quipu", "profiles.json")
+	s.SelfBinary = filepath.Join(s.home, "bin", "quipu")
+	h := s.Handler()
+	cookie := &http.Cookie{Name: cookieName, Value: s.token}
+	if rec := postJSON(h, "/api/profiles", `{"name":"work","share":[],"statusLine":true}`, cookie); !strings.Contains(rec.Body.String(), "profile-added") {
+		t.Fatalf("add: %s", rec.Body.String())
+	}
+	b, _ := os.ReadFile(filepath.Join(s.home, ".claude-work", "settings.json"))
+	if !strings.Contains(string(b), "quipu statusline") {
+		t.Errorf("new profile has no status line: %s", b)
+	}
+}

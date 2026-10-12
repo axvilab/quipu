@@ -79,12 +79,13 @@ export const api = {
   backup: () => get<BackupInfo>("/api/backup"),
   createBackup: (opts: { gitDir: string; push: boolean; allowSecrets: boolean }) =>
     request<BackupResult>("POST", "/api/backup", opts),
+  excludeFromBackup: (dir: string, exclude: boolean) => post("/api/backup/exclude", { dir, exclude }),
   planRestore: (source: string) => request<RestorePlan>("POST", "/api/restore/plan", { source }),
   restore: (source: string) => post("/api/restore", { source }),
   watchRemoteControl: (on: boolean) => post("/api/live/watch", { on }),
   tokens: (text: string) => request<{ tokens: number }>("POST", "/api/tokens", { text }),
   profiles: () => get<Profiles>("/api/profiles"),
-  addProfile: (name: string, share: string[]) => post("/api/profiles", { name, share }),
+  addProfile: (name: string, share: string[], statusLine: boolean) => post("/api/profiles", { name, share, statusLine }),
   removeProfile: (name: string) => post(`/api/profiles/${encodeURIComponent(name)}/remove`),
   signIn: (name: string, opts: { email: string; browser: string; private: boolean }) =>
     post(`/api/profiles/${encodeURIComponent(name)}/sign-in`, opts),

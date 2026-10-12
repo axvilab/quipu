@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"sort"
@@ -10,13 +9,24 @@ import (
 	"time"
 
 	"github.com/axvilab/quipu/internal/backup"
+	"github.com/axvilab/quipu/internal/claudecode"
 )
 
 // BackupInfo is the backup page: where backups go and the archives made so far.
 type BackupInfo struct {
-	Folder   string    `json:"folder"`   // where archives are written, with ~
-	GitDir   string    `json:"gitDir"`   // the repository working copy chosen last time, with ~
-	Archives []Archive `json:"archives"` // newest first
+	Folder   string          `json:"folder"`   // where archives are written, with ~
+	GitDir   string          `json:"gitDir"`   // the repository working copy chosen last time, with ~
+	Archives []Archive       `json:"archives"` // newest first
+	Projects []BackupProject `json:"projects"` // projects whose memory the backup takes, or leaves out
+}
+
+// BackupProject is a project whose memory can go into the backup.
+type BackupProject struct {
+	Dir      string   `json:"dir"`  // folder name under projects/, the key for excluding it
+	Name     string   `json:"name"` // the project's path with ~ when quipu knows it
+	Profiles []string `json:"profiles"`
+	Files    int      `json:"files"`
+	Excluded bool     `json:"excluded"`
 }
 
 // Archive is a backup file in the backup folder.
@@ -56,21 +66,26 @@ type RestoreFile struct {
 
 func (s *Service) backupFolder() string { return filepath.Join(s.home, "quipu-backups") }
 
-type backupSettings struct {
-	GitDir string `json:"gitDir"`
-}
-
-func (s *Service) backupSettings() backupSettings {
-	var b backupSettings
-	if data, err := os.ReadFile(filepath.Join(s.dataDir, "backup.json")); err == nil {
-		json.Unmarshal(data, &b)
-	}
-	return b
-}
+func (s *Service) backupSettings() backup.Settings { return backup.LoadSettings(s.dataDir) }
 
 // BackupInfo lists the archives in the backup folder.
 func (s *Service) BackupInfo() (BackupInfo, error) {
-	out := BackupInfo{Folder: s.shortPath(s.backupFolder()), GitDir: s.shortPath(s.backupSettings().GitDir), Archives: []Archive{}}
+	settings := s.backupSettings()
+	out := BackupInfo{Folder: s.shortPath(s.backupFolder()), GitDir: s.shortPath(settings.GitDir), Archives: []Archive{}, Projects: []BackupProject{}}
+	names := map[string]string{} // project folder name → path, from collected projects
+	for path := range s.projectItems(context.Background()) {
+		names[claudecode.ProjectDirName(path)] = s.shortPath(path)
+	}
+	excluded := settings.Excluded()
+	if memories, err := backup.ProjectMemories(s.home, s.ProfilesFile); err == nil {
+		for _, pm := range memories {
+			name := names[pm.Dir]
+			if name == "" {
+				name = pm.Dir
+			}
+			out.Projects = append(out.Projects, BackupProject{Dir: pm.Dir, Name: name, Profiles: pm.Profiles, Files: pm.Files, Excluded: excluded[pm.Dir]})
+		}
+	}
 	if out.GitDir == "." {
 		out.GitDir = ""
 	}
@@ -93,7 +108,7 @@ func (s *Service) BackupInfo() (BackupInfo, error) {
 // CreateBackup writes an archive to the backup folder, or, with gitDir, saves into that working
 // copy (pushing when asked). Credentials stop it unless allowSecrets.
 func (s *Service) CreateBackup(ctx context.Context, gitDir string, push, allowSecrets bool) (BackupResult, error) {
-	m, entries, err := backup.Collect(s.home, s.ProfilesFile, s.version)
+	m, entries, err := backup.Collect(s.home, s.ProfilesFile, s.version, s.backupSettings().Excluded())
 	if err != nil {
 		return BackupResult{}, problem("backup-failed", "error", err.Error())
 	}
@@ -104,8 +119,9 @@ func (s *Service) CreateBackup(ctx context.Context, gitDir string, push, allowSe
 	out.Secrets = []backup.Secret{}
 	if gitDir != "" {
 		dir := filepath.Clean(s.expandHome(gitDir))
-		b, _ := json.Marshal(backupSettings{GitDir: dir})
-		os.WriteFile(filepath.Join(s.dataDir, "backup.json"), b, 0o600)
+		st := s.backupSettings()
+		st.GitDir = dir
+		st.Save(s.dataDir)
 		changed, err := backup.SaveToGit(ctx, dir, m, entries, push)
 		if err != nil {
 			return BackupResult{}, problem("backup-failed", "error", err.Error())
@@ -185,4 +201,26 @@ func (s *Service) ApplyRestore(source string) (Result, error) {
 		return ok("unchanged"), nil
 	}
 	return ok("restored", "change", id), nil
+}
+
+// ExcludeFromBackup leaves a project's memory out of backups, or takes it in again.
+func (s *Service) ExcludeFromBackup(dir string, exclude bool) (Result, error) {
+	st := s.backupSettings()
+	var keep []string
+	for _, d := range st.Exclude {
+		if d != dir {
+			keep = append(keep, d)
+		}
+	}
+	if exclude {
+		keep = append(keep, dir)
+	}
+	st.Exclude = keep
+	if err := st.Save(s.dataDir); err != nil {
+		return Result{}, problem("backup-failed", "error", err.Error())
+	}
+	if exclude {
+		return ok("backup-excluded"), nil
+	}
+	return ok("backup-included"), nil
 }

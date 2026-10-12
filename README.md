@@ -8,7 +8,7 @@ every session, and it grows quietly: a design doc pulled in with `@`, a skill co
 projects, a plugin nobody uses. quipu reads your Claude Code setup and transcripts locally, shows
 where the tokens go, and turns what it finds into concrete edits you can review and undo.
 
-![Overview: each project is a cord of a khipu; knots record cache writes, red side cords mark things worth fixing](docs/images/overview.png)
+![Overview: each project is a cord of a quipu; knots record cache writes, red side cords mark things worth fixing](docs/images/overview.png)
 
 Everything runs on your machine. quipu reads no credentials, sends nothing anywhere, and changes
 a file only when you click Apply, keeping a copy so the change can be undone.
@@ -49,7 +49,8 @@ answer for the whole git repository.
 
 Each account is set up in one panel: the name quipu shows it by, its sign-in, which of
 `CLAUDE.md`, skills, agents, rules and commands it shares with your main account, and its status
-line. A project that moves to another account can keep its memory: quipu points both accounts at
+line. A new account can start like your main one, with its status line and plugins, in the same
+step. A project that moves to another account can keep its memory: quipu points both accounts at
 one memory folder through Claude Code's own `autoMemoryDirectory` setting, so Claude remembers what
 it learned about the project under either. `quipu doctor` checks the whole setup.
 
@@ -87,8 +88,9 @@ quipu adds no templates or conventions of its own.
 
 ![New project: your own skills and rules, with what Claude will read](docs/images/new-project.png)
 
-**Also:** backup and restore of the setup of every profile, as an archive or into your own git
-repository, with a scan for credentials first; live sessions with Remote Control links; a first
+**Also:** backup and restore of the setup of every account, even one without a session yet, as an
+archive or into your own git repository, with a scan for credentials first and the memory of the
+projects you choose left out; live sessions with Remote Control links; a first
 run that shows its progress while it reads your history, then collects in the background; English
 and Ukrainian; light and dark themes; keyboard first (`Ctrl K`, `G` then a letter, `?` for help).
 
