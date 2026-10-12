@@ -70,7 +70,16 @@ func statusTop(profile, plan string, s claudecode.StatusInput, st style) string 
 	}
 	parts := []string{who}
 	if m := s.Model.DisplayName; m != "" {
+		if e := s.Effort; e != nil && e.Level != "" {
+			m += " " + st.dim(e.Level)
+		}
+		if s.FastMode {
+			m += " " + st.paint("33", "fast")
+		}
 		parts = append(parts, m)
+	}
+	if a := s.Agent; a != nil && a.Name != "" {
+		parts = append(parts, st.dim("agent ")+a.Name)
 	}
 	if dir := s.Workspace.CurrentDir; dir != "" {
 		where := filepath.Base(dir)
@@ -78,6 +87,13 @@ func statusTop(profile, plan string, s claudecode.StatusInput, st style) string 
 			where += " " + st.dim("⎇") + " " + b
 		}
 		parts = append(parts, where)
+	}
+	if pr := s.PR; pr != nil && pr.Number > 0 {
+		label := "PR"
+		if pr.Kind == "mr" {
+			label = "MR"
+		}
+		parts = append(parts, fmt.Sprintf("%s #%d", label, pr.Number)+prState(pr.ReviewState, st))
 	}
 	if c := s.Cost.TotalCostUSD; c != nil && *c > 0 {
 		parts = append(parts, st.dim(fmt.Sprintf("$%.2f", *c)))
@@ -113,11 +129,30 @@ func statusBottom(s claudecode.StatusInput, now time.Time, st style) string {
 		} else if c.ExpiresAt > 0 {
 			part += " " + st.paint("31", "cold")
 		}
+		// A miss in the last few minutes, with what Claude Code thinks caused it: why it got dearer.
+		if c.LastMissCause != nil && len(c.LastMissCause.Causes) > 0 && c.LastMissAt > 0 && now.Sub(time.Unix(c.LastMissAt, 0)) < 5*time.Minute {
+			part += " " + st.paint("31", "miss: "+strings.ReplaceAll(c.LastMissCause.Causes[0], "_", " "))
+		}
 		if part != "cache" {
 			parts = append(parts, part)
 		}
 	}
 	return strings.Join(parts, st.dim(" · "))
+}
+
+// prState marks a PR's review: approved, waiting, changes asked, or a draft.
+func prState(state string, st style) string {
+	switch state {
+	case "approved":
+		return " " + st.paint("32", "✓")
+	case "pending":
+		return " " + st.paint("33", "⏳")
+	case "changes_requested":
+		return " " + st.paint("31", "✗")
+	case "draft":
+		return " " + st.dim("draft")
+	}
+	return ""
 }
 
 // bar draws pct (0..100) as cells filled from the left.

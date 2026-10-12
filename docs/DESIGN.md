@@ -133,8 +133,10 @@ It is offered when a rule is remembered in the terminal, on the Profiles page an
 `quipu profile memory`.
 
 `quipu statusline` is a status line built from what Claude Code passes it for the session's own
-account: profile and plan, model, folder and git branch (read from `.git/HEAD`), session cost,
-context, 5-hour and 7-day limits with the reset, cache hit ratio and how long it stays warm. No
+account: profile and plan, model with its effort (and fast mode, an agent, the branch's PR with
+its review when there are any), folder and git branch (read from `.git/HEAD`), session cost,
+context, 5-hour and 7-day limits with the reset, cache hit ratio and how long it stays warm, and
+the cause of a cache miss in the last five minutes. No
 store, network or login is read; the plan comes from a small file the service writes when it asks
 Claude Code for each profile's sign-in. A switch per profile writes `statusLine` with a
 `refreshInterval` of a minute, so the cache countdown moves while the session is idle; quipu

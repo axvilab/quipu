@@ -15,6 +15,18 @@ type StatusInput struct {
 	Workspace struct {
 		CurrentDir string `json:"current_dir"`
 	} `json:"workspace"`
+	Effort *struct {
+		Level string `json:"level"` // low, medium, high, xhigh or max
+	} `json:"effort"`
+	FastMode bool `json:"fast_mode"`
+	Agent    *struct {
+		Name string `json:"name"`
+	} `json:"agent"`
+	PR *struct {
+		Number      int    `json:"number"`
+		ReviewState string `json:"review_state"` // approved, pending, changes_requested or draft
+		Kind        string `json:"kind"`         // "mr" for a GitLab merge request
+	} `json:"pr"`
 	Cost struct {
 		TotalCostUSD *float64 `json:"total_cost_usd"`
 	} `json:"cost"`
@@ -32,9 +44,13 @@ type StatusInput struct {
 		SevenDay *RateWindow `json:"seven_day"`
 	} `json:"rate_limits"`
 	PromptCache *struct {
-		Warm      bool     `json:"warm"`
-		ExpiresAt int64    `json:"expires_at"` // Unix seconds the warm cache lasts until
-		HitRatio  *float64 `json:"hit_ratio"`
+		Warm          bool     `json:"warm"`
+		ExpiresAt     int64    `json:"expires_at"` // Unix seconds the warm cache lasts until
+		HitRatio      *float64 `json:"hit_ratio"`
+		LastMissAt    int64    `json:"last_miss_at"`
+		LastMissCause *struct {
+			Causes []string `json:"causes"`
+		} `json:"last_miss_cause"`
 	} `json:"prompt_cache"`
 }
 

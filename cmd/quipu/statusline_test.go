@@ -18,12 +18,14 @@ func TestStatusline(t *testing.T) {
 	now := time.Now()
 	reset := now.Add(2*time.Hour + 10*time.Minute).Unix()
 	warm := now.Add(4*time.Minute + 30*time.Second).Unix()
-	input := `{"model":{"display_name":"Opus"},"workspace":{"current_dir":"` + filepath.Join(repo, "src") + `"},
+	miss := now.Add(-time.Minute).Unix()
+	input := `{"model":{"display_name":"Opus"},"effort":{"level":"xhigh"},"fast_mode":true,"pr":{"number":12,"review_state":"approved"},"workspace":{"current_dir":"` + filepath.Join(repo, "src") + `"},
 		"cost":{"total_cost_usd":0.4213},
 		"context_window":{"used_percentage":34.4,"context_window_size":200000,
 			"current_usage":{"input_tokens":500,"cache_creation_input_tokens":2500,"cache_read_input_tokens":65000}},
 		"rate_limits":{"five_hour":{"used_percentage":23.5,"resets_at":` + strconv.FormatInt(reset, 10) + `},"seven_day":{"used_percentage":41.2,"resets_at":1}},
-		"prompt_cache":{"warm":true,"expires_at":` + strconv.FormatInt(warm, 10) + `,"hit_ratio":0.91}}`
+		"prompt_cache":{"warm":true,"expires_at":` + strconv.FormatInt(warm, 10) + `,"hit_ratio":0.91,
+			"last_miss_at":` + strconv.FormatInt(miss, 10) + `,"last_miss_cause":{"causes":["tools_changed"]}}}`
 
 	t.Setenv("HOME", t.TempDir()) // no profiles file: the profile shows by its name
 	t.Setenv("XDG_CONFIG_HOME", "")
@@ -37,10 +39,10 @@ func TestStatusline(t *testing.T) {
 	if strings.Contains(line, "\n") {
 		t.Fatalf("more than one line: %q", line)
 	}
-	if want := "work · Opus · src ⎇ feature-1 · $0.42 · ctx"; !strings.HasPrefix(line, want) {
+	if want := "work · Opus xhigh fast · src ⎇ feature-1 · PR #12 ✓ · $0.42 · ctx"; !strings.HasPrefix(line, want) {
 		t.Errorf("line = %q, want it to start with %q", line, want)
 	}
-	for _, want := range []string{"ctx ▰▰▰▱▱▱▱▱ 34% 68K/200K", "5h ▰▱▱▱▱ 24% ↻", "7d ▰▰▱▱▱ 41%", "cache 91% ⏳4m"} {
+	for _, want := range []string{"ctx ▰▰▰▱▱▱▱▱ 34% 68K/200K", "5h ▰▱▱▱▱ 24% ↻", "7d ▰▰▱▱▱ 41%", "cache 91% ⏳4m miss: tools changed"} {
 		if !strings.Contains(line, want) {
 			t.Errorf("line %q has no %q", line, want)
 		}
