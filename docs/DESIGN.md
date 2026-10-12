@@ -114,6 +114,11 @@ main repo via `git rev-parse --git-common-dir`.
 - No edits to `.claude.json` ([ADR 0003](adr/0003-supported-integration-only.md)); MCP servers
   are shared through plugins or `.mcp.json`.
 
+Each profile is set up in one panel on the Profiles page: a label (how quipu shows it everywhere;
+the name stays, since the config dir is built from it and moving that would break open sessions,
+rules, shared memory and history), its sign-in, which items it shares with the default profile
+(sharing is refused over the profile's own item; stopping leaves a copy), and the status line.
+
 In a folder without a rule, `quipu run` (and the shim) asks which account to use and offers to
 remember it as a rule for the git repository the folder is in, or the folder itself (never for
 home, a folder above it, the root or the temp folder; Enter means yes). Every run under a rule

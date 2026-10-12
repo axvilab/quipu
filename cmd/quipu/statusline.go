@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/axvilab/quipu/internal/claudecode"
+	"github.com/axvilab/quipu/internal/profile"
 )
 
 // runStatusline prints the status line Claude Code shows under the prompt, in one line: who and
@@ -25,6 +26,7 @@ func runStatusline(in io.Reader, out io.Writer) error {
 	if dir := os.Getenv("CLAUDE_CONFIG_DIR"); dir != "" {
 		profile = claudecode.ProfileName(dir)
 	}
+	profile = profileTitle(profile)
 	st := style{color: os.Getenv("NO_COLOR") == ""}
 	line := statusTop(profile, s, st)
 	if usage := statusBottom(s, time.Now(), st); usage != "" {
@@ -198,4 +200,20 @@ func gitBranch(dir string) string {
 			return ""
 		}
 	}
+}
+
+// profileTitle is the label the user gave the profile in quipu, or its name.
+func profileTitle(name string) string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return name
+	}
+	c, err := profile.Load(home, profilesFile(home))
+	if err != nil {
+		return name
+	}
+	if p := c.Find(name); p != nil {
+		return p.Title()
+	}
+	return name
 }

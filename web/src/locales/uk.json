@@ -626,5 +626,22 @@
   "statusline.switch": "Рядок стану quipu для {name}",
   "statusline.on": "рядок quipu, з наступної відповіді",
   "statusline.other": "інший: {command}; quipu відкладе його й поверне, коли вимкнете свій",
-  "statusline.none": "немає"
+  "statusline.none": "немає",
+  "profiles.edit": "Налаштувати",
+  "profiles.editTitle": "Акаунт {name}",
+  "profiles.label": "Назва в quipu",
+  "profiles.labelNote": "Як quipu його показує: у меню, на «Плагінах», у рядку стану і коли claude питає, який акаунт. Профіль лишається {name} у {dir}.",
+  "profiles.account": "Акаунт",
+  "profiles.shareTitle": "Спільне з основним акаунтом",
+  "profiles.shareEditNote": "Спільне — це ті самі файли в обох акаунтах. Вимкнення дає цьому акаунту власну копію, тож нічого не губиться; увімкнути не вийде, якщо в цього акаунта вже є своє.",
+  "profiles.removeProfile": "Видалити цей профіль…",
+  "profiles.statusOn": "рядок стану quipu",
+  "result.label-saved": "Показується як {name}.",
+  "result.label-failed": "Назву не збережено: {error}",
+  "result.share-on": "{name} тепер ділить {item} з основним акаунтом.",
+  "result.share-off": "{name} знову має власні {item}, почавши з копії.",
+  "result.share-own": "У цього акаунта є власні {item} ({count} файлів); перенесіть або видаліть їх, щоб ділити.",
+  "result.share-failed": "Не змінено: {error}",
+  "action.save": "Зберегти",
+  "rules.remove": "Видалити правило"
 }

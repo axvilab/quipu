@@ -168,6 +168,8 @@ type SignIn struct {
 
 type ProfileInfo struct {
 	Name     string   `json:"name"`
+	Label    string   `json:"label,omitempty"`
+	Title    string   `json:"title"` // the label, or the name`
 	Account  string   `json:"account"`
 	Plan     string   `json:"plan"`
 	SignedIn bool     `json:"signedIn"`
@@ -634,17 +636,15 @@ func (s *Service) profileInfos(ctx context.Context) []ProfileInfo {
 	c, err := s.loadProfiles()
 	if err != nil {
 		for _, v := range views {
-			out = append(out, ProfileInfo{Name: v.Name, Current: v.Current, Shares: []string{}})
+			out = append(out, ProfileInfo{Name: v.Name, Title: v.Name, Current: v.Current, Shares: []string{}})
 		}
 		return out
 	}
 	for _, p := range c.Profiles {
 		v := views[p.Name]
-		info := ProfileInfo{Name: p.Name, Account: v.Email, Plan: v.Plan, SignedIn: v.LoggedIn, Current: p.Name == s.profile,
+		info := ProfileInfo{Name: p.Name, Label: p.Label, Title: p.Title(), Account: v.Email, Plan: v.Plan, SignedIn: v.LoggedIn, Current: p.Name == s.profile,
 			Dir: s.shortPath(p.Dir), Shares: []string{}}
-		for _, link := range p.Links {
-			info.Shares = append(info.Shares, filepath.Base(link))
-		}
+		info.Shares = append(info.Shares, c.Shared(p.Name)...)
 		info.StatusLine, info.StatusCommand = statusLineOf(p.Dir)
 		if l := s.logins.get(p.Name); l != nil && !l.done {
 			info.SignIn.State = "starting"

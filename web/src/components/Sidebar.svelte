@@ -2,6 +2,7 @@
   import type { Session } from "../lib/api/types";
   import { t } from "../lib/i18n.svelte";
   import { palette } from "../lib/palette.svelte";
+  import { prefs, setAccountsOpen } from "../lib/prefs.svelte";
   import { link, router } from "../lib/router.svelte";
   import Icon from "./Icon.svelte";
 
@@ -50,16 +51,28 @@
   <div class="flex-1"></div>
 
   {#if session?.profiles.length}
-    <p class="px-2.5 pb-1 text-xs text-fleece">{t("nav.accounts")}</p>
+    <!-- Folded to one line by default: a dot per account; open shows each with its sign-in. -->
+    <button class="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-fleece hover:bg-loom hover:text-cotton"
+      aria-expanded={prefs.accountsOpen} onclick={() => setAccountsOpen(!prefs.accountsOpen)}>
+      <Icon name={prefs.accountsOpen ? "down" : "right"} size={12} />
+      <span class="flex-1 text-left">{t("nav.accounts")}</span>
+      {#if !prefs.accountsOpen}
+        {#each session.profiles as p (p.name)}
+          <span class="h-2 w-2 shrink-0 rounded-full {p.signedIn ? 'bg-chilca' : 'bg-warp'}" title="{p.title || p.name}: {p.signedIn ? p.account : t('profile.signedOut')}"></span>
+        {/each}
+      {/if}
+    </button>
+    {#if prefs.accountsOpen}
     {#each session.profiles as p (p.name)}
       <a href="/profiles" use:link class="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 hover:bg-loom {p.current ? 'bg-loom' : ''}" title={p.account || t("profile.signedOut")}>
         <span class="h-2 w-2 shrink-0 rounded-full {p.signedIn ? 'bg-chilca' : 'bg-warp'}" aria-hidden="true"></span>
         <span class="min-w-0 flex-1">
-          <span class="block truncate text-sm">{p.name}</span>
+          <span class="block truncate text-sm">{p.title || p.name}</span>
           <span class="block truncate text-xs text-fleece">{p.signedIn ? p.account : t("profile.signedOut")}</span>
         </span>
       </a>
     {/each}
+    {/if}
   {/if}
 
   <div class="mt-3 flex items-center justify-between gap-3 px-2.5">

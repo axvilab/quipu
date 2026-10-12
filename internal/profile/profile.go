@@ -24,8 +24,17 @@ var Shareable = []string{"CLAUDE.md", "skills", "agents", "rules", "commands"}
 // Profile is one Claude Code config dir.
 type Profile struct {
 	Name  string   `json:"name"`
+	Label string   `json:"label,omitempty"` // how quipu shows it; the name stays, since Dir is built from it
 	Dir   string   `json:"dir"`
 	Links []string `json:"links,omitempty"` // symlinks quipu created inside Dir
+}
+
+// Title is how the profile is shown: its label, or its name.
+func (p Profile) Title() string {
+	if p.Label != "" {
+		return p.Label
+	}
+	return p.Name
 }
 
 // Rule selects a profile for a folder and everything below it.

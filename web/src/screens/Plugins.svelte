@@ -83,7 +83,7 @@
       {#each data.profiles as profile (profile)}
         {@const n = missing(profile).length}
         <div class="flex flex-wrap items-center gap-2 py-3">
-          <span class="text-sm font-semibold">{profile}</span>
+          <span class="text-sm font-semibold">{data.titles[profile] ?? profile}</span>
           {#if n}
             <button class="btn btn-ghost h-7 px-2 text-xs" disabled={!!busy} onclick={() => installAll(profile)} title={t("plugins.installAllHint", { profile })}>
               <Icon name="plus" size={12} />{t("plugins.installAll", { count: n })}
@@ -127,15 +127,18 @@
                 {/if}
               {:else}
                 {#if c.state === "everywhere"}
-                  <button class="btn h-7 px-2 text-xs" disabled={!!busy} onclick={() => run(key, () => api.setPluginEnabled(profile, p.id, false), true)}>{t("plugins.turnOff")}</button>
+                  <button class="btn btn-icon h-7 w-7 text-chilca" disabled={!!busy} aria-label={t("plugins.turnOff")} title={t("plugins.turnOff")}
+                    onclick={() => run(key, () => api.setPluginEnabled(profile, p.id, false), true)}><Icon name="power" size={14} /></button>
                 {:else}
-                  <button class="btn h-7 px-2 text-xs" disabled={!!busy} onclick={() => run(key, () => api.setPluginEnabled(profile, p.id, true), true)}>{t("plugins.turnOn")}</button>
+                  <button class="btn btn-icon h-7 w-7 text-fleece" disabled={!!busy} aria-label={t("plugins.turnOn")} title={t("plugins.turnOn")}
+                    onclick={() => run(key, () => api.setPluginEnabled(profile, p.id, true), true)}><Icon name="power" size={14} /></button>
                 {/if}
                 {#if isConfirm("remove", profile, p)}
                   <button class="btn h-7 border-cochineal px-2 text-xs text-cochineal" disabled={!!busy} onclick={() => run(key, () => api.uninstallPlugin(profile, p.id))}>{t("plugins.confirmRemove")}</button>
                   <button class="btn btn-ghost h-7 px-2 text-xs" onclick={() => (confirm = null)}>{t("action.cancel")}</button>
                 {:else}
-                  <button class="btn btn-ghost h-7 px-2 text-xs" onclick={() => (confirm = { kind: "remove", profile, id: p.id })}>{t("action.remove")}</button>
+                  <button class="btn btn-ghost btn-icon h-7 w-7" aria-label={t("action.remove")} title={t("action.remove")}
+                    onclick={() => (confirm = { kind: "remove", profile, id: p.id })}><Icon name="trash" size={14} /></button>
                 {/if}
               {/if}
             </span>

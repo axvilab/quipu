@@ -596,3 +596,37 @@ func TestPluginsAPI(t *testing.T) {
 		t.Errorf("unknown plugin: %s", rec.Body.String())
 	}
 }
+
+func TestProfileEditAPI(t *testing.T) {
+	s := testServer(t)
+	s.ProfilesFile = filepath.Join(s.home, ".config", "quipu", "profiles.json")
+	h := s.Handler()
+	cookie := &http.Cookie{Name: cookieName, Value: s.token}
+	os.MkdirAll(filepath.Join(s.home, ".claude", "skills"), 0o755)
+	os.WriteFile(filepath.Join(s.home, ".claude", "CLAUDE.md"), []byte("me\n"), 0o644)
+	postJSON(h, "/api/profiles", `{"name":"work","share":["CLAUDE.md"]}`, cookie)
+
+	if rec := postJSON(h, "/api/profiles/work/label", `{"label":"Office"}`, cookie); !strings.Contains(rec.Body.String(), "label-saved") {
+		t.Fatalf("label: %s", rec.Body.String())
+	}
+	if rec := postJSON(h, "/api/profiles/work/share", `{"item":"skills","on":true}`, cookie); !strings.Contains(rec.Body.String(), "share-on") {
+		t.Fatalf("share: %s", rec.Body.String())
+	}
+	var p Profiles
+	getJSON(t, h, "/api/profiles", cookie, &p)
+	var work ProfileInfo
+	for _, pr := range p.Profiles {
+		if pr.Name == "work" {
+			work = pr
+		}
+	}
+	if work.Title != "Office" || strings.Join(work.Shares, ",") != "CLAUDE.md,skills" {
+		t.Errorf("work = %+v", work)
+	}
+	if rec := postJSON(h, "/api/profiles/work/share", `{"item":"skills","on":false}`, cookie); !strings.Contains(rec.Body.String(), "share-off") {
+		t.Errorf("unshare: %s", rec.Body.String())
+	}
+	if rec := postJSON(h, "/api/profiles/default/share", `{"item":"skills","on":true}`, cookie); !strings.Contains(rec.Body.String(), "share-failed") {
+		t.Errorf("share into default: %s", rec.Body.String())
+	}
+}

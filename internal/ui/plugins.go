@@ -20,8 +20,9 @@ import (
 
 // PluginsMatrix shows every plugin against every profile.
 type PluginsMatrix struct {
-	Profiles []string       `json:"profiles"`
-	Plugins  []PluginMatrix `json:"plugins"`
+	Profiles []string          `json:"profiles"`
+	Titles   map[string]string `json:"titles"` // how each profile is shown`
+	Plugins  []PluginMatrix    `json:"plugins"`
 }
 
 // PluginMatrix is one plugin, with its state in each profile.
@@ -48,7 +49,12 @@ type PluginCell struct {
 
 // PluginsReport puts every plugin installed in any profile against every profile.
 func (s *Service) PluginsReport(ctx context.Context) (PluginsMatrix, error) {
-	out := PluginsMatrix{Profiles: []string{}, Plugins: []PluginMatrix{}}
+	out := PluginsMatrix{Profiles: []string{}, Titles: map[string]string{}, Plugins: []PluginMatrix{}}
+	if c, err := s.loadProfiles(); err == nil {
+		for _, p := range c.Profiles {
+			out.Titles[p.Name] = p.Title()
+		}
+	}
 	projects := s.projectItems(ctx)
 	byID := map[string]*PluginMatrix{}
 	sources := map[string]string{} // marketplace → source, from any profile that knows it

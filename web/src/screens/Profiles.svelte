@@ -17,6 +17,8 @@
   let adding = $state(false);
   let signingIn = $state<string | null>(null);
   let removing = $state<string | null>(null);
+  let editing = $state<string | null>(null);
+  let label = $state("");
 
   // add form
   let name = $state("");
@@ -55,6 +57,13 @@
   });
 
   const signing = $derived<ProfileInfo | undefined>(data?.profiles.find((p) => p.name === signingIn));
+  const edited = $derived<ProfileInfo | undefined>(data?.profiles.find((p) => p.name === editing));
+
+  function openEdit(p: ProfileInfo) {
+    editing = p.name;
+    label = p.label ?? "";
+    removing = null;
+  }
 
   async function act(p: Promise<unknown>, after?: () => void) {
     try {
@@ -97,47 +106,24 @@
       <li class="flex flex-wrap items-center gap-4 py-3">
         <span class="h-2.5 w-2.5 shrink-0 rounded-full {p.signedIn ? 'bg-chilca' : 'bg-warp'}" aria-hidden="true"></span>
         <span class="min-w-0 flex-1">
-          <span class="block font-medium">{p.name}</span>
+          <span class="block">
+            <span class="font-medium">{p.title}</span>
+            {#if p.label}<span class="ml-1.5 text-xs text-fleece">{p.name}</span>{/if}
+          </span>
           <span class="block truncate text-sm text-fleece">
             {#if p.signIn.state}{t("profiles.waiting")}{:else if p.signedIn}{p.account}{p.plan ? ` · ${p.plan}` : ""}{:else}{t("profile.signedOut")}{/if}
           </span>
+          <span class="block truncate text-xs text-fleece">
+            {[p.dir, p.shares.length ? t("profiles.shares", { items: p.shares.join(", ") }) : "", p.statusLine === "quipu" ? t("profiles.statusOn") : ""].filter(Boolean).join(" · ")}
+          </span>
         </span>
-        <span class="hidden min-w-0 font-mono text-xs text-fleece md:block">{p.dir}</span>
-        <span class="hidden text-xs text-fleece lg:block">{p.shares.length ? t("profiles.shares", { items: p.shares.join(", ") }) : ""}</span>
         <span class="flex gap-2">
-          <button class="btn" onclick={() => ((signingIn = p.name), (email = ""))}>{p.signedIn ? t("profiles.signInAgain") : t("profiles.signIn")}</button>
-          {#if p.name !== "default"}
-            {#if removing === p.name}
-              <button class="btn border-cochineal text-cochineal" onclick={() => act(api.removeProfile(p.name), () => (removing = null))}>{t("profiles.confirmRemove")}</button>
-              <button class="btn btn-ghost" onclick={() => (removing = null)}>{t("action.cancel")}</button>
-            {:else}
-              <button class="btn btn-ghost" onclick={() => (removing = p.name)}>{t("action.remove")}</button>
-            {/if}
-          {/if}
+          {#if !p.signedIn}<button class="btn" onclick={() => ((signingIn = p.name), (email = ""))}>{t("profiles.signIn")}</button>{/if}
+          <button class="btn btn-ghost btn-icon" onclick={() => openEdit(p)} aria-label={t("profiles.edit")} title={t("profiles.edit")}><Icon name="gear" size={16} /></button>
         </span>
       </li>
     {/each}
   </ul>
-  {#if removing}<p class="mt-2 text-xs text-fleece">{t("profiles.removeNote")}</p>{/if}
-
-  <section class="mt-10 max-w-3xl">
-    <h2 class="mb-1 text-md font-semibold">{t("statusline.title")}</h2>
-    <p class="text-sm text-fleece">{t("statusline.note")}</p>
-    <pre class="mt-3 whitespace-pre-wrap rounded-md border border-warp bg-loom px-3 py-2 font-mono text-[12px] leading-relaxed text-fleece"><span class="text-cotton">work</span> · Opus · shop ⎇ main · $0.42 · ctx <span class="text-chilca">▰▰▰▱▱▱▱▱ 34%</span> 68K/200K · 5h <span class="text-qolle">▰▰▰▱▱ 67%</span> ↻14:50 · 7d <span class="text-chilca">▰▰▱▱▱ 41%</span> ↻Tue 19:00 · cache 91% <span class="text-chilca">⏳59m</span></pre>
-    <ul class="mt-3 divide-y divide-warp border-y border-warp">
-      {#each data.profiles as p (p.name)}
-        <li class="flex items-center gap-3 py-2.5 text-sm">
-          <Switch on={p.statusLine === "quipu"} label={t("statusline.switch", { name: p.name })} onchange={(on) => change(api.setStatusLine(p.name, on))} />
-          <span class="min-w-0 flex-1">
-            <span class="font-medium">{p.name}</span>
-            <span class="block truncate text-xs text-fleece" title={p.statusCommand ?? ""}>
-              {p.statusLine === "quipu" ? t("statusline.on") : p.statusLine === "other" ? t("statusline.other", { command: p.statusCommand ?? "" }) : t("statusline.none")}
-            </span>
-          </span>
-        </li>
-      {/each}
-    </ul>
-  </section>
 
   <section class="mt-10 max-w-3xl">
     <h2 class="mb-1 text-md font-semibold">{t("rules.title")}</h2>
@@ -148,8 +134,8 @@
           <Icon name="folder" size={14} />
           <span class="min-w-0 flex-1 truncate font-mono text-[12.5px]">{r.path}</span>
           <span class="text-fleece">{t("rules.uses")}</span>
-          <span class="font-medium">{r.profile}</span>
-          <button class="btn btn-ghost" onclick={() => act(api.deleteRule(r.path))}>{t("action.remove")}</button>
+          <span class="font-medium">{data.profiles.find((p) => p.name === r.profile)?.title ?? r.profile}</span>
+          <button class="btn btn-ghost btn-icon" onclick={() => act(api.deleteRule(r.path))} aria-label={t("rules.remove")} title={t("rules.remove")}><Icon name="trash" size={15} /></button>
         </li>
         {#if r.memory.shared || r.memory.sourceFiles}
           <li class="flex flex-wrap items-center gap-3 border-t-0 pb-2.5 pl-6 text-xs text-fleece">
@@ -172,12 +158,75 @@
       </label>
       <datalist id="folders">{#each data.folders as f (f)}<option value={f}></option>{/each}</datalist>
       <label class="flex flex-col gap-1 text-xs text-fleece">{t("rules.profile")}
-        <select class="field" bind:value={ruleProfile}>{#each data.profiles as p (p.name)}<option>{p.name}</option>{/each}</select>
+        <select class="field" bind:value={ruleProfile}>{#each data.profiles as p (p.name)}<option value={p.name}>{p.title}</option>{/each}</select>
       </label>
       <button class="btn btn-primary h-9">{t("rules.save")}</button>
     </form>
     <p class="mt-4 text-xs text-fleece">{t("rules.shim")} <a href="/settings" use:link class="text-indigo hover:underline">{t("rules.shimLink")}</a></p>
   </section>
+{/if}
+
+{#if editing && edited}
+  {@const p = edited}
+  <Panel title={t("profiles.editTitle", { name: p.title })} onclose={() => ((editing = null), (removing = null))}>
+    <div class="flex flex-col gap-7 text-sm">
+      <form class="flex flex-col gap-1" onsubmit={(e) => { e.preventDefault(); change(api.setProfileLabel(p.name, label)); }}>
+        <label for="profile-label">{t("profiles.label")}</label>
+        <div class="flex gap-2">
+          <input id="profile-label" class="field flex-1" bind:value={label} maxlength="40" placeholder={p.name} data-autofocus />
+          <button class="btn" disabled={label.trim() === (p.label ?? "")}>{t("action.save")}</button>
+        </div>
+        <span class="text-xs text-fleece">{t("profiles.labelNote", { name: p.name, dir: p.dir })}</span>
+      </form>
+
+      <section>
+        <h3 class="font-semibold">{t("profiles.account")}</h3>
+        <p class="mt-1 text-fleece">{p.signedIn ? `${p.account}${p.plan ? ` · ${p.plan}` : ""}` : t("profile.signedOut")}</p>
+        <button class="btn mt-2" onclick={() => ((signingIn = p.name), (email = ""), (editing = null))}>{p.signedIn ? t("profiles.signInAgain") : t("profiles.signIn")}</button>
+      </section>
+
+      {#if p.name !== "default"}
+        <section>
+          <h3 class="font-semibold">{t("profiles.shareTitle")}</h3>
+          <p class="mt-1 text-xs text-fleece">{t("profiles.shareEditNote")}</p>
+          <ul class="mt-2 divide-y divide-warp border-y border-warp">
+            {#each data?.shareable ?? [] as item (item)}
+              <li class="flex items-center gap-3 py-2">
+                <Switch on={p.shares.includes(item)} label={item} onchange={(on) => change(api.shareItem(p.name, item, on))} />
+                <span class="font-mono text-[12.5px]">{item}</span>
+              </li>
+            {/each}
+          </ul>
+        </section>
+      {/if}
+
+      <section>
+        <h3 class="font-semibold">{t("statusline.title")}</h3>
+        <p class="mt-1 text-xs text-fleece">{t("statusline.note")}</p>
+        <pre class="mt-2 whitespace-pre-wrap rounded-md border border-warp bg-loom px-3 py-2 font-mono text-[11.5px] leading-relaxed text-fleece"><span class="text-cotton">{p.title}</span> · Opus · shop ⎇ main · $0.42 · ctx <span class="text-chilca">▰▰▰▱▱▱▱▱ 34%</span> 68K/200K · 5h <span class="text-qolle">▰▰▰▱▱ 67%</span> ↻14:50 · 7d <span class="text-chilca">▰▰▱▱▱ 41%</span> · cache 91% <span class="text-chilca">⏳59m</span></pre>
+        <div class="mt-2 flex items-center gap-3">
+          <Switch on={p.statusLine === "quipu"} label={t("statusline.switch", { name: p.title })} onchange={(on) => change(api.setStatusLine(p.name, on))} />
+          <span class="min-w-0 flex-1 truncate text-xs text-fleece" title={p.statusCommand ?? ""}>
+            {p.statusLine === "quipu" ? t("statusline.on") : p.statusLine === "other" ? t("statusline.other", { command: p.statusCommand ?? "" }) : t("statusline.none")}
+          </span>
+        </div>
+      </section>
+
+      {#if p.name !== "default"}
+        <section class="border-t border-warp pt-5">
+          {#if removing === p.name}
+            <p class="mb-2 text-xs text-fleece">{t("profiles.removeNote")}</p>
+            <div class="flex gap-2">
+              <button class="btn border-cochineal text-cochineal" onclick={() => act(api.removeProfile(p.name), () => ((removing = null), (editing = null)))}>{t("profiles.confirmRemove")}</button>
+              <button class="btn btn-ghost" onclick={() => (removing = null)}>{t("action.cancel")}</button>
+            </div>
+          {:else}
+            <button class="btn btn-ghost text-cochineal" onclick={() => (removing = p.name)}>{t("profiles.removeProfile")}</button>
+          {/if}
+        </section>
+      {/if}
+    </div>
+  </Panel>
 {/if}
 
 {#if adding && data}
@@ -200,7 +249,7 @@
 {/if}
 
 {#if signingIn && signing}
-  <Panel title={t("signin.title", { name: signing.name })} onclose={() => (signingIn = null)}>
+  <Panel title={t("signin.title", { name: signing.title })} onclose={() => (signingIn = null)}>
     {#if signing.signIn.state === "open"}
       <ol class="flex flex-col gap-4 text-sm">
         <li>{t("signin.step.open")}</li>

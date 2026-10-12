@@ -224,14 +224,14 @@ func runClaudeWith(args []string, explicit string) (int, error) {
 			name = r.Profile
 			// One line, so a rule remembered by mistake is noticed at once.
 			if interactive && isTerminal(os.Stderr) {
-				fmt.Fprintf(os.Stderr, "quipu: %s (rule for %s)\n", r.Profile, shortPath(home, r.Path, r.Path))
+				fmt.Fprintf(os.Stderr, "quipu: %s (rule for %s)\n", titleOf(c, r.Profile), shortPath(home, r.Path, r.Path))
 			}
 		}
 	}
 	if name == "" && len(c.Profiles) > 1 && interactive {
 		in := bufio.NewReader(os.Stdin)
 		name = askProfile(c, in, os.Stderr)
-		if folder := profile.RememberFolder(cwd, home); folder != "" && askRemember(name, shortPath(home, folder, folder), in, os.Stderr) {
+		if folder := profile.RememberFolder(cwd, home); folder != "" && askRemember(titleOf(c, name), shortPath(home, folder, folder), in, os.Stderr) {
 			if err := rememberRule(home, folder, name); err != nil {
 				fmt.Fprintln(os.Stderr, "quipu: not remembered:", err)
 			} else {
@@ -252,7 +252,11 @@ func runClaudeWith(args []string, explicit string) (int, error) {
 func askProfile(c *profile.Config, in *bufio.Reader, out io.Writer) string {
 	fmt.Fprintln(out, "Which Claude account for this folder?")
 	for i, p := range c.Profiles {
-		fmt.Fprintf(out, "  %d) %s\n", i+1, p.Name)
+		if p.Label != "" {
+			fmt.Fprintf(out, "  %d) %s (%s)\n", i+1, p.Label, p.Name)
+		} else {
+			fmt.Fprintf(out, "  %d) %s\n", i+1, p.Name)
+		}
 	}
 	fmt.Fprintf(out, "Choose [1]: ")
 	line, _ := in.ReadString('\n')
@@ -390,4 +394,12 @@ func openJournal(home string) (*fsx.Journal, error) {
 		return nil, err
 	}
 	return fsx.OpenJournal(filepath.Join(data, "backups"))
+}
+
+// titleOf is how a profile is shown: its label, or its name.
+func titleOf(c *profile.Config, name string) string {
+	if p := c.Find(name); p != nil {
+		return p.Title()
+	}
+	return name
 }

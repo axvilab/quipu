@@ -25,6 +25,8 @@ func TestStatusline(t *testing.T) {
 		"rate_limits":{"five_hour":{"used_percentage":23.5,"resets_at":` + strconv.FormatInt(reset, 10) + `},"seven_day":{"used_percentage":41.2,"resets_at":1}},
 		"prompt_cache":{"warm":true,"expires_at":` + strconv.FormatInt(warm, 10) + `,"hit_ratio":0.91}}`
 
+	t.Setenv("HOME", t.TempDir()) // no profiles file: the profile shows by its name
+	t.Setenv("XDG_CONFIG_HOME", "")
 	t.Setenv("NO_COLOR", "1")
 	t.Setenv("CLAUDE_CONFIG_DIR", "/home/u/.claude-work")
 	var out strings.Builder

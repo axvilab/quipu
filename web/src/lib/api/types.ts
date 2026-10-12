@@ -132,6 +132,8 @@ export interface SignIn {
 
 export interface ProfileInfo {
   name: string;
+  label?: string;
+  title: string;
   account: string;
   plan: string;
   signedIn: boolean;
@@ -344,5 +346,6 @@ export interface PluginMatrix {
 
 export interface PluginsMatrix {
   profiles: string[];
+  titles: Record<string, string>;
   plugins: PluginMatrix[];
 }

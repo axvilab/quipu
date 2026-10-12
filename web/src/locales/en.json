@@ -584,5 +584,22 @@
   "statusline.switch": "quipu status line for {name}",
   "statusline.on": "quipu's, from the next reply",
   "statusline.other": "another one: {command}; turning quipu's on keeps it aside and turning it off brings it back",
-  "statusline.none": "none"
+  "statusline.none": "none",
+  "profiles.edit": "Set up",
+  "profiles.editTitle": "Account {name}",
+  "profiles.label": "Name in quipu",
+  "profiles.labelNote": "How quipu shows it: in the menu, on Plugins, in the status line and when claude asks which account. The profile stays {name} in {dir}.",
+  "profiles.account": "Account",
+  "profiles.shareTitle": "Shared with the default account",
+  "profiles.shareEditNote": "A shared item is the same files in both accounts. Turning one off gives this account its own copy, so nothing is lost; turning one on is refused if this account has its own.",
+  "profiles.removeProfile": "Remove this profile…",
+  "profiles.statusOn": "quipu status line",
+  "result.label-saved": "Shown as {name}.",
+  "result.label-failed": "Name not saved: {error}",
+  "result.share-on": "{name} now shares {item} with the default account.",
+  "result.share-off": "{name} has its own {item} again, starting from a copy.",
+  "result.share-own": "This account has its own {item} ({count} files); move or delete them to share.",
+  "result.share-failed": "Not changed: {error}",
+  "action.save": "Save",
+  "rules.remove": "Delete the rule"
 }

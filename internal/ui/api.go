@@ -180,6 +180,23 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 			writeJSON(w, v, err)
 		}
 	})
+	mux.HandleFunc("POST /api/profiles/{name}/label", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ Label string }
+		if readJSON(w, r, &in) {
+			v, err := s.SetProfileLabel(r.PathValue("name"), in.Label)
+			writeJSON(w, v, err)
+		}
+	})
+	mux.HandleFunc("POST /api/profiles/{name}/share", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			Item string
+			On   bool
+		}
+		if readJSON(w, r, &in) {
+			v, err := s.ShareItem(r.PathValue("name"), in.Item, in.On)
+			writeJSON(w, v, err)
+		}
+	})
 	mux.HandleFunc("POST /api/profiles/{name}/statusline", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ On bool }
 		if readJSON(w, r, &in) {

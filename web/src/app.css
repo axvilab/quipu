@@ -87,6 +87,10 @@
   .btn-ghost {
     @apply border-transparent bg-transparent text-fleece hover:bg-loom hover:text-cotton;
   }
+  /* A square button with only an icon; it carries its name in aria-label and title. */
+  .btn-icon {
+    @apply w-8 justify-center px-0;
+  }
   .field {
     @apply h-9 w-full rounded-md border border-warp bg-night px-3 text-sm text-cotton placeholder:text-fleece/70;
   }
