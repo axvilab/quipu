@@ -8,8 +8,11 @@
   import { report } from "../lib/toast.svelte";
   import Icon from "./Icon.svelte";
 
-  // quipu's changes, one row per action, each with Undo (all files of the action at once).
+  // quipu's changes, one row per action, each with Undo (all files of the action at once). The
+  // latest few show; the rest wait behind "show all", since switches pile up quickly.
   let { changes }: { changes: Change[] } = $props();
+  let all = $state(false);
+  const shown = $derived(all ? changes : changes.slice(0, 5));
 
   async function undo(id: string) {
     try {
@@ -22,7 +25,7 @@
 </script>
 
 <ul class="divide-y divide-warp">
-  {#each changes as c (c.id)}
+  {#each shown as c (c.id)}
     <li class="flex items-center gap-4 py-2.5 text-sm">
       <span class="h-2 w-2 shrink-0 rounded-full {c.undone ? 'bg-warp' : 'bg-chilca'}" aria-hidden="true"></span>
       <span class="min-w-0 flex-1">
@@ -42,3 +45,6 @@
     </li>
   {/each}
 </ul>
+{#if changes.length > shown.length}
+  <button class="btn btn-ghost mt-2" onclick={() => (all = true)}>{t("action.showAll", { count: changes.length })}</button>
+{/if}

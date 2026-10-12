@@ -19,25 +19,31 @@ func accountFile(home, configDir string) string {
 
 var usageMultiple = regexp.MustCompile(`_(\d+)x$`)
 
+// oauthAccount is the account metadata Claude Code keeps in .claude.json; never tokens.
+type oauthAccount struct {
+	AccountUUID               string `json:"accountUuid"`
+	OrganizationUUID          string `json:"organizationUuid"`
+	SeatTier                  string `json:"seatTier"`
+	OrganizationType          string `json:"organizationType"`
+	OrganizationRateLimitTier string `json:"organizationRateLimitTier"`
+}
+
+// account reads the account metadata of configDir; zero when there is none.
+func account(home, configDir string) oauthAccount {
+	var f struct {
+		OAuthAccount oauthAccount `json:"oauthAccount"`
+	}
+	if b, err := os.ReadFile(accountFile(home, configDir)); err == nil {
+		json.Unmarshal(b, &f)
+	}
+	return f.OAuthAccount
+}
+
 // PlanTier says which tier of its plan the account in configDir has, as Claude Code last saw it:
 // "team standard", "team premium", "max 5×", "max 20×". "" when the file says nothing more than
-// the plan itself. It reads only these fields, and nothing is written.
+// the plan itself. It reads only account fields, and nothing is written.
 func PlanTier(home, configDir string) string {
-	b, err := os.ReadFile(accountFile(home, configDir))
-	if err != nil {
-		return ""
-	}
-	var f struct {
-		OAuthAccount struct {
-			SeatTier                  string `json:"seatTier"`
-			OrganizationType          string `json:"organizationType"`
-			OrganizationRateLimitTier string `json:"organizationRateLimitTier"`
-		} `json:"oauthAccount"`
-	}
-	if json.Unmarshal(b, &f) != nil {
-		return ""
-	}
-	a := f.OAuthAccount
+	a := account(home, configDir)
 	if a.SeatTier != "" {
 		return strings.ReplaceAll(a.SeatTier, "_", " ")
 	}
@@ -46,4 +52,15 @@ func PlanTier(home, configDir string) string {
 		return ""
 	}
 	return strings.TrimPrefix(a.OrganizationType, "claude_") + " " + m[1] + "×"
+}
+
+// syncedFolder is the folder under skills/synced that holds the signed-in account's claude.ai
+// skills, named <organization>_<account>. Folders of accounts signed in earlier stay on disk, but
+// Claude Code lists only this one. "" when the account is unknown.
+func syncedFolder(home, configDir string) string {
+	a := account(home, configDir)
+	if a.OrganizationUUID == "" || a.AccountUUID == "" {
+		return ""
+	}
+	return a.OrganizationUUID + "_" + a.AccountUUID
 }

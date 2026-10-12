@@ -179,11 +179,19 @@ func (c *collector) memory(dir string) {
 // extensions adds skills, agents and commands under base: their name and description are listed
 // in every session, the body is loaded when used.
 func (c *collector) extensions(base, scope string) {
+	synced := filepath.Join(base, "skills", "synced")
+	current := ""
+	if scope == "user" {
+		current = syncedFolder(c.home, base)
+	}
 	skills := findFiles(filepath.Join(base, "skills"), func(p string) bool { return filepath.Base(p) == "SKILL.md" })
 	for _, path := range skills {
 		skillScope := scope
-		// Skills enabled on claude.ai are synced into <config>/skills/synced/<id>/<name>/.
-		if strings.Contains(path, string(filepath.Separator)+filepath.Join("skills", "synced")+string(filepath.Separator)) {
+		// Skills enabled on claude.ai are synced into <config>/skills/synced/<org>_<account>/<name>/.
+		if rel, err := filepath.Rel(synced, path); err == nil && !strings.HasPrefix(rel, "..") {
+			if folder := strings.SplitN(rel, string(filepath.Separator), 2)[0]; current != "" && folder != current {
+				continue // left by an account signed in earlier
+			}
 			skillScope = "claude.ai"
 		}
 		c.extension(path, skillScope, "skill", filepath.Base(filepath.Dir(path)))

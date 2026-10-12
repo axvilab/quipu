@@ -33,3 +33,32 @@ func TestPlanTier(t *testing.T) {
 		t.Errorf("no file = %q", got)
 	}
 }
+
+func TestSyncedSkillsOfTheCurrentAccount(t *testing.T) {
+	home := t.TempDir()
+	cfg := filepath.Join(home, ".claude")
+	skill := func(folder, name string) {
+		dir := filepath.Join(cfg, "skills", "synced", folder, name)
+		os.MkdirAll(dir, 0o755)
+		os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("---\nname: "+name+"\ndescription: d\n---\nBody.\n"), 0o644)
+	}
+	skill("org1_acc1", "pdf")
+	skill("org2_acc2", "docx") // left by an account signed in earlier
+	names := func() []string {
+		var out []string
+		for _, it := range Instructions(home, cfg, filepath.Join(home, "src")) {
+			if it.Scope == "claude.ai" && it.Load == Always {
+				out = append(out, it.Name)
+			}
+		}
+		return out
+	}
+	// Without account metadata every folder counts, as before.
+	if got := names(); len(got) != 2 {
+		t.Errorf("unknown account: %v", got)
+	}
+	os.WriteFile(filepath.Join(home, ".claude.json"), []byte(`{"oauthAccount":{"organizationUuid":"org1","accountUuid":"acc1"}}`), 0o600)
+	if got := names(); len(got) != 1 || got[0] != "pdf" {
+		t.Errorf("current account: %v", got)
+	}
+}

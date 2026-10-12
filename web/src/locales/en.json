@@ -685,5 +685,6 @@
   "result.fixed-all": {
     "one": "Fixed {count} finding",
     "other": "Fixed {count} findings"
-  }
+  },
+  "action.showAll": "Show all {count}"
 }
