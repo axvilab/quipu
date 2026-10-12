@@ -156,6 +156,13 @@ func (s *Server) apiRoutes(mux *http.ServeMux) {
 			writeJSON(w, v, err)
 		}
 	})
+	mux.HandleFunc("POST /api/plugins/install", func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ Profile, ID string }
+		if readJSON(w, r, &in) {
+			v, err := s.InstallPlugin(r.Context(), in.Profile, in.ID)
+			writeJSON(w, v, err)
+		}
+	})
 	mux.HandleFunc("POST /api/plugins/uninstall", func(w http.ResponseWriter, r *http.Request) {
 		var in struct{ Profile, ID string }
 		if readJSON(w, r, &in) {

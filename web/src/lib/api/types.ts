@@ -323,16 +323,26 @@ export interface Collection {
   first: boolean;
 }
 
-export interface PluginRow {
-  id: string;
-  name: string;
-  marketplace: string;
-  version: string;
-  profile: string;
-  state: "everywhere" | "projects" | "off";
+export interface PluginCell {
+  installed: boolean;
+  version?: string;
+  state: "everywhere" | "projects" | "off" | "";
   projects: string[];
-  tokens: number;
   uses: number;
   usedIn: string[];
   last?: string;
+  installable: boolean;
+}
+
+export interface PluginMatrix {
+  id: string;
+  name: string;
+  marketplace: string;
+  tokens: number;
+  cells: Record<string, PluginCell>;
+}
+
+export interface PluginsMatrix {
+  profiles: string[];
+  plugins: PluginMatrix[];
 }

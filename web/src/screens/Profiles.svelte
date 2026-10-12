@@ -10,6 +10,7 @@
   import Icon from "../components/Icon.svelte";
   import Loading from "../components/Loading.svelte";
   import Panel from "../components/Panel.svelte";
+  import Switch from "../components/Switch.svelte";
 
   let data = $state<Profiles | null>(null);
   let error = $state<unknown>(null);
@@ -103,10 +104,6 @@
         </span>
         <span class="hidden min-w-0 font-mono text-xs text-fleece md:block">{p.dir}</span>
         <span class="hidden text-xs text-fleece lg:block">{p.shares.length ? t("profiles.shares", { items: p.shares.join(", ") }) : ""}</span>
-        <label class="flex items-center gap-2 text-xs text-fleece" title={p.statusLine === "other" ? p.statusCommand : t("profiles.statusHint")}>
-          <input type="checkbox" class="accent-indigo" checked={p.statusLine === "quipu"} onchange={(e) => change(api.setStatusLine(p.name, e.currentTarget.checked))} />
-          {p.statusLine === "other" ? t("profiles.statusOther") : t("profiles.status")}
-        </label>
         <span class="flex gap-2">
           <button class="btn" onclick={() => ((signingIn = p.name), (email = ""))}>{p.signedIn ? t("profiles.signInAgain") : t("profiles.signIn")}</button>
           {#if p.name !== "default"}
@@ -122,6 +119,25 @@
     {/each}
   </ul>
   {#if removing}<p class="mt-2 text-xs text-fleece">{t("profiles.removeNote")}</p>{/if}
+
+  <section class="mt-10 max-w-3xl">
+    <h2 class="mb-1 text-md font-semibold">{t("statusline.title")}</h2>
+    <p class="text-sm text-fleece">{t("statusline.note")}</p>
+    <pre class="mt-3 whitespace-pre-wrap rounded-md border border-warp bg-loom px-3 py-2 font-mono text-[12px] leading-relaxed text-fleece"><span class="text-cotton">work</span> · Opus · shop ⎇ main · $0.42 · ctx <span class="text-chilca">▰▰▰▱▱▱▱▱ 34%</span> 68K/200K · 5h <span class="text-qolle">▰▰▰▱▱ 67%</span> ↻14:50 · 7d <span class="text-chilca">▰▰▱▱▱ 41%</span> ↻Tue 19:00 · cache 91% <span class="text-chilca">⏳59m</span></pre>
+    <ul class="mt-3 divide-y divide-warp border-y border-warp">
+      {#each data.profiles as p (p.name)}
+        <li class="flex items-center gap-3 py-2.5 text-sm">
+          <Switch on={p.statusLine === "quipu"} label={t("statusline.switch", { name: p.name })} onchange={(on) => change(api.setStatusLine(p.name, on))} />
+          <span class="min-w-0 flex-1">
+            <span class="font-medium">{p.name}</span>
+            <span class="block truncate text-xs text-fleece" title={p.statusCommand ?? ""}>
+              {p.statusLine === "quipu" ? t("statusline.on") : p.statusLine === "other" ? t("statusline.other", { command: p.statusCommand ?? "" }) : t("statusline.none")}
+            </span>
+          </span>
+        </li>
+      {/each}
+    </ul>
+  </section>
 
   <section class="mt-10 max-w-3xl">
     <h2 class="mb-1 text-md font-semibold">{t("rules.title")}</h2>

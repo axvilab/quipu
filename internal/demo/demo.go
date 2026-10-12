@@ -60,8 +60,10 @@ func Create(home string, now time.Time) error {
 		files[filepath.Join(dir, "skills", name, "SKILL.md")] = fmt.Sprintf(
 			"---\nname: %s\ndescription: Use this skill whenever the user asks to work with %s, from the first step to a finished result, including checks and fixes along the way.\n---\nInstructions.\n",
 			name, name)
-		installed[name+"@demo-market"] = []map[string]string{{"installPath": dir}}
+		installed[name+"@demo-market"] = []map[string]string{{"installPath": dir, "version": "1.0.0"}}
 	}
+	// Where the marketplace comes from, so the Plugins page can offer it to another account.
+	files[filepath.Join(cfg, "plugins", "known_marketplaces.json")] = `{"demo-market":{"source":{"source":"github","repo":"example/demo-market"}}}`
 	b, _ := json.Marshal(map[string]any{"version": 2, "plugins": installed})
 	files[filepath.Join(cfg, "plugins", "installed_plugins.json")] = string(b)
 	for _, skill := range []string{"pptx", "docx", "xlsx", "pdf", "deep-research", "browser"} {

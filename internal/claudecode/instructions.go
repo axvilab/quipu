@@ -489,3 +489,32 @@ func PluginsEnabledIn(projectPath string) map[string]string {
 	}
 	return out
 }
+
+// MarketplaceSources maps each marketplace a profile knows to what `claude plugin marketplace
+// add` takes to add it elsewhere: "owner/repo" for GitHub, else the URL or path; "" when the
+// source is of a kind that cannot be added that way.
+func MarketplaceSources(configDir string) map[string]string {
+	var known map[string]struct {
+		Source struct {
+			Source string `json:"source"`
+			Repo   string `json:"repo"`
+			URL    string `json:"url"`
+			Path   string `json:"path"`
+		} `json:"source"`
+	}
+	readJSON(filepath.Join(configDir, "plugins", "known_marketplaces.json"), &known)
+	out := map[string]string{}
+	for name, m := range known {
+		switch m.Source.Source {
+		case "github":
+			out[name] = m.Source.Repo
+		case "url", "git":
+			out[name] = m.Source.URL
+		case "directory", "file":
+			out[name] = m.Source.Path
+		default:
+			out[name] = ""
+		}
+	}
+	return out
+}

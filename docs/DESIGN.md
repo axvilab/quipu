@@ -170,9 +170,12 @@ does not matter, only a version that has these commands.
   MCP run with the user's rights. Only trusted marketplaces are suggested by default.
 - Advisor rule: a plugin enabled for the user but used in one project should move to project scope.
 
-A Plugins page lists every plugin installed in every profile (`installed_plugins.json`): whether
-it is on for every project, only in some, or off; what it lists in each session; its use in the
-last 30 days under that profile. Turning one on or off edits the profile's `enabledPlugins`
+A Plugins page puts every plugin installed in any profile (`installed_plugins.json`) against every
+profile: whether it is on for every project, only in some, off, or not installed; what it lists in
+each session; its use in the last 30 days under that profile. A plugin missing from a profile can
+be installed there, one by one or all at once: `claude plugin marketplace add` with the source
+another profile knows the marketplace by (`known_marketplaces.json`), then `claude plugin install`,
+both under that profile's config dir. Turning one on or off edits the profile's `enabledPlugins`
 through the journal; removing runs `claude plugin uninstall` under that profile's config dir, with
 a confirmation, since quipu cannot undo it.
 

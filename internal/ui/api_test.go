@@ -534,20 +534,31 @@ func TestPluginsAPI(t *testing.T) {
 	h := s.Handler()
 	cookie := &http.Cookie{Name: cookieName, Value: s.token}
 	cfg := filepath.Join(s.home, ".claude")
+	work := filepath.Join(s.home, ".claude-work")
+	os.MkdirAll(filepath.Join(work, "projects"), 0o755)
 	plugDir := filepath.Join(cfg, "plugins", "cache", "market", "dash", "1.0.0")
 	os.MkdirAll(filepath.Join(plugDir, "skills", "check-usage"), 0o755)
 	os.WriteFile(filepath.Join(plugDir, "skills", "check-usage", "SKILL.md"),
 		[]byte("---\nname: check-usage\ndescription: Check usage limits of every AI CLI and recommend one.\n---\nRun it.\n"), 0o644)
 	os.WriteFile(filepath.Join(cfg, "plugins", "installed_plugins.json"),
 		[]byte(`{"version":2,"plugins":{"dash@market":[{"scope":"user","version":"1.0.0","installPath":"`+plugDir+`"}]}}`), 0o644)
+	os.WriteFile(filepath.Join(cfg, "plugins", "known_marketplaces.json"),
+		[]byte(`{"market":{"source":{"source":"github","repo":"someone/market"}}}`), 0o644)
 	os.WriteFile(filepath.Join(cfg, "settings.json"), []byte(`{"enabledPlugins":{"dash@market":true}}`), 0o644)
 
-	var rows []PluginRow
-	if code := getJSON(t, h, "/api/plugins", cookie, &rows); code != 200 || len(rows) != 1 {
-		t.Fatalf("plugins %d = %+v", code, rows)
+	var m PluginsMatrix
+	if code := getJSON(t, h, "/api/plugins", cookie, &m); code != 200 || len(m.Plugins) != 1 || len(m.Profiles) != 2 {
+		t.Fatalf("plugins %d = %+v", code, m)
 	}
-	if r := rows[0]; r.Name != "dash" || r.Profile != "default" || r.State != "everywhere" || r.Tokens == 0 || r.Uses != 0 {
-		t.Errorf("row = %+v", r)
+	row := m.Plugins[0]
+	if row.Name != "dash" || row.Tokens == 0 {
+		t.Errorf("row = %+v", row)
+	}
+	if c := row.Cells["default"]; !c.Installed || c.State != "everywhere" || c.Version != "1.0.0" {
+		t.Errorf("default cell = %+v", c)
+	}
+	if c := row.Cells["work"]; c.Installed || !c.Installable {
+		t.Errorf("work cell = %+v", c)
 	}
 
 	rec := postJSON(h, "/api/plugins/enable", `{"profile":"default","id":"dash@market","on":false}`, cookie)
@@ -556,26 +567,30 @@ func TestPluginsAPI(t *testing.T) {
 	if res.Code != "plugin-off" {
 		t.Fatalf("off: %s", rec.Body.String())
 	}
-	getJSON(t, h, "/api/plugins", cookie, &rows)
-	if rows[0].State != "off" {
-		t.Errorf("after off: %+v", rows[0])
+	getJSON(t, h, "/api/plugins", cookie, &m)
+	if m.Plugins[0].Cells["default"].State != "off" {
+		t.Errorf("after off: %+v", m.Plugins[0].Cells["default"])
 	}
 	postJSON(h, "/api/advice/undo", `{"id":"`+res.Params["change"]+`"}`, cookie)
-	getJSON(t, h, "/api/plugins", cookie, &rows)
-	if rows[0].State != "everywhere" {
-		t.Errorf("after undo: %+v", rows[0])
+	getJSON(t, h, "/api/plugins", cookie, &m)
+	if m.Plugins[0].Cells["default"].State != "everywhere" {
+		t.Errorf("after undo: %+v", m.Plugins[0].Cells["default"])
 	}
 
-	// Uninstall runs Claude Code's own command under the profile's config dir.
+	// Install into work and uninstall run Claude Code's own commands under that profile.
 	log := filepath.Join(s.home, "claude.log")
 	s.ClaudeBinary = filepath.Join(s.home, "bin", "claude")
 	os.MkdirAll(filepath.Dir(s.ClaudeBinary), 0o755)
-	os.WriteFile(s.ClaudeBinary, []byte("#!/bin/sh\necho \"$CLAUDE_CONFIG_DIR $*\" > "+log+"\n"), 0o755)
+	os.WriteFile(s.ClaudeBinary, []byte("#!/bin/sh\necho \"$CLAUDE_CONFIG_DIR $*\" >> "+log+"\n"), 0o755)
+	if rec := postJSON(h, "/api/plugins/install", `{"profile":"work","id":"dash@market"}`, cookie); !strings.Contains(rec.Body.String(), "plugin-installed") {
+		t.Fatalf("install: %s", rec.Body.String())
+	}
+	b, _ := os.ReadFile(log)
+	if want := work + " plugin marketplace add someone/market\n" + work + " plugin install dash@market\n"; string(b) != want {
+		t.Errorf("claude ran:\n%s\nwant:\n%s", b, want)
+	}
 	if rec := postJSON(h, "/api/plugins/uninstall", `{"profile":"default","id":"dash@market"}`, cookie); !strings.Contains(rec.Body.String(), "plugin-uninstalled") {
 		t.Fatalf("uninstall: %s", rec.Body.String())
-	}
-	if b, _ := os.ReadFile(log); !strings.Contains(string(b), "plugin uninstall dash@market") {
-		t.Errorf("claude ran with %q", b)
 	}
 	if rec := postJSON(h, "/api/plugins/uninstall", `{"profile":"default","id":"nope@x"}`, cookie); !strings.Contains(rec.Body.String(), "plugin-unknown") {
 		t.Errorf("unknown plugin: %s", rec.Body.String())
