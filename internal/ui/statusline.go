@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/axvilab/quipu/internal/claudecode"
@@ -55,11 +56,25 @@ func (s *Service) SetStatusLine(name string, on bool) (Result, error) {
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return Result{}, problem("read-failed", "path", s.shortPath(path), "error", err.Error())
 	}
+	// The status line quipu replaced is kept aside and put back when quipu's is turned off.
+	saved := filepath.Join(s.dataDir, "statusline", name+".json")
+	state, _ := statusLineOf(p.Dir)
 	var value json.RawMessage // nil removes the key
-	if on {
+	switch {
+	case on:
 		value = claudecode.StatusLineCommand(shellQuote(s.SelfBinary) + " statusline")
-	} else if state, _ := statusLineOf(p.Dir); state != "quipu" {
+		if state == "other" {
+			previous, _, _ := claudecode.SettingsValue(current, "statusLine")
+			if err := os.MkdirAll(filepath.Dir(saved), 0o700); err == nil {
+				os.WriteFile(saved, previous, 0o600)
+			}
+		}
+	case state != "quipu":
 		return ok("unchanged"), nil // someone else's status line is not ours to remove
+	default:
+		if previous, err := os.ReadFile(saved); err == nil && json.Valid(previous) {
+			value = previous
+		}
 	}
 	next, err := claudecode.SetSettingsValue(current, "statusLine", value)
 	if err != nil {
@@ -72,14 +87,17 @@ func (s *Service) SetStatusLine(name string, on bool) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	state := "off"
+	label := "off"
 	if on {
-		state = "on"
+		label = "on"
 	}
-	ch, err := s.journal.Write(path, next, fsx.Meta{Rule: "statusline", Title: "quipu status line " + state + " for " + name,
-		Params: map[string]string{"state": state, "name": name}, Batch: batch})
+	ch, err := s.journal.Write(path, next, fsx.Meta{Rule: "statusline", Title: "quipu status line " + label + " for " + name,
+		Params: map[string]string{"state": label, "name": name}, Batch: batch})
 	if err != nil {
 		return Result{}, problem("write-failed", "path", s.shortPath(path), "error", err.Error())
 	}
-	return ok("statusline-"+state, "name", name, "change", ch.ID), nil
+	if !on {
+		os.Remove(saved)
+	}
+	return ok("statusline-"+label, "name", name, "change", ch.ID), nil
 }

@@ -12,16 +12,40 @@ type StatusInput struct {
 	Model struct {
 		DisplayName string `json:"display_name"`
 	} `json:"model"`
+	Workspace struct {
+		CurrentDir string `json:"current_dir"`
+	} `json:"workspace"`
+	Cost struct {
+		TotalCostUSD *float64 `json:"total_cost_usd"`
+	} `json:"cost"`
 	ContextWindow struct {
-		UsedPercentage *float64 `json:"used_percentage"`
+		UsedPercentage    *float64 `json:"used_percentage"`
+		ContextWindowSize int64    `json:"context_window_size"`
+		CurrentUsage      *struct {
+			InputTokens              int64 `json:"input_tokens"`
+			CacheCreationInputTokens int64 `json:"cache_creation_input_tokens"`
+			CacheReadInputTokens     int64 `json:"cache_read_input_tokens"`
+		} `json:"current_usage"`
 	} `json:"context_window"`
 	RateLimits struct {
 		FiveHour *RateWindow `json:"five_hour"`
 		SevenDay *RateWindow `json:"seven_day"`
 	} `json:"rate_limits"`
 	PromptCache *struct {
-		HitRatio *float64 `json:"hit_ratio"`
+		Warm      bool     `json:"warm"`
+		ExpiresAt int64    `json:"expires_at"` // Unix seconds the warm cache lasts until
+		HitRatio  *float64 `json:"hit_ratio"`
 	} `json:"prompt_cache"`
+}
+
+// ContextTokens is what the context window holds now: the input of the last request, as Claude
+// Code counts its used_percentage. Zero before the first request.
+func (s StatusInput) ContextTokens() int64 {
+	u := s.ContextWindow.CurrentUsage
+	if u == nil {
+		return 0
+	}
+	return u.InputTokens + u.CacheCreationInputTokens + u.CacheReadInputTokens
 }
 
 // RateWindow is one usage limit window.

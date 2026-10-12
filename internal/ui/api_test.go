@@ -477,6 +477,12 @@ func TestStatusLineAPI(t *testing.T) {
 	if rec := postJSON(h, "/api/profiles/work/statusline", `{"on":false}`, cookie); !strings.Contains(rec.Body.String(), "unchanged") {
 		t.Errorf("off over another status line: %s", rec.Body.String())
 	}
+	// On, then off: the status line that was there before comes back.
+	postJSON(h, "/api/profiles/work/statusline", `{"on":true}`, cookie)
+	postJSON(h, "/api/profiles/work/statusline", `{"on":false}`, cookie)
+	if b, _ := os.ReadFile(work); !strings.Contains(string(b), "dash.js") || strings.Contains(string(b), "quipu statusline") {
+		t.Errorf("off did not bring back the old status line: %s", b)
+	}
 }
 
 func statusOf(p Profiles, name string) string {
