@@ -26,7 +26,7 @@ func TestDemoTriggersEveryRule(t *testing.T) {
 	}
 	// browser is used in shop-api (its sessions call the plugin's MCP tool), slides nowhere.
 	in := advise.Input{Home: home, ConfigDir: cfg, Project: shop, Items: projects[shop], Projects: projects,
-		PluginUse: map[string][]string{"browser": {shop}}, Sessions: 1}
+		PluginUse: map[string][]string{"browser": {shop}}, SkillUse: map[string][]string{"release": {shop}}, Sessions: 1}
 	fired := map[string]bool{}
 	for _, f := range advise.Run(in, nil) {
 		fired[f.Rule] = true

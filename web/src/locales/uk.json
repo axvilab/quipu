@@ -738,5 +738,11 @@
     "many": "Виправлено {count} порад",
     "other": "Виправлено {count} поради"
   },
-  "action.showAll": "Показати всі {count}"
+  "action.showAll": "Показати всі {count}",
+  "rule.unused-skill.title": "Скіл {name} не використовувався 30 днів",
+  "rule.unused-skill.detail.user": "Його назва й опис перелічуються в кожній сесії кожного проєкту, але ні Claude, ні ви його не викликали. Виправлення ховає його від Claude через skillOverrides у ваших налаштуваннях; /{name} і далі працює.",
+  "rule.unused-skill.detail.project": "Його назва й опис перелічуються в кожній сесії {project}, але ні Claude, ні ви його там не викликали. Виправлення ховає його від Claude через skillOverrides у settings.local.json проєкту, лише для вас; /{name} і далі працює.",
+  "rule.unused-skill.row": "{name}",
+  "advice.group.unused-skill": "Скіли, якими ви не користуєтеся",
+  "advice.group.unused-skill.note": "Перелічуються в кожній сесії, але не викликалися 30 днів. Сховані від Claude, вони й далі працюють як /назва."
 }

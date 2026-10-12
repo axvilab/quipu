@@ -160,6 +160,7 @@ func runDaemon(ctx context.Context, args []string) error {
 		}
 		attachProfiles(srv, home)
 		srv.Restart = func() { restart.Store(true); stop() }
+		srv.UpdateBase = os.Getenv("QUIPU_UPDATE_BASE") // a mirror, or a fake release in tests
 		go func() {
 			err := srv.Listen(ctx, *uiPort, func(url string) {
 				if err := ui.WriteRuntime(dir, url); err != nil {

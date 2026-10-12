@@ -46,6 +46,9 @@ func Create(home string, now time.Time) error {
 
 		filepath.Join(blog, "CLAUDE.md"): "# blog\n\nStatic site. Build with `make site`.\n",
 
+		// A skill of your own that no session has used.
+		filepath.Join(cfg, "skills", "changelog", "SKILL.md"): "---\nname: changelog\ndescription: Write a changelog entry from the commits since the last tag\n---\n1. List the commits.\n2. Group them.\n",
+
 		filepath.Join(cfg, "projects", claudecode.ProjectDirName(shop), "memory", "MEMORY.md"): strings.Repeat("- [Note](note.md): something learned about the shop\n", 190) +
 			"- [Commits](commits.md): how commit messages are written here\n",
 		// A memory note that only repeats a rule CLAUDE.md already has.
@@ -98,7 +101,7 @@ func Create(home string, now time.Time) error {
 		for i := 0; i < p.sessions; i++ {
 			started := now.AddDate(0, 0, -(i*4 + 1)).Add(-time.Duration(rng.IntN(8)) * time.Hour)
 			id := fmt.Sprintf("demo-%s-%d", filepath.Base(p.path), i)
-			tool := "" // shop-api drives the browser plugin now and then
+			tool := "" // shop-api drives the browser plugin and runs its release skill now and then
 			if p.path == shop {
 				tool = "mcp__plugin_browser_browser__click"
 			}
@@ -167,6 +170,9 @@ func writeSession(path, session, cwd string, started time.Time, startTokens int6
 		}
 		if tool != "" && i%5 == 4 {
 			msg["content"] = []map[string]any{{"type": "tool_use", "name": tool, "input": map[string]any{}}}
+		}
+		if tool != "" && i%7 == 6 { // the same project also runs its release skill
+			msg["content"] = []map[string]any{{"type": "tool_use", "name": "Skill", "input": map[string]any{"skill": "release"}}}
 		}
 		line := map[string]any{
 			"type": "assistant", "sessionId": session, "timestamp": ts.UTC().Format(time.RFC3339),

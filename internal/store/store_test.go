@@ -133,7 +133,7 @@ func TestSchemaUpgrade(t *testing.T) {
 	src := Source{Path: "/t/a.jsonl", Profile: "default", ProjectDir: "-p", SessionID: "s-1", Kind: claudecode.KindSession}
 
 	// A file written by schema 1: no plugins column, old name.
-	old := filepath.Join(dir, "responses", oldFileName(src.Path))
+	old := filepath.Join(dir, "responses", olderFileNames(src.Path)[0])
 	if _, err := s.db.ExecContext(ctx, "COPY (SELECT 'default' AS profile, '-p' AS project_dir, TIMESTAMP '2026-10-01 10:00:00' AS ts, 5::BIGINT AS cache_read_tokens) TO "+quote(old)+" (FORMAT parquet)"); err != nil {
 		t.Fatal(err)
 	}
@@ -152,21 +152,30 @@ func TestSchemaUpgrade(t *testing.T) {
 		t.Errorf("rows %d, with plugins %d", n, withPlugins)
 	}
 
+	// And one by schema 2, which has plugins but no skills.
+	v2 := filepath.Join(dir, "responses", olderFileNames(src.Path)[1])
+	if _, err := s.db.ExecContext(ctx, "COPY (SELECT 'default' AS profile, '-p' AS project_dir, TIMESTAMP '2026-10-01 10:00:00' AS ts, 5::BIGINT AS cache_read_tokens, 'x' AS plugins) TO "+quote(v2)+" (FORMAT parquet)"); err != nil {
+		t.Fatal(err)
+	}
+
 	r := response("m1", 5, 0, nil)
 	r.Plugins = []string{"frontend-design", "playwright"}
+	r.Skills = []string{"ship"}
 	if err := s.WriteResponses(ctx, src, []claudecode.Response{r}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(old); !os.IsNotExist(err) {
-		t.Errorf("schema 1 file kept next to the new one: %v", err)
+	for _, f := range []string{old, v2} {
+		if _, err := os.Stat(f); !os.IsNotExist(err) {
+			t.Errorf("older file %s kept next to the new one: %v", filepath.Base(f), err)
+		}
 	}
-	rows, _ = s.Query(ctx, "SELECT plugins FROM responses")
-	var plugins string
+	rows, _ = s.Query(ctx, "SELECT count(*), any_value(plugins), any_value(skills) FROM responses")
+	var plugins, skills string
 	rows.Next()
-	rows.Scan(&plugins)
+	rows.Scan(&n, &plugins, &skills)
 	rows.Close()
-	if plugins != "frontend-design,playwright" {
-		t.Errorf("plugins = %q", plugins)
+	if n != 1 || plugins != "frontend-design,playwright" || skills != "ship" {
+		t.Errorf("rows %d, plugins %q, skills %q", n, plugins, skills)
 	}
 }
 

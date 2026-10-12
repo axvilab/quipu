@@ -53,6 +53,10 @@ type Response struct {
 	// Plugins are the plugins this response used (an MCP tool, a skill or a subagent of theirs),
 	// or that the user's slash command right before it belonged to. Sorted, without repeats.
 	Plugins []string
+	// Skills are the skills this response invoked, and the slash command the user typed right
+	// before it ("/ship" gives "ship"; built-in commands come too, the advisor matches known
+	// skills). Plugin and claude.ai skills keep their prefix: "frontend-design:frontend-design".
+	Skills []string
 }
 
 // ReadStats describes what ReadResponses saw besides the responses it returned.
@@ -112,8 +116,16 @@ func pluginOf(b block) string {
 	return ""
 }
 
-// commandPlugin returns the plugin of a slash command the user typed ("/<plugin>:<name>").
-func commandPlugin(content json.RawMessage) string {
+// skillOf returns the skill a tool call invoked, or "".
+func skillOf(b block) string {
+	if b.Type != "tool_use" || b.Name != "Skill" {
+		return ""
+	}
+	return b.Input.Skill
+}
+
+// command returns the slash command the user typed ("<command-name>/<name>"), without the slash.
+func command(content json.RawMessage) string {
 	var text string
 	if json.Unmarshal(content, &text) != nil {
 		return ""
@@ -123,7 +135,12 @@ func commandPlugin(content json.RawMessage) string {
 		return ""
 	}
 	name, _, _ := strings.Cut(after, "<")
-	if plugin, _, ok := strings.Cut(name, ":"); ok {
+	return strings.TrimSpace(name)
+}
+
+// commandPlugin returns the plugin of a slash command the user typed ("/<plugin>:<name>").
+func commandPlugin(content json.RawMessage) string {
+	if plugin, _, ok := strings.Cut(command(content), ":"); ok {
 		return plugin
 	}
 	return ""
@@ -152,6 +169,7 @@ func ReadResponses(r io.Reader) ([]Response, ReadStats, error) {
 		stats   ReadStats
 		index   = map[string]int{} // message ID → position in out
 		pending []string           // plugins of a slash command, counted with the next response
+		typed   []string           // the slash command itself, as a skill used by the next response
 	)
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 0, 1<<20), maxLineSize)
@@ -168,6 +186,7 @@ func ReadResponses(r io.Reader) ([]Response, ReadStats, error) {
 		}
 		if l.Type == "user" && l.Message != nil {
 			pending = addPlugin(pending, commandPlugin(l.Message.Content))
+			typed = addPlugin(typed, command(l.Message.Content))
 			continue
 		}
 		if l.Type != "assistant" || l.Message == nil || l.Message.ID == "" {
@@ -184,6 +203,7 @@ func ReadResponses(r io.Reader) ([]Response, ReadStats, error) {
 			stats.Repeated++
 			for _, b := range blocks {
 				out[i].Plugins = addPlugin(out[i].Plugins, pluginOf(b))
+				out[i].Skills = addPlugin(out[i].Skills, skillOf(b))
 			}
 			continue
 		}
@@ -208,9 +228,11 @@ func ReadResponses(r io.Reader) ([]Response, ReadStats, error) {
 		for _, p := range pending {
 			resp.Plugins = addPlugin(resp.Plugins, p)
 		}
-		pending = nil
+		resp.Skills = typed
+		pending, typed = nil, nil
 		for _, b := range blocks {
 			resp.Plugins = addPlugin(resp.Plugins, pluginOf(b))
+			resp.Skills = addPlugin(resp.Skills, skillOf(b))
 		}
 		out = append(out, resp)
 	}

@@ -56,11 +56,12 @@ var columns = []struct{ name, typ string }{
 	{"cache_miss_type", "VARCHAR"},
 	{"cache_miss_tokens", "BIGINT"},
 	{"plugins", "VARCHAR"}, // comma-separated; added in schema 2
+	{"skills", "VARCHAR"},  // comma-separated; added in schema 3
 }
 
 // schema is the version of the file layout above. Files of older versions are rewritten when
 // their transcript still exists, and read as they are (missing columns are NULL) when it is gone.
-const schema = 2
+const schema = 3
 
 // Store is a directory of Parquet files plus an in-memory DuckDB to query them.
 type Store struct {
@@ -134,7 +135,10 @@ func (s *Store) WriteResponses(ctx context.Context, src Source, rs []claudecode.
 	if err := os.Rename(tmp, final); err != nil {
 		return err
 	}
-	os.Remove(filepath.Join(s.dir, oldFileName(src.Path))) // the same transcript under schema 1
+	// The same transcript under an older schema would be counted twice.
+	for _, old := range olderFileNames(src.Path) {
+		os.Remove(filepath.Join(s.dir, old))
+	}
 	return nil
 }
 
@@ -164,7 +168,7 @@ func insertRows(ctx context.Context, conn *sql.Conn, src Source, rs []claudecode
 			r.Model, r.StopReason, r.Sidechain,
 			u.InputTokens, u.CacheReadTokens, u.CacheCreationTokens,
 			u.CacheCreation.Ephemeral5m, u.CacheCreation.Ephemeral1h, u.OutputTokens,
-			missType, missTokens, strings.Join(r.Plugins, ","),
+			missType, missTokens, strings.Join(r.Plugins, ","), strings.Join(r.Skills, ","),
 		)
 		if err != nil {
 			return fmt.Errorf("insert response %s: %w", r.MessageID, err)
@@ -228,10 +232,16 @@ func fileName(transcriptPath string) string {
 	return fmt.Sprintf("%s.v%d.parquet", hex.EncodeToString(sum[:12]), schema)
 }
 
-// oldFileName is the name a transcript's file had under schema 1.
-func oldFileName(transcriptPath string) string {
+// olderFileNames are the names a transcript's file had under earlier schemas: no version suffix
+// under schema 1, .v<n> after it.
+func olderFileNames(transcriptPath string) []string {
 	sum := sha256.Sum256([]byte(transcriptPath))
-	return hex.EncodeToString(sum[:12]) + ".parquet"
+	base := hex.EncodeToString(sum[:12])
+	names := []string{base + ".parquet"}
+	for v := 2; v < schema; v++ {
+		names = append(names, fmt.Sprintf("%s.v%d.parquet", base, v))
+	}
+	return names
 }
 
 // quote makes a SQL string literal.

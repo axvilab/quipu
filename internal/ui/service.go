@@ -562,11 +562,12 @@ func (s *Service) UndoChange(id string) (Result, error) {
 type adviceData struct {
 	projects  map[string][]claudecode.Item
 	pluginUse map[string][]string
+	skillUse  map[string][]string
 	sessions  int64
 }
 
 func (s *Service) adviceData(ctx context.Context) adviceData {
-	d := adviceData{projects: s.projectItems(ctx), pluginUse: map[string][]string{}}
+	d := adviceData{projects: s.projectItems(ctx)}
 	rows, _ := analytics.ByProject(ctx, s.st, analytics.Filter{Since: time.Now().AddDate(0, 0, -365)})
 	path := map[string]string{}
 	for _, r := range rows {
@@ -576,15 +577,11 @@ func (s *Service) adviceData(ctx context.Context) adviceData {
 	if t, err := analytics.Total(ctx, s.st, month); err == nil {
 		d.sessions = t.Sessions
 	}
-	uses, err := analytics.PluginUses(ctx, s.st, month)
-	if err != nil {
-		d.pluginUse = nil // no usage data: plugin rules stay quiet
-		return d
+	if uses, err := analytics.PluginUses(ctx, s.st, month); err == nil {
+		d.pluginUse = analytics.Folders(uses, path)
 	}
-	for _, u := range uses {
-		if p, ok := path[u.ProjectDir]; ok {
-			d.pluginUse[u.Plugin] = append(d.pluginUse[u.Plugin], p)
-		}
+	if uses, err := analytics.SkillUses(ctx, s.st, month); err == nil {
+		d.skillUse = analytics.Folders(uses, path)
 	}
 	return d
 }
@@ -596,7 +593,7 @@ func (s *Service) adviceInput(path string, d adviceData) advise.Input {
 		items = claudecode.Instructions(s.home, s.configDir, path)
 	}
 	return advise.Input{Home: s.home, ConfigDir: s.configDir, Project: path, Items: items, Projects: d.projects,
-		PluginUse: d.pluginUse, Sessions: d.sessions}
+		PluginUse: d.pluginUse, SkillUse: d.skillUse, Sessions: d.sessions}
 }
 
 // projectItems scans every project seen in the last year that still exists, once per request.

@@ -80,4 +80,11 @@ func TestReadResponsesPlugins(t *testing.T) {
 			t.Errorf("response %d plugins = %v, want %v", i, rs[i].Plugins, w)
 		}
 	}
+	// Skills: what Claude invoked, and the command the user typed before a response.
+	wantSkills := [][]string{{"frontend-design:frontend-design"}, {"ship:release"}, nil}
+	for i, w := range wantSkills {
+		if strings.Join(rs[i].Skills, ",") != strings.Join(w, ",") {
+			t.Errorf("response %d skills = %v, want %v", i, rs[i].Skills, w)
+		}
+	}
 }

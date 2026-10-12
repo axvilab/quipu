@@ -7,7 +7,7 @@
   import { prefs } from "../lib/prefs.svelte";
   import { link, projectPath } from "../lib/router.svelte";
   import FindingDetail from "../components/FindingDetail.svelte";
-  import FindingList from "../components/FindingList.svelte";
+  import FindingGroups from "../components/FindingGroups.svelte";
   import Header from "../components/Header.svelte";
   import Icon from "../components/Icon.svelte";
   import Khipu from "../components/Khipu.svelte";
@@ -71,7 +71,7 @@
       <a href="/advice" use:link class="text-sm text-indigo hover:underline">{t("overview.allAdvice")}</a>
     </div>
     {#if data.attention.length}
-      <FindingList findings={data.attention.slice(0, 6)} onopen={(f) => (open = f)} />
+      <FindingGroups findings={data.attention} limit={5} onopen={(f) => (open = f)} onapplied={load} />
     {:else}
       <p class="rounded-md border border-warp px-4 py-4 text-sm text-fleece">{t("overview.allGood")}</p>
     {/if}

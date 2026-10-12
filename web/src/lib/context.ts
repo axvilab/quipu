@@ -52,6 +52,7 @@ const movesCopies = new Set(["shared-block", "copied-extension"]);
 function findingsFor(row: ContextRow, findings: Finding[]): Finding[] {
   return findings.filter((f) => {
     if (row.plugin) return (f.rule === "unused-plugin" || f.rule === "plugin-one-project") && f.params.name === row.plugin.name;
+    if (f.rule === "unused-skill") return row.kind === "skill" && row.label === f.params.name;
     if (f.rule === "large-import") return row.kind === "import" && (row.label === f.params.ref || row.path.endsWith("/" + f.params.ref));
     if (movesCopies.has(f.rule)) return deletedPaths(f).has(row.path);
     return f.path === row.path;

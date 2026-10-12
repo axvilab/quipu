@@ -10,9 +10,10 @@
 
   // Findings grouped by rule: what is wrong is said once in the group's title, the rows below
   // only name where. Small groups start open; big ones show their size and stay folded.
-  let { findings, onopen, onapplied }: { findings: Finding[]; onopen: (f: Finding) => void; onapplied: () => void } = $props();
+  // limit keeps the biggest groups only (the overview shows a few, Advice all of them).
+  let { findings, onopen, onapplied, limit = Infinity }: { findings: Finding[]; onopen: (f: Finding) => void; onapplied: () => void; limit?: number } = $props();
 
-  const groups = $derived(groupFindings(findings));
+  const groups = $derived(groupFindings(findings).slice(0, limit));
   let toggled = $state<Record<string, boolean>>({});
   let fixing = $state<{ rule: string; done: number; count: number } | null>(null);
 

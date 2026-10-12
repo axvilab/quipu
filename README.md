@@ -43,6 +43,7 @@ project and per day.
 | Memory repeating what `CLAUDE.md` or rules already say | remove it from memory, or delete the note |
 | The same `CLAUDE.md` block, skill, rule or agent copied into several projects | keep one, in your own settings |
 | A plugin unused for 30 days, or enabled everywhere but used in one project | turn it off, or enable it only there |
+| A skill of yours listed in every session but not invoked for 30 days | hide it from Claude; it still works as `/name` |
 
 Findings are grouped by kind, with the tokens all of them would save on top. Each fix is shown as
 a diff over every file it touches. Apply writes them all or none; every change is journaled and

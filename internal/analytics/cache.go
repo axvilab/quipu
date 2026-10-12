@@ -217,13 +217,24 @@ type PluginUse struct {
 
 // PluginUses reports, per project, the plugins its responses used in the filter's window.
 func PluginUses(ctx context.Context, st *store.Store, f Filter) ([]PluginUse, error) {
+	return uses(ctx, st, f, "plugins")
+}
+
+// SkillUses reports, per project, the skills its responses invoked or the user typed as /name in
+// the filter's window; Plugin holds the skill's name.
+func SkillUses(ctx context.Context, st *store.Store, f Filter) ([]PluginUse, error) {
+	return uses(ctx, st, f, "skills")
+}
+
+// uses splits a comma-separated column of responses into one row per project and value.
+func uses(ctx context.Context, st *store.Store, f Filter, column string) ([]PluginUse, error) {
 	where, args := f.where()
 	rows, err := st.Query(ctx, `
-		SELECT project_dir, arg_min(cwd, ts), plugins, count(*), max(ts)
-		FROM responses WHERE `+where+` AND plugins IS NOT NULL AND plugins <> ''
-		GROUP BY project_dir, plugins`, args...)
+		SELECT project_dir, arg_min(cwd, ts), `+column+`, count(*), max(ts)
+		FROM responses WHERE `+where+` AND `+column+` IS NOT NULL AND `+column+` <> ''
+		GROUP BY project_dir, `+column, args...)
 	if err != nil {
-		return nil, fmt.Errorf("query plugin use: %w", err)
+		return nil, fmt.Errorf("query %s use: %w", column, err)
 	}
 	defer rows.Close()
 	type key struct{ project, plugin string }
@@ -255,4 +266,16 @@ func PluginUses(ctx context.Context, st *store.Store, f Filter) ([]PluginUse, er
 		out = append(out, *merged[k])
 	}
 	return out, rows.Err()
+}
+
+// Folders maps each plugin or skill to the folders of the projects that used it, given each
+// project directory's folder; projects without a known folder are left out.
+func Folders(uses []PluginUse, folder map[string]string) map[string][]string {
+	out := map[string][]string{}
+	for _, u := range uses {
+		if p, ok := folder[u.ProjectDir]; ok {
+			out[u.Plugin] = append(out[u.Plugin], p)
+		}
+	}
+	return out
 }

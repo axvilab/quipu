@@ -58,7 +58,7 @@ func runAdvise(ctx context.Context, args []string) error {
 	}
 
 	in := advise.Input{Home: home, ConfigDir: configDir, Project: project, Items: claudecode.Instructions(home, configDir, project)}
-	in.Projects, in.PluginUse, in.Sessions = knownProjects(ctx, home, configDir)
+	in.Projects, in.PluginUse, in.SkillUse, in.Sessions = knownProjects(ctx, home, configDir)
 	findings := advise.Run(in, disabled)
 	fmt.Printf("%s  (profile %s)\n\n", shortPath(home, project, project), *profile)
 	if len(findings) == 0 {
@@ -88,20 +88,21 @@ func runAdvise(ctx context.Context, args []string) error {
 
 // knownProjects scans every project quipu has seen in the last year (collecting new transcripts
 // first, as quipu cache does), so rules can compare the project with the others; it also reports
-// which projects used each plugin in the last 30 days, and the sessions of that window.
-func knownProjects(ctx context.Context, home, configDir string) (map[string][]claudecode.Item, map[string][]string, int64) {
-	items := map[string][]claudecode.Item{}
+// which projects used each plugin and each skill in the last 30 days, and the sessions of that
+// window.
+func knownProjects(ctx context.Context, home, configDir string) (items map[string][]claudecode.Item, pluginUse, skillUse map[string][]string, sessions int64) {
+	items = map[string][]claudecode.Item{}
 	_, _, st, err := openData()
 	if err != nil {
-		return items, nil, 0
+		return items, nil, nil, 0
 	}
 	defer st.Close()
 	if _, err := collect.Run(ctx, home, st); err != nil {
-		return items, nil, 0
+		return items, nil, nil, 0
 	}
 	rows, err := analytics.ByProject(ctx, st, analytics.Filter{Since: time.Now().AddDate(0, 0, -365)})
 	if err != nil {
-		return items, nil, 0
+		return items, nil, nil, 0
 	}
 	path := map[string]string{}
 	for _, r := range rows {
@@ -111,19 +112,14 @@ func knownProjects(ctx context.Context, home, configDir string) (map[string][]cl
 		}
 	}
 	month := analytics.Filter{Since: time.Now().AddDate(0, 0, -30)}
-	var sessions int64
 	if t, err := analytics.Total(ctx, st, month); err == nil {
 		sessions = t.Sessions
 	}
-	uses, err := analytics.PluginUses(ctx, st, month)
-	if err != nil {
-		return items, nil, sessions
+	if uses, err := analytics.PluginUses(ctx, st, month); err == nil {
+		pluginUse = analytics.Folders(uses, path)
 	}
-	pluginUse := map[string][]string{}
-	for _, u := range uses {
-		if p, ok := path[u.ProjectDir]; ok {
-			pluginUse[u.Plugin] = append(pluginUse[u.Plugin], p)
-		}
+	if uses, err := analytics.SkillUses(ctx, st, month); err == nil {
+		skillUse = analytics.Folders(uses, path)
 	}
-	return items, pluginUse, sessions
+	return items, pluginUse, skillUse, sessions
 }

@@ -686,5 +686,11 @@
     "one": "Fixed {count} finding",
     "other": "Fixed {count} findings"
   },
-  "action.showAll": "Show all {count}"
+  "action.showAll": "Show all {count}",
+  "rule.unused-skill.title": "Skill {name} was not used in 30 days",
+  "rule.unused-skill.detail.user": "Its name and description are listed in every session of every project, yet neither Claude nor you invoked it. The fix hides it from Claude with skillOverrides in your settings; /{name} keeps working.",
+  "rule.unused-skill.detail.project": "Its name and description are listed in every session of {project}, yet neither Claude nor you invoked it there. The fix hides it from Claude with skillOverrides in the project's settings.local.json, just for you; /{name} keeps working.",
+  "rule.unused-skill.row": "{name}",
+  "advice.group.unused-skill": "Skills you do not use",
+  "advice.group.unused-skill.note": "Listed in every session, not invoked in 30 days. Hidden from Claude, they still work as /name."
 }

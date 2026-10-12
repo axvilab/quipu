@@ -24,6 +24,9 @@ type Input struct {
 	// days; Sessions counts the sessions of that window. Without data (nil) plugin rules stay quiet.
 	PluginUse map[string][]string
 	Sessions  int64
+	// SkillUse holds, per skill name as Claude Code records it ("ship", "anthropic-skills:pdf"),
+	// the folders of the projects that invoked it in the last 30 days. nil keeps skill rules quiet.
+	SkillUse map[string][]string
 }
 
 // Finding is one problem and what to do about it.
@@ -62,6 +65,7 @@ var Rules = []Rule{
 	{"copied-extension", "the same skill, rule or agent is copied into several projects", copiedExtension},
 	{"unused-plugin", "a plugin was not used in any project in 30 days", unusedPlugin},
 	{"plugin-one-project", "a plugin enabled for every project is used in only one", pluginOneProject},
+	{"unused-skill", "a skill listed in every session was not used in 30 days", unusedSkill},
 }
 
 // Run applies every rule not in disabled and returns findings, biggest savings first.

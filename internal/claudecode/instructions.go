@@ -63,6 +63,7 @@ func Instructions(home, configDir, projectPath string) []Item {
 
 	c.memory(memoryDir(configDir, projectPath))
 
+	c.overrides = skillOverrides(configDir, projectPath)
 	c.extensions(configDir, "user")
 	c.extensions(filepath.Join(projectPath, ".claude"), "project")
 	for _, p := range Plugins(configDir, projectPath) {
@@ -83,9 +84,10 @@ func UserClaudeMD(configDir string) string {
 }
 
 type collector struct {
-	home  string
-	items []Item
-	seen  map[string]bool // files already added, so a file reached twice counts once
+	overrides map[string]string // skillOverrides from the settings: skill name → visibility
+	home      string
+	items     []Item
+	seen      map[string]bool // files already added, so a file reached twice counts once
 }
 
 func (c *collector) add(it Item) {
@@ -211,7 +213,21 @@ func (c *collector) extension(path, scope, kind, fallbackName string) {
 	if name == "" {
 		name = fallbackName
 	}
-	c.add(Item{Load: Always, Scope: scope, Kind: kind, Name: name, Path: path, Text: name + ": " + fm.Description})
+	listing := name + ": " + fm.Description
+	// skillOverrides hides a skill from Claude or lists its name only. It applies to the user's
+	// and the project's own skills; plugin skills ignore it, and the docs do not say it covers
+	// claude.ai skills, so those keep counting.
+	if kind == "skill" && (scope == "user" || scope == "project") {
+		switch c.overrides[name] {
+		case "user-invocable-only", "off":
+			listing = ""
+		case "name-only":
+			listing = name
+		}
+	}
+	if listing != "" {
+		c.add(Item{Load: Always, Scope: scope, Kind: kind, Name: name, Path: path, Text: listing})
+	}
 	c.add(Item{Load: OnDemand, Scope: scope, Kind: kind, Name: name, Path: path, Text: body})
 }
 
@@ -528,6 +544,29 @@ func MarketplaceSources(configDir string) map[string]string {
 			out[name] = m.Source.Path
 		default:
 			out[name] = ""
+		}
+	}
+	return out
+}
+
+// skillOverrides merges the skillOverrides entries of the user's, the project's and the local
+// settings, a later file winning for the same skill.
+func skillOverrides(configDir, projectPath string) map[string]string {
+	out := map[string]string{}
+	for _, file := range []string{UserSettings(configDir), filepath.Join(projectPath, ".claude", "settings.json"), LocalSettings(projectPath)} {
+		b, err := os.ReadFile(file)
+		if err != nil {
+			continue
+		}
+		raw, ok, _ := SettingsValue(b, "skillOverrides")
+		if !ok {
+			continue
+		}
+		var entries map[string]string
+		if json.Unmarshal(raw, &entries) == nil {
+			for name, v := range entries {
+				out[name] = v
+			}
 		}
 	}
 	return out

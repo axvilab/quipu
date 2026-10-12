@@ -34,6 +34,10 @@ jobs:
         run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
       - run: go vet ./...
       - run: go test ./...
+      - name: Self-update and restart in place (builds quipu twice)
+        run: go test ./cmd/quipu -run TestUpdateRestartsInPlace -v
+        env:
+          QUIPU_E2E: "1"
       - name: GTK and WebKit headers for the window
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libgtk-3-dev libwebkit2gtk-4.1-dev
