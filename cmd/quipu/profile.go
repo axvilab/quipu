@@ -16,6 +16,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/axvilab/quipu/internal/claudecode"
+	"github.com/axvilab/quipu/internal/fsx"
 	"github.com/axvilab/quipu/internal/profile"
 )
 
@@ -31,6 +32,8 @@ const profileUsage = `usage: quipu profile <command>
   unrule <folder>               delete the rule for <folder>
   shim on|off|status [--rc]     make plain "claude" pick the profile by folder; --rc also adds or
                                 removes the PATH line in your shell's startup file
+  memory share|unshare|status <folder>
+                                share the project's memory with the profile of its folder rule
 `
 
 func loadProfiles() (string, *profile.Config, error) {
@@ -116,6 +119,8 @@ func runProfile(ctx context.Context, args []string) error {
 		return nil
 	case "shim":
 		return runShim(home, rest)
+	case "memory":
+		return runMemory(home, c, rest)
 	case "rule":
 		if len(rest) != 2 {
 			return fmt.Errorf("usage: quipu profile rule <folder> <name>")
@@ -229,6 +234,8 @@ func runClaudeWith(args []string, explicit string) (int, error) {
 		if folder := profile.RememberFolder(cwd, home); folder != "" && askRemember(name, shortPath(home, folder, folder), in, os.Stderr) {
 			if err := rememberRule(home, folder, name); err != nil {
 				fmt.Fprintln(os.Stderr, "quipu: not remembered:", err)
+			} else {
+				offerSharedMemory(home, folder, name, in)
 			}
 		}
 	}
@@ -266,6 +273,35 @@ func askRemember(name, folder string, in *bufio.Reader, out io.Writer) bool {
 	return false
 }
 
+// offerSharedMemory asks to share the project's memory when another profile has some, so the
+// project keeps what Claude learned about it under that account.
+func offerSharedMemory(home, folder, name string, in *bufio.Reader) {
+	c, err := profile.Load(home, profilesFile(home))
+	if err != nil {
+		return
+	}
+	m := profile.ProjectMemory(c, home, folder, name)
+	if m.Shared || m.SourceFiles == 0 {
+		return
+	}
+	fmt.Fprintf(os.Stderr, "%s has memory of this project (%d files). Share it with %s? [Y/n]: ", m.Source, m.SourceFiles, name)
+	line, _ := in.ReadString('\n')
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "", "y", "yes", "т", "так", "д", "да":
+	default:
+		return
+	}
+	journal, err := openJournal(home)
+	if err == nil {
+		_, err = profile.ShareMemory(c, home, folder, name, journal)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "quipu: memory not shared:", err)
+		return
+	}
+	fmt.Fprintf(os.Stderr, "quipu: %s now uses the same memory as %s here\n", name, m.Source)
+}
+
 // rememberRule saves a folder rule. It loads the profiles again first, so a rule another terminal
 // saved meanwhile is kept.
 func rememberRule(home, folder, name string) error {
@@ -297,4 +333,61 @@ func splitName(args []string) (string, []string) {
 		}
 	}
 	return "", args
+}
+
+// runMemory shares a project's memory with the profile its folder rule names, or stops it.
+func runMemory(home string, c *profile.Config, args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("usage: quipu profile memory share|unshare|status <folder>")
+	}
+	folder, err := filepath.Abs(args[1])
+	if err != nil {
+		return err
+	}
+	r, ok := c.RuleFor(folder)
+	if !ok {
+		return fmt.Errorf("no folder rule covers %s; add one with quipu profile rule", shortPath(home, folder, folder))
+	}
+	project := r.Path
+	journal, err := openJournal(home)
+	if err != nil {
+		return err
+	}
+	switch args[0] {
+	case "status":
+		m := profile.ProjectMemory(c, home, project, r.Profile)
+		switch {
+		case m.Shared:
+			fmt.Printf("%s uses the memory of %s for %s.\n", r.Profile, m.From, shortPath(home, project, project))
+		case m.SourceFiles > 0:
+			fmt.Printf("%s has its own memory (%d files); %s has %d. Share with: quipu profile memory share %s\n",
+				r.Profile, m.Own, m.Source, m.SourceFiles, shortPath(home, project, project))
+		default:
+			fmt.Printf("%s has its own memory (%d files); no other profile has any.\n", r.Profile, m.Own)
+		}
+		return nil
+	case "share":
+		if _, err := profile.ShareMemory(c, home, project, r.Profile, journal); err != nil {
+			return err
+		}
+		fmt.Printf("%s now shares the memory of %s. Undo it under Advice, in Changes made by quipu (quipu ui).\n",
+			r.Profile, shortPath(home, project, project))
+		return nil
+	case "unshare":
+		if _, err := profile.UnshareMemory(c, home, project, r.Profile, journal); err != nil {
+			return err
+		}
+		fmt.Printf("%s has its own memory of %s again, starting from a copy.\n", r.Profile, shortPath(home, project, project))
+		return nil
+	}
+	return fmt.Errorf("usage: quipu profile memory share|unshare|status <folder>")
+}
+
+// openJournal opens quipu's change journal, so CLI edits can be undone in the UI.
+func openJournal(home string) (*fsx.Journal, error) {
+	data, err := dataDir(home)
+	if err != nil {
+		return nil, err
+	}
+	return fsx.OpenJournal(filepath.Join(data, "backups"))
 }

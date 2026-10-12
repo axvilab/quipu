@@ -175,11 +175,15 @@ type ProfileInfo struct {
 	Dir      string   `json:"dir"`
 	Shares   []string `json:"shares"`
 	SignIn   SignIn   `json:"signIn"`
+	// StatusLine is the status line the profile uses: "quipu", "other" or "".
+	StatusLine    string `json:"statusLine"`
+	StatusCommand string `json:"statusCommand,omitempty"`
 }
 
 type Rule struct {
-	Path    string `json:"path"`
-	Profile string `json:"profile"`
+	Path    string         `json:"path"`
+	Profile string         `json:"profile"`
+	Memory  profile.Memory `json:"memory"`
 }
 
 type Browser struct {
@@ -641,6 +645,7 @@ func (s *Service) profileInfos(ctx context.Context) []ProfileInfo {
 		for _, link := range p.Links {
 			info.Shares = append(info.Shares, filepath.Base(link))
 		}
+		info.StatusLine, info.StatusCommand = statusLineOf(p.Dir)
 		if l := s.logins.get(p.Name); l != nil && !l.done {
 			info.SignIn.State = "starting"
 			if b, err := os.ReadFile(l.urlFile); err == nil && len(b) > 0 {
@@ -657,7 +662,8 @@ func (s *Service) ProfilesReport(ctx context.Context) (Profiles, error) {
 	out := Profiles{Profiles: s.profileInfos(ctx), Rules: []Rule{}, Folders: []string{}, Shareable: profile.Shareable, Browsers: []Browser{}}
 	if c, err := s.loadProfiles(); err == nil {
 		for _, r := range c.Rules {
-			out.Rules = append(out.Rules, Rule{Path: s.shortPath(r.Path), Profile: r.Profile})
+			out.Rules = append(out.Rules, Rule{Path: s.shortPath(r.Path), Profile: r.Profile,
+				Memory: profile.ProjectMemory(c, s.home, r.Path, r.Profile)})
 		}
 	}
 	if rows, err := analytics.ByProject(ctx, s.st, window(90)); err == nil {

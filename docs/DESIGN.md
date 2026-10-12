@@ -119,6 +119,18 @@ remember it as a rule for the git repository the folder is in, or the folder its
 home, a folder above it, the root or the temp folder; Enter means yes). Every run under a rule
 prints one line naming the profile and the rule, so a wrong one is noticed at once.
 
+Each profile keeps its own project memory, so a project moved to another account would lose what
+Claude learned there. For a folder rule, quipu can share it: the files only the rule's profile has
+move into the other profile's memory folder, and the project's `.claude/settings.local.json` sets
+`autoMemoryDirectory` to that folder, which Claude Code reads under every profile (a supported
+setting, honoured once the folder is trusted). One journal batch; stopping gives the profile a copy.
+It is offered when a rule is remembered in the terminal, on the Profiles page and with
+`quipu profile memory`.
+
+`quipu statusline` is a status line built from what Claude Code passes it for the session's own
+account: profile, context, 5-hour and 7-day limits with the reset, cache hit ratio. No store,
+network or login is read. A switch per profile on the Profiles page writes `statusLine`.
+
 The PATH line goes into the login shell's startup file; Settings lists bash, zsh and fish, so a
 terminal that runs another shell (an IDE's, often zsh) can be connected on its own. Turning the
 shim off removes the line from every shell.

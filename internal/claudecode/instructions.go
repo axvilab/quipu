@@ -377,3 +377,33 @@ func ExtensionAt(path string) (kind, file string, ok bool) {
 	}
 	return "", "", false
 }
+
+// OwnMemoryDir is where a profile keeps a project's memory when no autoMemoryDirectory setting
+// points elsewhere.
+func OwnMemoryDir(configDir, projectPath string) string {
+	return filepath.Join(configDir, "projects", ProjectDirName(projectPath), "memory")
+}
+
+// ProjectMemoryDir is the memory folder the project's settings.local.json sets with
+// autoMemoryDirectory for every profile, with ~ expanded against home; "" if none.
+func ProjectMemoryDir(home, projectPath string) string {
+	var s struct {
+		AutoMemoryDirectory string `json:"autoMemoryDirectory"`
+	}
+	if !readJSON(LocalSettings(projectPath), &s) || s.AutoMemoryDirectory == "" {
+		return ""
+	}
+	if rest, ok := strings.CutPrefix(s.AutoMemoryDirectory, "~/"); ok {
+		return filepath.Join(home, rest)
+	}
+	return s.AutoMemoryDirectory
+}
+
+// MemorySettingValue is the autoMemoryDirectory value for dir: under home it is written with ~ so
+// the file names no personal path.
+func MemorySettingValue(home, dir string) string {
+	if rel, err := filepath.Rel(home, dir); err == nil && !strings.HasPrefix(rel, "..") {
+		return "~/" + filepath.ToSlash(rel)
+	}
+	return dir
+}

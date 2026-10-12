@@ -42,6 +42,7 @@ commands:
   profile    Claude accounts (personal, work…) and which folder uses which
   restore    show what a backup would change, and write it with --apply
   run        start claude under the profile of the current folder
+  statusline the status line Claude Code shows: profile, context, limits (set up on the Profiles page)
   ui         open the web interface
   uninstall  undo quipu install
   version    print the version
@@ -104,6 +105,8 @@ func main() {
 		os.Exit(code)
 	case "hook":
 		runHook(os.Args[2:]) // never fails: a hook error would bother the Claude Code session
+	case "statusline":
+		err = runStatusline(os.Stdin, os.Stdout)
 	case "ui":
 		err = runUI(ctx, os.Args[2:])
 	case "version", "--version":

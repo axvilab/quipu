@@ -139,11 +139,22 @@ export interface ProfileInfo {
   dir: string;
   shares: string[];
   signIn: SignIn;
+  statusLine: "quipu" | "other" | "";
+  statusCommand?: string;
+}
+
+export interface ProjectMemory {
+  shared: boolean;
+  from?: string;
+  own: number;
+  source?: string;
+  sourceFiles: number;
 }
 
 export interface Rule {
   path: string;
   profile: string;
+  memory: ProjectMemory;
 }
 
 export interface Browser {

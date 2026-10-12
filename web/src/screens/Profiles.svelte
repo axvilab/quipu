@@ -1,7 +1,7 @@
 <script lang="ts">
   import { external } from "../lib/external";
   import { api } from "../lib/api/client";
-  import type { ProfileInfo, Profiles } from "../lib/api/types";
+  import type { ProfileInfo, Profiles, Result } from "../lib/api/types";
   import { t } from "../lib/i18n.svelte";
   import { notifyChanged } from "../lib/changes.svelte";
   import { link } from "../lib/router.svelte";
@@ -65,6 +65,19 @@
     load();
   }
 
+  // A change written through the journal: the toast offers to undo it.
+  async function change(p: Promise<Result>) {
+    try {
+      const res = await p;
+      const id = res.params?.change;
+      report(res, id ? { label: t("action.undo"), run: () => act(api.undo(id)) } : undefined);
+    } catch (e) {
+      report(e);
+    }
+    notifyChanged();
+    load();
+  }
+
   const add = () => act(api.addProfile(name, share), () => ((adding = false), (signingIn = name), (name = "")));
   const startSignIn = (priv: boolean) => act(api.signIn(signingIn!, { email, browser, private: priv }));
 </script>
@@ -90,6 +103,10 @@
         </span>
         <span class="hidden min-w-0 font-mono text-xs text-fleece md:block">{p.dir}</span>
         <span class="hidden text-xs text-fleece lg:block">{p.shares.length ? t("profiles.shares", { items: p.shares.join(", ") }) : ""}</span>
+        <label class="flex items-center gap-2 text-xs text-fleece" title={p.statusLine === "other" ? p.statusCommand : t("profiles.statusHint")}>
+          <input type="checkbox" class="accent-indigo" checked={p.statusLine === "quipu"} onchange={(e) => change(api.setStatusLine(p.name, e.currentTarget.checked))} />
+          {p.statusLine === "other" ? t("profiles.statusOther") : t("profiles.status")}
+        </label>
         <span class="flex gap-2">
           <button class="btn" onclick={() => ((signingIn = p.name), (email = ""))}>{p.signedIn ? t("profiles.signInAgain") : t("profiles.signIn")}</button>
           {#if p.name !== "default"}
@@ -118,6 +135,17 @@
           <span class="font-medium">{r.profile}</span>
           <button class="btn btn-ghost" onclick={() => act(api.deleteRule(r.path))}>{t("action.remove")}</button>
         </li>
+        {#if r.memory.shared || r.memory.sourceFiles}
+          <li class="flex flex-wrap items-center gap-3 border-t-0 pb-2.5 pl-6 text-xs text-fleece">
+            {#if r.memory.shared}
+              <span class="flex-1">{t("rules.memoryShared", { from: r.memory.from || "?" })}</span>
+              <button class="btn btn-ghost" onclick={() => change(api.shareMemory(r.path, false))}>{t("rules.memoryUnshare")}</button>
+            {:else}
+              <span class="flex-1">{t("rules.memoryOther", { from: r.memory.source ?? "", count: r.memory.sourceFiles, name: r.profile })}</span>
+              <button class="btn" onclick={() => change(api.shareMemory(r.path, true))}>{t("rules.memoryShare")}</button>
+            {/if}
+          </li>
+        {/if}
       {:else}
         <li class="py-2 text-sm text-fleece">{t("rules.empty")}</li>
       {/each}

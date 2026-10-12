@@ -433,3 +433,92 @@ func TestNewProjectAPI(t *testing.T) {
 		t.Errorf("relative folder: %s", rec.Body.String())
 	}
 }
+
+func TestStatusLineAPI(t *testing.T) {
+	s := testServer(t)
+	s.ProfilesFile = filepath.Join(s.home, ".config", "quipu", "profiles.json")
+	s.SelfBinary = filepath.Join(s.home, "bin", "quipu")
+	h := s.Handler()
+	cookie := &http.Cookie{Name: cookieName, Value: s.token}
+	if rec := postJSON(h, "/api/profiles", `{"name":"work","share":[]}`, cookie); !strings.Contains(rec.Body.String(), "profile-added") {
+		t.Fatalf("add: %s", rec.Body.String())
+	}
+	work := filepath.Join(s.home, ".claude-work", "settings.json")
+	// Another status line was there before; quipu's replaces it and undo brings it back.
+	os.WriteFile(work, []byte(`{"theme":"dark","statusLine":{"type":"command","command":"node dash.js"}}`), 0o644)
+
+	var p Profiles
+	getJSON(t, h, "/api/profiles", cookie, &p)
+	if st := statusOf(p, "work"); st != "other" {
+		t.Fatalf("before: %q", st)
+	}
+	rec := postJSON(h, "/api/profiles/work/statusline", `{"on":true}`, cookie)
+	var r Result
+	json.Unmarshal(rec.Body.Bytes(), &r)
+	if r.Code != "statusline-on" || r.Params["change"] == "" {
+		t.Fatalf("on: %s", rec.Body.String())
+	}
+	b, _ := os.ReadFile(work)
+	if !strings.Contains(string(b), "quipu statusline") || !strings.Contains(string(b), `"theme": "dark"`) {
+		t.Errorf("settings = %s", b)
+	}
+	getJSON(t, h, "/api/profiles", cookie, &p)
+	if st := statusOf(p, "work"); st != "quipu" {
+		t.Errorf("after on: %q", st)
+	}
+	if st := statusOf(p, "default"); st != "" {
+		t.Errorf("default changed: %q", st)
+	}
+	postJSON(h, "/api/advice/undo", `{"id":"`+r.Params["change"]+`"}`, cookie)
+	if b, _ := os.ReadFile(work); !strings.Contains(string(b), "dash.js") {
+		t.Errorf("undo did not bring back the old status line: %s", b)
+	}
+	// Off removes only quipu's own status line.
+	if rec := postJSON(h, "/api/profiles/work/statusline", `{"on":false}`, cookie); !strings.Contains(rec.Body.String(), "unchanged") {
+		t.Errorf("off over another status line: %s", rec.Body.String())
+	}
+}
+
+func statusOf(p Profiles, name string) string {
+	for _, pr := range p.Profiles {
+		if pr.Name == name {
+			return pr.StatusLine
+		}
+	}
+	return "missing"
+}
+
+func TestShareMemoryAPI(t *testing.T) {
+	s := testServer(t)
+	s.ProfilesFile = filepath.Join(s.home, ".config", "quipu", "profiles.json")
+	h := s.Handler()
+	cookie := &http.Cookie{Name: cookieName, Value: s.token}
+	postJSON(h, "/api/profiles", `{"name":"work","share":[]}`, cookie)
+	project := filepath.Join(s.home, "src", "demo")
+	if rec := postJSON(h, "/api/rules", `{"folder":"~/src/demo","profile":"work"}`, cookie); rec.Code != 200 {
+		t.Fatalf("rule: %s", rec.Body.String())
+	}
+	mem := claudecode.OwnMemoryDir(filepath.Join(s.home, ".claude"), project)
+	os.MkdirAll(mem, 0o755)
+	os.WriteFile(filepath.Join(mem, "MEMORY.md"), []byte("- stage copied from dev\n"), 0o644)
+
+	var p Profiles
+	getJSON(t, h, "/api/profiles", cookie, &p)
+	if len(p.Rules) != 1 || p.Rules[0].Memory.Source != "default" || p.Rules[0].Memory.SourceFiles != 1 || p.Rules[0].Memory.Shared {
+		t.Fatalf("rules = %+v", p.Rules)
+	}
+	rec := postJSON(h, "/api/rules/memory", `{"folder":"~/src/demo","on":true}`, cookie)
+	if !strings.Contains(rec.Body.String(), "memory-shared") {
+		t.Fatalf("share: %s", rec.Body.String())
+	}
+	getJSON(t, h, "/api/profiles", cookie, &p)
+	if !p.Rules[0].Memory.Shared || p.Rules[0].Memory.From != "default" {
+		t.Errorf("after share: %+v", p.Rules[0].Memory)
+	}
+	if rec := postJSON(h, "/api/rules/memory", `{"folder":"~/src/demo","on":false}`, cookie); !strings.Contains(rec.Body.String(), "memory-unshared") {
+		t.Errorf("unshare: %s", rec.Body.String())
+	}
+	if rec := postJSON(h, "/api/rules/memory", `{"folder":"~/elsewhere","on":true}`, cookie); !strings.Contains(rec.Body.String(), "rule-missing") {
+		t.Errorf("no rule: %s", rec.Body.String())
+	}
+}
