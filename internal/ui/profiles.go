@@ -35,9 +35,19 @@ const profileCacheTTL = 5 * time.Minute
 // profiles lists the configured profiles with their login state. Without ProfilesFile or a
 // claude binary it shows just the current profile.
 func (s *Service) profiles(ctx context.Context) []profileView {
+	return s.profileViews(ctx, false)
+}
+
+// refreshProfiles asks Claude Code again whatever the cache holds. The collection loop calls it
+// every minute, so a sign-in or sign-out shows within a minute while pages never wait for it.
+func (s *Service) refreshProfiles(ctx context.Context) {
+	s.profileViews(ctx, true)
+}
+
+func (s *Service) profileViews(ctx context.Context, fresh bool) []profileView {
 	s.profileCache.mu.Lock()
 	defer s.profileCache.mu.Unlock()
-	if time.Since(s.profileCache.at) < profileCacheTTL && s.profileCache.views != nil {
+	if !fresh && time.Since(s.profileCache.at) < profileCacheTTL && s.profileCache.views != nil {
 		return s.profileCache.views
 	}
 	views := []profileView{{Name: s.profile, Current: true}}
