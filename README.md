@@ -42,9 +42,43 @@ change is journaled and undone in one click, alone or with the rest of its batch
 token cost as you type.
 
 **Several accounts, picked by folder.** Keep personal and work Claude subscriptions side by side
-(`CLAUDE_CONFIG_DIR` profiles) with one shared library of skills and rules. A rule says which
-folder uses which account; an optional `claude` shim applies it whenever you type `claude`.
-`quipu doctor` checks the whole setup.
+(`CLAUDE_CONFIG_DIR` profiles). Plain `claude` picks the account by folder through an optional
+shim, for bash, zsh and fish alike (an IDE terminal often runs a different shell than your
+login one). In a folder without a rule it asks which account to use and offers to remember the
+answer for the whole git repository.
+
+Each account is set up in one panel: the name quipu shows it by, its sign-in, which of
+`CLAUDE.md`, skills, agents, rules and commands it shares with your main account, and its status
+line. A project that moves to another account can keep its memory: quipu points both accounts at
+one memory folder through Claude Code's own `autoMemoryDirectory` setting, so Claude remembers what
+it learned about the project under either. `quipu doctor` checks the whole setup.
+
+![Profiles: one panel per account, with its name, sign-in, shared items and status line](docs/images/profiles.png)
+
+**Plugins against accounts.** Plugins are installed per account, so one you rely on can be missing
+from another. The Plugins page puts every plugin against every account: where it is on, where it
+is missing, what it lists in each session, and whether you used it in the last 30 days. Turn it
+off or on (undoable), remove it, or install it into an account that lacks it, one by one or all at
+once; quipu adds the marketplace from where your other account got it and runs Claude Code's own
+`claude plugin install` under that account.
+
+![Plugins: every plugin against every account, with cost, use and what is missing](docs/images/plugins.png)
+
+**A status line for the account you are in.** Turn it on per account and Claude Code shows, under
+the prompt:
+
+```text
+work max · Opus 5.5 xhigh · shop ⎇ main · $0.42 · ctx ▰▰▰▱▱▱▱▱ 34% 68K/200K · 5h ▰▰▰▱▱ 67% ↻14:50 · 7d ▰▰▱▱▱ 41% ↻Tue 19:00 · cache 91% ⏳4m
+```
+
+The account and its plan, the model and its effort, folder and branch, session cost, context used
+(as a bar and in tokens), the 5-hour and weekly limits with their reset, the cache hit ratio and
+how long the cache stays warm; past that, the next message pays for the whole context again. Fast
+mode, the branch's PR with its review and the cause of a recent cache miss appear when they apply.
+Colours go green, yellow and red as things fill. Everything comes from what Claude Code passes the
+status line for that session, so each account sees its own numbers; quipu reads no login and makes
+no requests for it. A status line it replaces is kept aside and comes back when you turn quipu's
+off.
 
 **Starts new projects from your own work.** Set up a new or freshly cloned folder with skills,
 rules and agents from your other projects. What several projects already share is offered as
@@ -54,7 +88,8 @@ quipu adds no templates or conventions of its own.
 ![New project: your own skills and rules, with what Claude will read](docs/images/new-project.png)
 
 **Also:** backup and restore of the setup of every profile, as an archive or into your own git
-repository, with a scan for credentials first; live sessions with Remote Control links; English
+repository, with a scan for credentials first; live sessions with Remote Control links; a first
+run that shows its progress while it reads your history, then collects in the background; English
 and Ukrainian; light and dark themes; keyboard first (`Ctrl K`, `G` then a letter, `?` for help).
 
 ## Install
@@ -88,8 +123,9 @@ quipu map [path]       what Claude Code loads for a project and how much it weig
 quipu cache            cache hit rate per project or day, and why the cache missed
 quipu advise [path]    findings for a project, each with its diff
 quipu new <folder>     set up a new or freshly cloned project from your own skills and rules
-quipu profile …        accounts, folder rules and the claude shim
+quipu profile …        accounts, folder rules, shared memory (profile memory) and the claude shim
 quipu run              start claude under the profile of the current folder
+quipu statusline       the status line Claude Code runs (turn it on per account in the window)
 quipu doctor           check Claude Code, profiles, the shim and quipu itself
 quipu backup           save the setup of every profile; quipu restore brings it back
 quipu daemon           collect transcripts in the background (quipu install sets this up)

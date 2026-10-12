@@ -20,5 +20,8 @@ Steps; stop and report if any step fails:
    `chore:`), imperative, subject ≤ 72 chars, body explains why. Use $ARGUMENTS if given.
    No AI attribution trailers.
 5. If the change touches an architectural decision, check that an ADR exists (`/adr-new`).
-6. Show the message and file list, then commit. Push only after the user confirms.
-7. After push, remind the user to check the CI run on GitHub.
+6. Before a release (a version tag), check that README.md covers every user-visible change since
+   the last tag, and retake its screenshots for pages that changed, from the demo home
+   (`quipu demo /tmp/qdemo`), never from the real `~/.claude`.
+7. Show the message and file list, then commit. Push only after the user confirms.
+8. After push, remind the user to check the CI run on GitHub.
