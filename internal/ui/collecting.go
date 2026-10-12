@@ -37,12 +37,15 @@ func (s *Service) Collection() Collection {
 	return c
 }
 
-// Collect collects transcripts now and then every interval until ctx ends. Pages read whatever
-// is stored and never wait for it.
+// Collect collects transcripts now and then every interval until ctx ends, and refreshes the
+// profiles' login state with it. Pages read whatever is stored and never wait for it.
 func (s *Service) Collect(ctx context.Context, every time.Duration) {
 	s.upgradeStatusLines()
 	for {
 		s.collectOnce(ctx)
+		// Keeps plans.json fresh for the status line without the UI open; the profile cache asks
+		// Claude Code at most every few minutes.
+		s.profiles(ctx)
 		select {
 		case <-ctx.Done():
 			return
