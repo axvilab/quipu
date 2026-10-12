@@ -1,6 +1,8 @@
 package claudecode
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -44,5 +46,23 @@ func TestHooks(t *testing.T) {
 	clean, _ := WithoutHook(only, "quipu hook claude")
 	if strings.Contains(string(clean), "hooks") {
 		t.Errorf("empty hooks left: %s", clean)
+	}
+}
+
+func TestFindBinaryOutsidePath(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("PATH", "")
+	bin := filepath.Join(home, ".local", "bin", "claude")
+	os.MkdirAll(filepath.Dir(bin), 0o755)
+	os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o755)
+
+	got, err := FindBinary("")
+	if err != nil || got != bin {
+		t.Fatalf("FindBinary = %q, %v; want %q", got, err, bin)
+	}
+	// quipu itself under that name (the shim) is skipped.
+	if got, err := FindBinary(bin); err == nil && got == bin {
+		t.Errorf("FindBinary returned self: %q", got)
 	}
 }

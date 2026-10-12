@@ -65,14 +65,25 @@ func Env(home, configDir string) []string {
 }
 
 // FindBinary returns the first "claude" on PATH that is not self (quipu itself, which may be
-// installed under that name as a shim). Files are compared by identity, not by path.
+// installed under that name as a shim), then looks where Claude Code's installers put it: a
+// service started at login (systemd, launchd) does not get the PATH the user's shell sets up.
+// Files are compared by identity, not by path.
 func FindBinary(self string) (string, error) {
 	selfInfo, _ := os.Stat(self)
+	var candidates []string
 	for _, dir := range filepath.SplitList(os.Getenv("PATH")) {
-		if dir == "" {
-			continue
+		if dir != "" {
+			candidates = append(candidates, filepath.Join(dir, "claude"))
 		}
-		path := filepath.Join(dir, "claude")
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		candidates = append(candidates,
+			filepath.Join(home, ".local", "bin", "claude"),    // native installer
+			filepath.Join(home, ".claude", "local", "claude"), // older local install
+			filepath.Join(home, ".npm-global", "bin", "claude"))
+	}
+	candidates = append(candidates, "/opt/homebrew/bin/claude", "/usr/local/bin/claude", "/usr/bin/claude")
+	for _, path := range candidates {
 		info, err := os.Stat(path)
 		if err != nil || info.IsDir() || info.Mode()&0o111 == 0 {
 			continue
@@ -82,5 +93,5 @@ func FindBinary(self string) (string, error) {
 		}
 		return path, nil
 	}
-	return "", errors.New("claude not found on PATH; install Claude Code first")
+	return "", errors.New("claude not found on PATH or where Claude Code installs it; install Claude Code first")
 }
