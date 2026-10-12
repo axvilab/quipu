@@ -3,9 +3,10 @@
   import type { Advice, Finding } from "../lib/api/types";
   import { onChanged } from "../lib/changes.svelte";
   import { t } from "../lib/i18n.svelte";
+  import { tokens } from "../lib/format";
   import ChangeList from "../components/ChangeList.svelte";
   import FindingDetail from "../components/FindingDetail.svelte";
-  import FindingList from "../components/FindingList.svelte";
+  import FindingGroups from "../components/FindingGroups.svelte";
   import Header from "../components/Header.svelte";
   import Loading from "../components/Loading.svelte";
   import Panel from "../components/Panel.svelte";
@@ -26,8 +27,7 @@
 
   onChanged(load);
 
-  const user = $derived(data?.findings.filter((f) => f.scope === "user") ?? []);
-  const projects = $derived(data?.findings.filter((f) => f.scope !== "user") ?? []);
+  const saves = $derived(data?.findings.reduce((n, f) => n + f.saves, 0) ?? 0);
 </script>
 
 <Header title={t("advice.title")} subtitle={t("advice.subtitle")} />
@@ -38,19 +38,11 @@
   {#if !data.findings.length}
     <p class="rounded-md border border-warp px-4 py-4 text-sm text-fleece">{t("overview.allGood")}</p>
   {/if}
-  {#if user.length}
-    <section class="mb-8">
-      <h2 class="mb-1 text-md font-semibold">{t("advice.user")}</h2>
-      <p class="mb-2 text-xs text-fleece">{t("advice.userNote")}</p>
-      <FindingList findings={user} onopen={(f) => (open = f)} />
-    </section>
-  {/if}
-  {#if projects.length}
-    <section class="mb-8">
-      <h2 class="mb-1 text-md font-semibold">{t("advice.projects")}</h2>
-      <p class="mb-2 text-xs text-fleece">{t("advice.projectsNote")}</p>
-      <FindingList findings={projects} onopen={(f) => (open = f)} />
-    </section>
+  {#if data.findings.length}
+    <p class="mb-4 text-sm {saves ? 'text-cotton' : 'text-fleece'}">
+      {saves ? t("advice.saves", { tokens: tokens(saves) }) : t("advice.savesNone")}
+    </p>
+    <FindingGroups findings={data.findings} onopen={(f) => (open = f)} onapplied={load} />
   {/if}
 
   {#if data.changes.length}

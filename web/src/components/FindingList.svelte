@@ -1,11 +1,12 @@
 <script lang="ts">
   import type { Finding } from "../lib/api/types";
-  import { findingTitle, findingWhere } from "../lib/findings";
+  import { findingRow, findingTitle, findingWhere } from "../lib/findings";
   import { tokens } from "../lib/format";
   import { t } from "../lib/i18n.svelte";
 
-  // A list of findings; j/k or arrows move, Enter opens.
-  let { findings, onopen }: { findings: Finding[]; onopen: (f: Finding) => void } = $props();
+  // A list of findings; j/k or arrows move, Enter opens. Inside a rule's group (compact) a row
+  // shows only what differs, since the group's title already says what is wrong.
+  let { findings, onopen, compact = false }: { findings: Finding[]; onopen: (f: Finding) => void; compact?: boolean } = $props();
 
   function onkeydown(e: KeyboardEvent, i: number) {
     const rows = (e.currentTarget as HTMLElement).parentElement?.parentElement?.querySelectorAll<HTMLElement>("button[data-row]");
@@ -26,15 +27,15 @@
         onclick={() => onopen(f)}
         onkeydown={(e) => onkeydown(e, i)}
       >
-        <span class="h-2 w-2 shrink-0 rounded-full bg-cochineal" aria-hidden="true"></span>
+        {#if !compact}<span class="h-2 w-2 shrink-0 rounded-full bg-cochineal" aria-hidden="true"></span>{/if}
         <span class="min-w-0 flex-1">
-          <span class="block truncate">{findingTitle(f)}</span>
+          <span class="block truncate">{compact ? findingRow(f) : findingTitle(f)}</span>
           <span class="mt-0.5 block truncate text-xs text-fleece">{findingWhere(f)}</span>
         </span>
         {#if f.saves}
           <span class="shrink-0 text-sm text-qolle" title={t("finding.savesTitle")}>−{tokens(f.saves)}</span>
         {/if}
-        <span class="shrink-0 text-xs text-fleece">{f.canApply ? t("finding.oneClick") : t("finding.manualShort")}</span>
+        {#if !compact}<span class="shrink-0 text-xs text-fleece">{f.canApply ? t("finding.oneClick") : t("finding.manualShort")}</span>{/if}
       </button>
     </li>
   {/each}

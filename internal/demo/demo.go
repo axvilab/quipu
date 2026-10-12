@@ -46,11 +46,18 @@ func Create(home string, now time.Time) error {
 
 		filepath.Join(blog, "CLAUDE.md"): "# blog\n\nStatic site. Build with `make site`.\n",
 
-		filepath.Join(cfg, "projects", claudecode.ProjectDirName(shop), "memory", "MEMORY.md"): strings.Repeat("- [Note](note.md): something learned about the shop\n", 190),
+		filepath.Join(cfg, "projects", claudecode.ProjectDirName(shop), "memory", "MEMORY.md"): strings.Repeat("- [Note](note.md): something learned about the shop\n", 190) +
+			"- [Commits](commits.md): how commit messages are written here\n",
+		// A memory note that only repeats a rule CLAUDE.md already has.
+		filepath.Join(cfg, "projects", claudecode.ProjectDirName(shop), "memory", "commits.md"): "---\nname: commits\ndescription: how commit messages are written here\n---\n\n- Write commit messages as Conventional Commits.\n",
 	}
 	// The same testing block in several projects, and the same release skill in two of them.
 	for _, o := range others {
 		files[filepath.Join(o, "CLAUDE.md")] = "# " + filepath.Base(o) + "\n\n" + testingBlock
+	}
+	// A second block, in the work projects only.
+	for _, o := range others[:3] {
+		files[filepath.Join(o, "CLAUDE.md")] += "\n" + reviewBlock
 	}
 	files[filepath.Join(others[0], ".claude", "skills", "release", "SKILL.md")] = releaseSkill
 	// Two plugins enabled for every project: browser is used in shop-api only, slides nowhere.
@@ -105,6 +112,7 @@ func Create(home string, now time.Time) error {
 
 const (
 	testingBlock = "## Testing\n\n- Run `make test` before committing.\n- Keep each test next to the code it covers.\n"
+	reviewBlock  = "## Reviews\n\n- Every pull request needs one approving review before merge.\n"
 	releaseSkill = "---\nname: release\ndescription: Cut a release\n---\n1. Bump the version.\n2. Tag and push.\n"
 )
 

@@ -57,6 +57,7 @@ var Rules = []Rule{
 	{"long-claude-md", "CLAUDE.md longer than 200 lines", longClaudeMD},
 	{"memory-limit", "MEMORY.md near or over the 200-line load limit", memoryLimit},
 	{"repeated-in-session", "a project file repeats lines your own CLAUDE.md already sends", repeatedInSession},
+	{"memory-repeats", "memory repeats what CLAUDE.md or rules already say", memoryRepeats},
 	{"shared-block", "the same CLAUDE.md block is copied into several projects", sharedBlock},
 	{"copied-extension", "the same skill, rule or agent is copied into several projects", copiedExtension},
 	{"unused-plugin", "a plugin was not used in any project in 30 days", unusedPlugin},

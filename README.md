@@ -24,12 +24,13 @@ version, or once a day if you turn that on.
 
 ## What it does
 
-**Shows what is loaded and what it costs.** For every project: what goes into each session
-(Claude Code's own prompt and tools, your files, skill and plugin listings), what loads only on
-demand, and how many tokens each file takes. Cache writes, hit rate and the miss reasons the API
-reports, per project and per day.
+**Shows what is loaded and what it costs.** For every project: what goes into each session,
+grouped by where it comes from (the project, its memory, your settings, claude.ai, plugins), with
+each file, skill or plugin once: what it costs in every session and what it adds when used. Files
+with something to fix say what. Cache writes, hit rate and the miss reasons the API reports, per
+project and per day.
 
-![Project page: what is sent at the start of a session, file by file](docs/images/project.png)
+![Project page: what is sent at the start of a session, grouped by where it comes from](docs/images/project.png)
 
 **Finds what is worth fixing, with a diff for each.**
 
@@ -39,13 +40,15 @@ reports, per project and per day.
 | Skills synced from claude.ai listed in every code project | hide them from the model; they stay available as `/name` |
 | `CLAUDE.md` longer than 200 lines, `MEMORY.md` near its load limit | where to trim |
 | A project repeating lines your own `CLAUDE.md` already sends | remove the repeat |
+| Memory repeating what `CLAUDE.md` or rules already say | remove it from memory, or delete the note |
 | The same `CLAUDE.md` block, skill, rule or agent copied into several projects | keep one, in your own settings |
 | A plugin unused for 30 days, or enabled everywhere but used in one project | turn it off, or enable it only there |
 
-Each fix is shown as a diff over every file it touches. Apply writes them all or none; every
-change is journaled and undone in one click, alone or with the rest of its batch.
+Findings are grouped by kind, with the tokens all of them would save on top. Each fix is shown as
+a diff over every file it touches. Apply writes them all or none; every change is journaled and
+undone in one click, alone or with the rest of its batch.
 
-![A finding with its diff and one-click fix](docs/images/advice.png)
+![Advice grouped by kind, and a finding with its diff and one-click fix](docs/images/advice.png)
 
 **Edits with the cost in view.** An editor for `CLAUDE.md`, rules and skills that shows the
 token cost as you type.
