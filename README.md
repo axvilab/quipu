@@ -86,14 +86,15 @@ the prompt:
 work max 5× · Opus 5.5 xhigh · shop ⎇ main · $0.42 · ctx ▰▰▰▱▱▱▱▱ 34% 68K/200K · 5h ▰▰▰▱▱ 67% ↻14:50 · 7d ▰▰▱▱▱ 41% ↻Tue 19:00 · cache 91% ⏳4m
 ```
 
-The account and the tier of its plan that sets the limits (max 5×, team standard), the model and
-its effort, folder and branch, session cost, context used (as a bar and in tokens), the 5-hour and
-weekly limits with their reset, the cache hit ratio and how long the cache stays warm; past that,
-the next message pays for the whole context again. Fast mode, the branch's PR with its review and
-the cause of a recent cache miss appear when they apply. Colours go green, yellow and red as things
-fill. Everything comes from what Claude Code passes the status line for that session, so each
-account sees its own numbers; Quipu reads no login and makes no requests for it. A status line it
-replaces is kept aside and comes back when you turn Quipu's off.
+The account and the tier of its plan that sets the limits (max 5×, team standard, a team seat with
+its own limit as team tier 1 · 5×), the model and its effort, folder and branch, session cost,
+context used (as a bar and in tokens), the 5-hour and weekly limits with their reset, the cache hit
+ratio and how long the cache stays warm; past that, the next message pays for the whole context
+again. Fast mode, the branch's PR with its review and the cause of a recent cache miss (idle >1h,
+tools changed) appear when they apply. Colours go green, yellow and red as things fill. Everything
+comes from what Claude Code passes the status line for that session, so each account sees its own
+numbers; Quipu reads no login and makes no requests for it. A status line it replaces is kept aside
+and comes back when you turn Quipu's off.
 
 **Starts new projects from your own work.** Set up a new or freshly cloned folder with skills,
 rules and agents from your other projects. What several projects already share is offered as

@@ -18,6 +18,8 @@ func Human(n int64) string {
 // MissHints explains the cache miss reasons the API reports.
 var MissHints = map[string]string{
 	"previous_message_not_found": "cache expired: a long pause inside a session",
+	"ttl_expired_5m":             "cache expired: the session sat idle over 5 minutes",
+	"ttl_expired_1h":             "cache expired: the session sat idle over an hour",
 	"messages_changed":           "earlier conversation content changed",
 	"system_changed":             "system prompt changed: CLAUDE.md, settings, output style",
 	"tools_changed":              "tool list changed: MCP server or plugin toggled",

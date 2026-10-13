@@ -131,13 +131,22 @@ func statusBottom(s claudecode.StatusInput, now time.Time, st style) string {
 		}
 		// A miss in the last few minutes, with what Claude Code thinks caused it: why it got dearer.
 		if c.LastMissCause != nil && len(c.LastMissCause.Causes) > 0 && c.LastMissAt > 0 && now.Sub(time.Unix(c.LastMissAt, 0)) < 5*time.Minute {
-			part += " " + st.paint("31", "miss: "+strings.ReplaceAll(c.LastMissCause.Causes[0], "_", " "))
+			part += " " + st.paint("31", "miss: "+missCause(c.LastMissCause.Causes[0]))
 		}
 		if part != "cache" {
 			parts = append(parts, part)
 		}
 	}
 	return strings.Join(parts, st.dim(" · "))
+}
+
+// missCause says a cache miss cause in a few words: "ttl_expired_1h" (the cache outlived its
+// lifetime because the session sat idle) becomes "idle >1h", others lose their underscores.
+func missCause(cause string) string {
+	if ttl, ok := strings.CutPrefix(cause, "ttl_expired_"); ok {
+		return "idle >" + ttl
+	}
+	return strings.ReplaceAll(cause, "_", " ")
 }
 
 // prState marks a PR's review: approved, waiting, changes asked, or a draft.

@@ -15,6 +15,8 @@ func TestPlanTier(t *testing.T) {
 	}{
 		{"team seat", work, filepath.Join(work, ".claude.json"),
 			`{"oauthAccount":{"seatTier":"team_standard","organizationType":"claude_team","organizationRateLimitTier":"default_raven"}}`, "team standard"},
+		{"team seat with its own limit", work, filepath.Join(work, ".claude.json"),
+			`{"oauthAccount":{"seatTier":"team_tier_1","organizationType":"claude_team","organizationRateLimitTier":"default_raven","userRateLimitTier":"default_claude_max_5x"}}`, "team tier 1 · 5×"},
 		{"max multiple", filepath.Join(home, ".claude"), filepath.Join(home, ".claude.json"),
 			`{"oauthAccount":{"seatTier":null,"organizationType":"claude_max","organizationRateLimitTier":"default_claude_max_5x"}}`, "max 5×"},
 		{"plan only", work, filepath.Join(work, ".claude.json"),

@@ -81,3 +81,15 @@ func TestGitBranchWorktree(t *testing.T) {
 		t.Errorf("outside a repository = %q", got)
 	}
 }
+
+func TestMissCause(t *testing.T) {
+	for cause, want := range map[string]string{
+		"ttl_expired_1h": "idle >1h",
+		"ttl_expired_5m": "idle >5m",
+		"tools_changed":  "tools changed",
+	} {
+		if got := missCause(cause); got != want {
+			t.Errorf("missCause(%q) = %q, want %q", cause, got, want)
+		}
+	}
+}

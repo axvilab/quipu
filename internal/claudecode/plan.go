@@ -26,6 +26,7 @@ type oauthAccount struct {
 	SeatTier                  string `json:"seatTier"`
 	OrganizationType          string `json:"organizationType"`
 	OrganizationRateLimitTier string `json:"organizationRateLimitTier"`
+	UserRateLimitTier         string `json:"userRateLimitTier"`
 }
 
 // account reads the account metadata of configDir; zero when there is none.
@@ -40,14 +41,22 @@ func account(home, configDir string) oauthAccount {
 }
 
 // PlanTier says which tier of its plan the account in configDir has, as Claude Code last saw it:
-// "team standard", "team premium", "max 5×", "max 20×". "" when the file says nothing more than
-// the plan itself. It reads only account fields, and nothing is written.
+// "team standard", "team tier 1 · 5×", "max 5×", "max 20×". "" when the file says nothing more
+// than the plan itself. It reads only account fields, and nothing is written.
 func PlanTier(home, configDir string) string {
 	a := account(home, configDir)
 	if a.SeatTier != "" {
-		return strings.ReplaceAll(a.SeatTier, "_", " ")
+		tier := strings.ReplaceAll(a.SeatTier, "_", " ")
+		// Seat names like "tier_1" say little; the seat's own usage limit tells how big it is.
+		if m := usageMultiple.FindStringSubmatch(a.UserRateLimitTier); m != nil {
+			tier += " · " + m[1] + "×"
+		}
+		return tier
 	}
-	m := usageMultiple.FindStringSubmatch(a.OrganizationRateLimitTier)
+	m := usageMultiple.FindStringSubmatch(a.UserRateLimitTier)
+	if m == nil {
+		m = usageMultiple.FindStringSubmatch(a.OrganizationRateLimitTier)
+	}
 	if m == nil || a.OrganizationType == "" {
 		return ""
 	}
